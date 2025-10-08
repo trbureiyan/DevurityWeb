@@ -20,13 +20,27 @@
 *.pem
 
 # debug
+*.log
+*.log.*
+Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.yarn/*
 
 # local env files
 .env*.local
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.env.staging.local
+.env.*.local
+
+# IDE
+
+.vscode/
 
 # vercel
 .vercel
@@ -34,3 +48,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# cache
+
+*.sublime-project
+*.sublime-workspace
+.cache/
+.eslintcache
+.prettiercache
