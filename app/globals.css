@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* Variables de colores Devurity */
 :root {
   --background: #171212;
   --foreground: #ffffff;
@@ -7,15 +8,165 @@
   --link: #F66661;
   --selected: #555555;
   --placeholder: #2E2E2E;
+  
+  /* Variables con nombre de colección para compatibilidad */
+  --variable-collection-botones: rgba(202, 43, 38, 1);
+  --variable-collection-fondo: rgba(23, 18, 18, 1);
+  --variable-collection-link: rgba(246, 102, 97, 1);
+  --variable-collection-placeholder: rgba(46, 46, 46, 1);
+  --variable-collection-selected: rgba(85, 85, 85, 1);
+  
+  /* Animaciones */
+  --animate-spin: spin 1s linear infinite;
+}
+
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-buttons: var(--buttons);
   --color-link: var(--link);
   --color-selected: var(--selected);
   --color-placeholder: var(--placeholder);
+  
+  /* Colores con alias para Tailwind */
+  --color-variable-collection-botones: var(--variable-collection-botones);
+  --color-variable-collection-fondo: var(--variable-collection-fondo);
+  --color-variable-collection-link: var(--variable-collection-link);
+  --color-variable-collection-placeholder: var(--variable-collection-placeholder);
+  --color-variable-collection-selected: var(--variable-collection-selected);
+  
+  /* Fuentes personalizadas */
+  --font-family-orbitron: var(--font-orbitron), sans-serif;
+  --font-family-ubuntu: var(--font-ubuntu), sans-serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
+/* Base styles */
+@layer base {
+  body {
+    background: var(--background);
+    color: var(--foreground);
+  }
+  
+  button,
+  input,
+  select,
+  textarea {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    outline: none;
+  }
+}
+
+/* Utility classes */
+@layer utilities {
+  .all-\[unset\] {
+    all: unset;
+  }
+  
+  .font-orbitron {
+    font-family: var(--font-orbitron), sans-serif;
+  }
+  
+  .font-ubuntu {
+    font-family: var(--font-ubuntu), sans-serif;
+  }
+}
+
+/* Animaciones personalizadas */
+.animate-fade-in {
+  animation: fade-in 1s var(--animation-delay, 0s) ease forwards;
+}
+
+.animate-fade-up {
+  animation: fade-up 1s var(--animation-delay, 0s) ease forwards;
+}
+
+.animate-marquee {
+  animation: marquee var(--duration) infinite linear;
+}
+
+.animate-marquee-vertical {
+  animation: marquee-vertical var(--duration) linear infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 8s infinite;
+}
+
+.animate-spin {
+  animation: var(--animate-spin);
+}
+
+/* Keyframes */
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes image-glow {
+  0% {
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.74, 0.25, 0.76, 1);
+  }
+  10% {
+    opacity: 0.7;
+    animation-timing-function: cubic-bezier(0.12, 0.01, 0.08, 0.99);
+  }
+  to {
+    opacity: 0.4;
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  0%,
+  90%,
+  to {
+    background-position: calc(-100% - var(--shimmer-width)) 0;
+  }
+  30%,
+  60% {
+    background-position: calc(100% + var(--shimmer-width)) 0;
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translate(0);
+  }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+  }
+}
+
+@keyframes marquee-vertical {
+  0% {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+  }
 }
