@@ -82,6 +82,10 @@
   animation: fade-up 1s var(--animation-delay, 0s) ease forwards;
 }
 
+.animate-bounce {
+  animation: bounce 1s infinite;
+}
+
 .animate-marquee {
   animation: marquee var(--duration) infinite linear;
 }
@@ -102,6 +106,17 @@
 @keyframes spin {
   to {
     transform: rotate(1turn);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(-25%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
   }
 }
 
