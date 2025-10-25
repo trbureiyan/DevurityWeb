@@ -82,7 +82,7 @@ export async function POST(request: Request) {
   }
   return new Response(
     JSON.stringify({
-      message: "Verifica tu email para completar continuar con el registro",
+      message: "Verifica tu email para completar con el registro",
     }),
     {
       status: 200,
