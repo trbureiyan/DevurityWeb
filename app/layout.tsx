@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Orbitron, Ubuntu } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/layouts/Header";
+import Header from "@/components/layouts/Navbar";
 import Footer from "@/components/layouts/Footer";
 
 // Config de fuentes

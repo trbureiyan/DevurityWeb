@@ -1,14 +1,15 @@
 import Image from "next/image";
+import { IMAGES } from '@/public/images';
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-variable-collection-fondo scroll-smooth">
       {/* Hero Section con fondo de ondas */}
-      <section id="hero" className="relative h-screen w-full overflow-hidden">
+      <section id="hero" className="relative h-225 w-full overflow-hidden">
         {/* Fondo con imagen de ondas */}
         <div className="absolute inset-0">
           <Image
-            src="/images/landing/wave-background.jpg"
+            src={IMAGES.landing.banner}
             alt="Background waves"
             fill
             className="object-cover"
@@ -16,15 +17,17 @@ export default function Home() {
           />
           {/* Overlay oscuro para mejorar contraste */}
           <div className="absolute inset-0 bg-black/40"></div>
+          {/* Overlay degradado oscuro en la parte inferior */}
+          <div className="absolute bottom-0 left-0 right-0 h-[30%] bg-gradient-to-t from-variable-collection-fondo via-variable-collection-fondo/50 to-transparent"></div>
         </div>
 
         {/* Contenido central del Hero */}
-        <div className="relative h-full flex flex-col items-center justify-center px-6">
+        <div className="relative h-212 flex flex-col items-center justify-center px-6">
           {/* Logo central */}
           <div className="mb-8 relative">
             <div className="w-48 h-48 md:w-64 md:h-64 relative">
               <Image
-                src="/images/logo/RoundyBIGLogoWBgOnly.png"
+                src={IMAGES.logo.main}
                 alt="Devurity Logo"
                 fill
                 className="object-contain drop-shadow-2xl animate-fade-in"
@@ -49,7 +52,7 @@ export default function Home() {
           </p>
 
           {/* Scroll indicator */}
-          <div className="absolute bottom-25 animate-bounce">
+          <div className="absolute bottom-[50px] animate-bounce">
             <svg 
               className="w-6 h-6 text-white/60" 
               fill="none" 
@@ -130,9 +133,12 @@ export default function Home() {
     {/* SVG - Lado derecho */}
     <div className="relative h-[450px] md:h-[600px] lg:h-[750px] -mr-6 md:-mr-10 lg:-mr-24 -mt-16 md:-mt-32 lg:-mt-20">
       <div className="relative w-full h-full">
+        {/* Overlay degradado oscuro en la parte superior */}
+        <div className="absolute top-0 left-0 w-[120%] h-[30%] bg-gradient-to-b from-variable-collection-fondo via-variable-collection-fondo/50 to-transparent z-10"></div>
+        
         <div className="relative w-[120%] h-full animate-float">
           <Image
-            src="/images/landing/aprendizaje.svg"
+            src={IMAGES.landing.cuboAbstracto} 
             alt="Tecnología e Innovación"
             fill
             className="object-contain object-right-top"
@@ -146,15 +152,14 @@ export default function Home() {
 
       {/* About Section */} 
       <section id="nosotros" className="container mx-auto px-6 md:px-10 py-20">
-        <h2 className="font-orbitron font-bold text-58px md:text-5xl text-white mb-12 text-center">
+        <h2 className="font-orbitron font-bold text-[58px] md:text-5xl text-white mb-12 text-center">
           NUESTRO ADN
         </h2>
         <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
           <div className="bg-variable-collection-placeholder p-8 rounded-lg hover:bg-opacity-80 transition-all">
-            <h3 className="font-orbitron text-2xl text-white mb-4">Nuestra Misión</h3>
             <div className="relative h-64 mb-4 rounded-lg overflow-hidden">
               <Image
-                src="/images/landing/pexels-simonptr-33607952.jpg"
+                src={IMAGES.landing.devBG} 
                 alt="DEV Background"
                 fill
                 className="object-cover"
@@ -169,10 +174,9 @@ export default function Home() {
           </div>
           
           <div className="bg-variable-collection-placeholder p-8 rounded-lg hover:bg-opacity-80 transition-all">
-            <h3 className="font-orbitron text-2xl text-white mb-4">Nuestra Visión</h3>
             <div className="relative h-64 mb-4 rounded-lg overflow-hidden">
               <Image
-                src="/images/landing/pexels-googledeepmind-17483910.jpg"
+                src={IMAGES.landing.urityBG} 
                 alt="URITY Background"
                 fill
                 className="object-cover"
@@ -189,7 +193,7 @@ export default function Home() {
       </section>
 
       {/* Projects Preview */}
-      <section id="proyectos" className="container mx-auto px-6 md:px-10 py-20 bg-black/20">
+      <section id="proyectos" className="container mx-auto px-6 md:px-10 py-20">
         <h2 className="font-orbitron font-bold text-4xl md:text-5xl text-white mb-12 text-center">
           Nuestros Proyectos
         </h2>
@@ -240,7 +244,7 @@ export default function Home() {
       </section>
 
       {/* Contact Section */}
-      <section id="contacto" className="container mx-auto px-6 md:px-10 py-20 bg-black/20">
+      <section id="contacto" className="container mx-auto px-6 md:px-10 py-20">
         <h2 className="font-orbitron font-bold text-4xl md:text-5xl text-white mb-12 text-center">
           Contáctanos
         </h2>
