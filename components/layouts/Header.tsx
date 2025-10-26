@@ -212,17 +212,15 @@ export default function Header() {
       </div>
 
       {/* Mobile Menu - Cargado dinámicamente sin SSR */}
-      {isAuthenticated && (
-        <MobileMenu
-          isMenuOpen={isMenuOpen}
-          closeMenu={closeMenu}
-          navigationItems={navigationItems}
-          user={user}
-          isAuthenticated={isAuthenticated}
-          onLogout={handleLogout}
-          isLoggingOut={isLoggingOut}
-        />
-      )}
+      <MobileMenu
+        isMenuOpen={isMenuOpen}
+        closeMenu={closeMenu}
+        navigationItems={navigationItems}
+        user={user}
+        isAuthenticated={isAuthenticated}
+        onLogout={handleLogout}
+        isLoggingOut={isLoggingOut}
+      />
     </header>
   );
 }
