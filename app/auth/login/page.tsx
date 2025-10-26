@@ -208,7 +208,7 @@ export default function LoginPage() {
                 
                 <p className="font-ubuntu text-white/70 mb-8 text-center">
                   Aún no tienes cuenta?{" "}
-                  <Link href="/auth/registro" className="text-red-500 hover:underline font-semibold">
+                  <Link href="/auth/register" className="text-red-500 hover:underline font-semibold">
                     Regístrate Aquí
                   </Link>
                 </p>
