@@ -53,11 +53,35 @@ export interface createUserInterface {
   semester: number;
 }
 
+export async function findByEmailWithRole(email: string) {
+  return await prisma.users.findUnique({
+    where: { email },
+    include: {
+      roles: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+}
+
+export async function findByIdWithRole(id: string) {
+  return await prisma.users.findUnique({
+    where: { id: BigInt(id) },
+    include: {
+      roles: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+}
 export async function createUser(users: createUserInterface) {
   const { name, password, email, lastname, skills, motivation, semester } =
     users;
   return await prisma.$transaction(async (tx) => {
-    // 1. Crear usuario
     const nuevoUsuario = await tx.users.create({
       data: {
         name,
@@ -69,14 +93,14 @@ export async function createUser(users: createUserInterface) {
         semester,
       },
     });
-    // 2. Buscar skills existentes
+
     const skillsDB = await tx.skills.findMany({
       where: {
         name: { in: skills },
       },
       select: { id: true },
     });
-    // Asociar skills al usuario (en tabla intermedia)
+
     if (skills.length > 0) {
       await tx.user_skills.createMany({
         data: skillsDB.map((skill) => ({
