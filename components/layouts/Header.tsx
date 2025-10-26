@@ -21,6 +21,8 @@ export default function Header() {
     { label: "Proyectos", href: "/projects" },
     { label: "Eventos", href: "/updates" },
     { label: "Asistencia", href: "/attendance" },
+    { label: "Iniciar Sesión", href: "/auth/login" },
+    { label: "Registrarse", href: "/auth/registro" },
   ];
 
   const handleLogout = async () => {
