@@ -32,7 +32,6 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${orbitron.variable} ${ubuntu.variable}`}>
       <body className="antialiased flex flex-col min-h-screen">
-  
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
