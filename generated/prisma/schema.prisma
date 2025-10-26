@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model attendances {
+  id              BigInt   @id @default(autoincrement())
+  attendance_date DateTime @db.Date
+  user_id         BigInt?
+  users           users?   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "attendances_fk_users")
+}
+
+model platforms {
+  id             BigInt           @id @default(autoincrement())
+  name           String
+  user_platforms user_platforms[]
+}
+
+model projects {
+  id            BigInt          @id @default(autoincrement())
+  title         String
+  description   String
+  start_date    DateTime?       @default(dbgenerated("CURRENT_DATE")) @db.Date
+  is_archived   Boolean?        @default(false)
+  created_at    DateTime        @default(now())
+  updated_at    DateTime        @updatedAt
+  user_projects user_projects[]
+}
+
+model roles {
+  id    BigInt  @id @default(autoincrement())
+  name  String  @unique
+  users users[]
+}
+
+model skills {
+  id          BigInt        @id @default(autoincrement())
+  name        String        @unique
+  user_skills user_skills[]
+}
+
+model user_platforms {
+  id          BigInt     @id @default(autoincrement())
+  link        String
+  platform_id BigInt?
+  user_id     BigInt?
+  platforms   platforms? @relation(fields: [platform_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_platforms_fk_platforms")
+  users       users?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_platforms_fk_users")
+}
+
+model user_projects {
+  id           BigInt    @id @default(autoincrement())
+  project_id   BigInt?
+  user_id      BigInt?
+  is_active    Boolean?  @default(true)
+  project_role String?
+  projects     projects? @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_projects_fk_projects")
+  users        users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_projects_fk_users")
+}
+
+model user_skills {
+  id       BigInt  @id @default(autoincrement())
+  skill_id BigInt?
+  user_id  BigInt?
+  skills   skills? @relation(fields: [skill_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_skills_fk_skills")
+  users    users?  @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_skills_fk_users")
+}
+
+model users {
+  id             BigInt           @id @default(autoincrement())
+  email          String           @unique
+  password       String
+  name           String
+  last_name      String
+  personal_email String?
+  is_active      Boolean          @default(false)
+  role_id        BigInt
+  motivation     String
+  semester       Int
+  attendances    attendances[]
+  user_platforms user_platforms[]
+  user_projects  user_projects[]
+  user_skills    user_skills[]
+  roles          roles            @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "users_roles_fk")
+}
