@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Orbitron, Ubuntu } from "next/font/google";
+import { Orbitron, Ubuntu } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layouts/Header";
 import Footer from "@/components/layouts/Footer";
@@ -22,6 +23,7 @@ const ubuntu = Ubuntu({
 export const metadata: Metadata = {
   title: "Devurity - Semillero de Investigación",
   description: "Plataforma oficial del semillero universitario Devurity",
+  description: "Plataforma oficial del semillero universitario Devurity",
 };
 
 export default function RootLayout({
@@ -30,6 +32,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    <html lang="es" className={`${orbitron.variable} ${ubuntu.variable}`}>
+      <body className="antialiased flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-1">{children}</main>
+        <Footer />
     <html lang="es" className={`${orbitron.variable} ${ubuntu.variable}`}>
       <body className="antialiased flex flex-col min-h-screen">
         <Header />
