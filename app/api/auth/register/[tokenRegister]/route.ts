@@ -1,4 +1,4 @@
-import { NextApiRequest, NextApiResponse } from "next";
+import { NextRequest } from "next/server";
 import { validateToken } from "@/lib/jwt";
 import { errorRequest } from "@/lib/error";
 import {
@@ -7,22 +7,26 @@ import {
 } from "@/repositories/users/users.respositories";
 import { bcryptAdapter } from "@/lib/bcrypt";
 import { isValidPassword } from "@/lib/regex";
+
 interface Params {
-  params: {
+  params: Promise<{
     tokenRegister: string;
-  };
+  }>;
 }
-interface payload {
+
+interface TokenPayload {
   email: string;
   name: string;
   lastname: string;
+  exp: number;
 }
 
-export async function GET(req: Request, { params }: Params) {
+export async function GET(req: NextRequest, { params }: Params) {
   const timeUnixNow = Math.floor(Date.now() / 1000);
-  const token = (await params).tokenRegister;
+  const { tokenRegister: token } = await params;
   try {
-    const { email, name, exp } = await validateToken(token);
+    const payload = await validateToken(token) as TokenPayload;
+    const { email, name, exp } = payload;
     if (await existUserByEmail(email)) {
       return new Response(
         JSON.stringify(
@@ -59,19 +63,20 @@ export async function GET(req: Request, { params }: Params) {
   }
 }
 
-export async function POST(req: Request, { params }: Params) {
-  const token = (await params).tokenRegister;
+export async function POST(req: NextRequest, { params }: Params) {
+  const { tokenRegister: token } = await params;
   const timeUnixNow = Math.floor(Date.now() / 1000);
-  let payload: payload | unknown;
+  let payload: TokenPayload;
+  
   try {
-    payload = await validateToken(token);
+    payload = await validateToken(token) as TokenPayload;
     if (timeUnixNow > payload.exp) {
       throw new Error("Token expired");
     }
-  } catch (e) {
+  } catch {
     return new Response(
       JSON.stringify(
-        errorRequest("registro", "Ya ha expirado la duracion del"),
+        errorRequest("registro", "Ya ha expirado la duracion del token"),
       ),
       {
         status: 422,
@@ -79,6 +84,7 @@ export async function POST(req: Request, { params }: Params) {
       },
     );
   }
+  
   const { name, email, lastname } = payload;
 
   const { semester, motivation, skills, password } = await req.json();
