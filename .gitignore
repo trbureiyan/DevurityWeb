@@ -56,4 +56,4 @@ next-env.d.ts
 .cache/
 .eslintcache
 .prettiercache
-/lib/generated/prisma
+generated/prisma
