@@ -1,4 +1,3 @@
-import { use } from "react";
 import prisma from "../../lib/postgresDriver";
 
 /* Includes */

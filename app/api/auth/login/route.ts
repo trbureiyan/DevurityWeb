@@ -2,11 +2,7 @@ import { errorRequest } from "@/lib/error";
 import { generateToken } from "@/lib/jwt";
 import { bcryptAdapter } from "@/lib/bcrypt";
 import { emailUniversity } from "@/lib/regex";
-import {
-  findByEmailWithRole,
-  findPasswordByEmail,
-  existUserByEmail,
-} from "@/repositories/users/users.respositories";
+import { findByEmailWithRole } from "@/repositories/users/users.respositories";
 
 const loginAttempts = new Map<string, { count: number; lastAttempt: number }>();
 const MAX_ATTEMPTS = 5;
