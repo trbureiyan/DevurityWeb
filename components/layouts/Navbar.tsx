@@ -10,7 +10,7 @@ const MobileMenu = dynamic(() => import('./MobileMenu'), {
   ssr: false 
 });
 
-export default function Header() {
+export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navigationItems = [
@@ -78,7 +78,7 @@ export default function Header() {
 
           {/* Desktop Login Button */}
           <Link
-            href="/login"
+            href="/auth/login"
             className="w-[105px] h-[30px] flex items-center justify-center px-4 bg-variable-collection-botones rounded-lg overflow-hidden hover:opacity-90 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-variable-collection-link focus:ring-offset-2 focus:ring-offset-variable-collection-fondo"
             aria-label="Iniciar Sesión"
           >
@@ -92,7 +92,7 @@ export default function Header() {
         <div className="flex lg:hidden items-center gap-4">
           {/* Mobile Login Button */}
           <Link
-            href="/login"
+            href="/auth/login"
             className="w-[90px] h-[30px] flex items-center justify-center px-3 bg-variable-collection-botones rounded-lg overflow-hidden hover:opacity-90 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-variable-collection-link focus:ring-offset-2 focus:ring-offset-variable-collection-fondo"
             aria-label="Iniciar Sesión"
           >

@@ -3,16 +3,30 @@
 import Link from "next/link";
 import Image from "next/image";
 
+interface User {
+  name: string;
+  lastName?: string;
+  email: string;
+}
+
 interface MobileMenuProps {
   isMenuOpen: boolean;
   closeMenu: () => void;
   navigationItems: Array<{ label: string; href: string }>;
+  user?: User | null;
+  isAuthenticated?: boolean;
+  onLogout?: () => Promise<void>;
+  isLoggingOut?: boolean;
 }
 
 export default function MobileMenu({ 
   isMenuOpen, 
   closeMenu, 
-  navigationItems 
+  navigationItems,
+  user,
+  isAuthenticated,
+  onLogout,
+  isLoggingOut
 }: MobileMenuProps) {
   return (
     <>

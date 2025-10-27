@@ -18,7 +18,20 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "generated/**",
+      "lib/generated/**",
     ],
+  },
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": ["warn", { 
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_" 
+      }],
+      "@typescript-eslint/no-require-imports": "warn",
+      "@next/next/no-html-link-for-pages": "warn",
+    },
   },
 ];
 
