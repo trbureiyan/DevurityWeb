@@ -1,25 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 
 export function useCsrf() {
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Obtener token CSRF al montar el componente
-  useEffect(() => {
-    fetchCsrfToken();
-  }, []);
+  const fetchCsrfToken = useCallback(async (): Promise<string | null> => {
+    // Si ya tenemos un token, retornarlo
+    if (csrfToken) {
+      return csrfToken;
+    }
 
-  const fetchCsrfToken = async () => {
     try {
       setLoading(true);
       setError(null);
 
       const response = await fetch("/api/auth/csrf-token", {
         method: "GET",
-        credentials: "include", // Incluir cookies
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -28,32 +28,46 @@ export function useCsrf() {
 
       const data = await response.json();
       setCsrfToken(data.csrfToken);
+      return data.csrfToken;
     } catch (err) {
       console.error("Error fetching CSRF token:", err);
       setError(err instanceof Error ? err.message : "Error desconocido");
+      return null;
     } finally {
       setLoading(false);
     }
-  };
+  }, [csrfToken]);
 
   // Función para hacer requests con CSRF
   const fetchWithCsrf = async (
     url: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<Response> => {
-    if (!csrfToken) {
-      throw new Error("Token CSRF no disponible");
+    let token = csrfToken;
+
+    // Solo obtener token si no lo tenemos y es una request que lo requiere
+    if (!token && shouldUseCsrf(options.method)) {
+      token = await fetchCsrfToken();
     }
 
-    const headers = {
-      ...options.headers,
-      "x-csrf-token": csrfToken,
-    };
+    // Si tenemos token, agregarlo a los headers
+    if (token) {
+      const headers = {
+        ...options.headers,
+        "x-csrf-token": token,
+      };
 
+      return fetch(url, {
+        ...options,
+        headers,
+        credentials: "include",
+      });
+    }
+
+    // Si no hay token, hacer request normal (para rutas públicas)
     return fetch(url, {
       ...options,
-      headers,
-      credentials: "include", // Siempre incluir cookies
+      credentials: "include",
     });
   };
 
@@ -65,6 +79,12 @@ export function useCsrf() {
     return formData;
   };
 
+  // Función para verificar si un método HTTP requiere CSRF
+  const shouldUseCsrf = (method?: string): boolean => {
+    const protectedMethods = ["POST", "PUT", "DELETE", "PATCH"];
+    return method ? protectedMethods.includes(method.toUpperCase()) : false;
+  };
+
   return {
     csrfToken,
     loading,
@@ -72,5 +92,6 @@ export function useCsrf() {
     fetchWithCsrf,
     createFormDataWithCsrf,
     refetch: fetchCsrfToken,
+    hasToken: !!csrfToken,
   };
 }

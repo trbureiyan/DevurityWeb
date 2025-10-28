@@ -3,7 +3,6 @@ import { Orbitron, Ubuntu } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layouts/Navbar";
 import Footer from "@/components/layouts/Footer";
-import { CSRFProvider } from "@/components/providers/CSRFProvider";
 
 // Config de fuentes
 const orbitron = Orbitron({
@@ -33,11 +32,9 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${orbitron.variable} ${ubuntu.variable}`}>
       <body className="antialiased flex flex-col min-h-screen">
-        <CSRFProvider>
-          <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </CSRFProvider>
+        <Navbar />
+        <main className="flex-1">{children}</main>
+        <Footer />
       </body>
     </html>
   );
