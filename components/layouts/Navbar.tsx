@@ -14,7 +14,7 @@ const MobileMenu = dynamic(() => import("./MobileMenu"), {
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, isAdmin } = useAuth();
 
   const navigationItems = [
     { label: "Nosotros", href: "/about" },
@@ -149,7 +149,7 @@ export default function Navbar() {
                   </Link>
 
                   {/* Admin Link (if admin) */}
-                  {user.role === "admin" && (
+                  {isAdmin() && (
                     <Link
                       href="/admin"
                       onClick={closeProfileDropdown}
@@ -220,7 +220,7 @@ export default function Navbar() {
                   </Link>
 
                   {/* Admin Link (if admin) */}
-                  {user.role === "admin" && (
+                  {isAdmin() && (
                     <Link
                       href="/admin"
                       onClick={closeProfileDropdown}

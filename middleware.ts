@@ -12,8 +12,16 @@ export async function middleware(
 
   // Si no hay token y es ruta protegida, guardar intent URL
   if (!token && isProtectedPath(currentPath)) {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL("/auth/login", request.url);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Verificar roles para rutas de admin
+  if (currentPath.startsWith("/admin")) {
+    const roleCheck = await checkUserRole(request);
+    if (roleCheck) {
+      return roleCheck;
+    }
   }
 
   // Verificar CSRF para requests que lo requieran
@@ -30,6 +38,56 @@ function isProtectedPath(path: string): boolean {
   const protectedPaths = ["/admin", "/projects", "/profile", "/attendance"];
 
   return protectedPaths.some((protectedPath) => path.startsWith(protectedPath));
+}
+
+// Función helper para denegar acceso
+function denyAccess(request: NextRequest): NextResponse {
+  if (request.nextUrl.pathname.startsWith("/api")) {
+    return NextResponse.json(
+      {
+        error: "403 - Acceso restringido.",
+      },
+      { status: 403 },
+    );
+  } else {
+    return NextResponse.redirect(new URL("/access-denied", request.url));
+  }
+}
+
+// Función para verificar roles de usuario
+async function checkUserRole(
+  request: NextRequest,
+): Promise<NextResponse | null> {
+  try {
+    // Usar el endpoint simple de verificación de admin
+    const adminResponse = await fetch(
+      `${request.nextUrl.origin}/api/auth/is-admin`,
+      {
+        headers: {
+          cookie: request.headers.get("cookie") || "",
+        },
+      },
+    );
+
+    if (!adminResponse.ok) {
+      console.error(
+        `Error en is-admin: ${adminResponse.status} ${adminResponse.statusText}`,
+      );
+      return denyAccess(request);
+    }
+
+    const adminData = await adminResponse.json();
+
+    // Verificar que el usuario sea admin
+    if (!adminData.isAdmin) {
+      return denyAccess(request);
+    }
+  } catch (error) {
+    console.error("Error verificando si es admin:", error);
+    return denyAccess(request);
+  }
+
+  return null;
 }
 
 // Función para verificar CSRF

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Orbitron, Ubuntu } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/layouts/Navbar";
+import NavbarConditional from "@/components/layouts/NavbarConditional";
 import Footer from "@/components/layouts/Footer";
 
 // Config de fuentes
@@ -32,7 +32,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${orbitron.variable} ${ubuntu.variable}`}>
       <body className="antialiased flex flex-col min-h-screen">
-        <Navbar />
+        <NavbarConditional />
         <main className="flex-1">{children}</main>
         <Footer />
       </body>

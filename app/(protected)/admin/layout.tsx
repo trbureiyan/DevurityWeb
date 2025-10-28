@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AdminLayout({
   children,
@@ -12,6 +13,7 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const { user, isLoading } = useAuth();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -40,17 +42,22 @@ export default function AdminLayout({
             href="/profile"
             className="flex items-center gap-3 mb-6 hover:opacity-80 transition-opacity cursor-pointer"
           >
-            <div className="w-16 h-16 bg-white rounded-lg overflow-hidden relative">
-              <Image
-                src="/images/logo/RoundyBIGLogoWBgOnly.png"
-                alt="Profile"
-                fill
-                className="object-cover"
-              />
+            <div className="w-16 h-16 bg-variable-collection-botones rounded-full flex items-center justify-center text-white font-semibold text-xl">
+              {isLoading ? (
+                <div className="w-8 h-8 bg-gray-600 rounded-full animate-pulse"></div>
+              ) : user ? (
+                `${user.name.charAt(0)}${user.lastName.charAt(0)}`
+              ) : (
+                "US"
+              )}
             </div>
             <div className="flex flex-col">
-              <h2 className="text-white font-semibold text-lg">Brayan Toro</h2>
-              <p className="text-white text-sm">Bustos</p>
+              <h2 className="text-white font-semibold text-lg">
+                {isLoading ? "Cargando..." : user ? user.name : "Usuario"}
+              </h2>
+              <p className="text-white text-sm">
+                {isLoading ? "" : user ? user.lastName : "Devurity"}
+              </p>
               <p className="text-link text-xs mt-1">Ver mi perfil →</p>
             </div>
           </Link>
