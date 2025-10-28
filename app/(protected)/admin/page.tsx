@@ -35,6 +35,25 @@ export default function AdminDashboard() {
             </Link>
           </div>
 
+          {/* Attendances Card */}
+          <div className="bg-[#1A1515] border border-[#2E2E2E] rounded-lg p-4 lg:p-6 relative">
+            <div className="w-12 h-12 bg-variable-collection-botones rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-white font-semibold text-lg">A</span>
+            </div>
+            <h3 className="text-white font-semibold text-base lg:text-lg mb-2 text-center">
+              Registrar Asistencias
+            </h3>
+            <p className="text-gray-400 text-xs lg:text-sm mb-4 text-center">
+              Escanea códigos QR para registrar asistencias de los usuarios
+            </p>
+            <Link
+              href="/admin/attendances"
+              className="block text-center bg-variable-collection-botones text-white px-4 py-2 rounded-lg hover:bg-variable-collection-botones/90 transition-colors text-xs lg:text-sm font-medium"
+            >
+              Registrar Asistencias
+            </Link>
+          </div>
+
           {/* Add Event/News Card */}
           <div className="bg-[#1A1515] border border-[#2E2E2E] rounded-lg p-4 lg:p-6 relative">
             <button

@@ -4,7 +4,7 @@ import { errorRequest } from "@/lib/error";
 import {
   createUser,
   existUserByEmail,
-} from "@/repositories/users/users.respositories";
+} from "@/repositories/users/users.repositories";
 import { bcryptAdapter } from "@/lib/bcrypt";
 import { isValidPassword } from "@/lib/regex";
 
