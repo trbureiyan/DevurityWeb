@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useCsrf } from "@/hooks/useCsrf";
 
 interface User {
   id: string;
@@ -30,20 +29,17 @@ export default function UserDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
-  const { fetchWithCsrf, loading: csrfLoading } = useCsrf();
 
   const fetchUser = async () => {
     try {
       setLoading(true);
-      setError(null);
-
-      const response = await fetch(`/api/auth/admin/users?userId=${params.id}`);
+      const response = await fetch(`/api/auth/admin/users/${params.id}`);
       const result = await response.json();
 
-      if (result.success && result.data.users.length > 0) {
-        setUser(result.data.users[0]);
+      if (result.success) {
+        setUser(result.data);
       } else {
-        setError("Usuario no encontrado");
+        setError(result.error || "Error al cargar el usuario");
       }
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -64,7 +60,7 @@ export default function UserDetailPage() {
 
     setProcessing(true);
     try {
-      const response = await fetchWithCsrf(`/api/auth/admin/users/${user.id}`, {
+      const response = await fetch(`/api/auth/admin/users/${user.id}`, {
         method: "PUT",
       });
       const result = await response.json();
@@ -85,17 +81,13 @@ export default function UserDetailPage() {
   const handleReject = async () => {
     if (!user) return;
 
-    if (
-      !confirm(
-        `¿Estás seguro de que deseas rechazar la solicitud de ${user.name} ${user.last_name}? Esta acción no se puede deshacer.`,
-      )
-    ) {
+    if (!confirm("¿Estás seguro de que deseas rechazar esta solicitud?")) {
       return;
     }
 
     setProcessing(true);
     try {
-      const response = await fetchWithCsrf(`/api/auth/admin/users/${user.id}`, {
+      const response = await fetch(`/api/auth/admin/users/${user.id}`, {
         method: "DELETE",
       });
       const result = await response.json();
@@ -115,14 +107,14 @@ export default function UserDetailPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-4 lg:p-8">
         <div className="animate-pulse">
-          <div className="h-8 bg-[#2E2E2E] rounded w-1/3 mb-4"></div>
-          <div className="bg-[#1A1515] border border-[#2E2E2E] rounded-lg p-6">
-            <div className="h-6 bg-[#2E2E2E] rounded w-1/4 mb-4"></div>
-            <div className="space-y-3">
-              <div className="h-4 bg-[#2E2E2E] rounded"></div>
-              <div className="h-4 bg-[#2E2E2E] rounded w-3/4"></div>
+          <div className="h-6 lg:h-8 bg-[#2E2E2E] rounded w-1/2 lg:w-1/3 mb-4"></div>
+          <div className="bg-[#1A1515] border border-[#2E2E2E] rounded-lg p-4 lg:p-6">
+            <div className="h-5 lg:h-6 bg-[#2E2E2E] rounded w-1/3 lg:w-1/4 mb-4"></div>
+            <div className="space-y-2 lg:space-y-3">
+              <div className="h-3 lg:h-4 bg-[#2E2E2E] rounded"></div>
+              <div className="h-3 lg:h-4 bg-[#2E2E2E] rounded w-2/3 lg:w-3/4"></div>
             </div>
           </div>
         </div>
@@ -132,137 +124,157 @@ export default function UserDetailPage() {
 
   if (error || !user) {
     return (
-      <div className="p-8">
-        <div className="mb-6">
+      <div className="p-4 lg:p-8">
+        <div className="mb-4 lg:mb-6">
           <Link
             href="/admin/users/confirm"
-            className="text-link hover:text-link/80 text-sm font-medium mb-4 inline-block"
+            className="text-link hover:text-link/80 text-xs lg:text-sm font-medium mb-4 inline-block"
           >
             ← Volver a solicitudes
           </Link>
-          <h1 className="text-2xl font-semibold text-white mb-2">
+          <h1 className="text-xl lg:text-2xl font-semibold text-white mb-2">
             Error al cargar usuario
           </h1>
         </div>
-        <div className="bg-[#1A1515] border border-red-700 rounded-lg p-6">
-          <p className="text-red-400">{error || "Usuario no encontrado"}</p>
+        <div className="bg-[#1A1515] border border-red-700 rounded-lg p-4 lg:p-6">
+          <p className="text-red-400 text-sm lg:text-base">
+            {error || "Usuario no encontrado"}
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 lg:p-8">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-4 lg:mb-6">
         <Link
           href="/admin/users/confirm"
-          className="text-link hover:text-link/80 text-sm font-medium mb-4 inline-block"
+          className="text-link hover:text-link/80 text-xs lg:text-sm font-medium mb-4 inline-block"
         >
           ← Volver a solicitudes
         </Link>
-        <h1 className="text-2xl font-semibold text-white mb-2">
+        <h1 className="text-xl lg:text-2xl font-semibold text-white mb-2">
           Solicitud de Registro
         </h1>
-        <p className="text-gray-400">
+        <p className="text-gray-400 text-sm lg:text-base">
           Revisa los detalles de la solicitud de registro
         </p>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="mb-6 p-4 bg-red-900/20 border border-red-700 rounded-lg">
-          <p className="text-red-400">{error}</p>
+        <div className="mb-4 lg:mb-6 p-3 lg:p-4 bg-red-900/20 border border-red-700 rounded-lg">
+          <p className="text-red-400 text-sm lg:text-base">{error}</p>
         </div>
       )}
 
-      {/* User Details */}
-      <div className="bg-[#1A1515] border border-[#2E2E2E] rounded-lg p-6 mb-6">
-        {/* Profile Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-20 h-20 bg-link rounded-full flex items-center justify-center">
-            <span className="text-white font-semibold text-2xl">
-              {user.name.charAt(0)}
-              {user.last_name.charAt(0)}
-            </span>
-          </div>
-          <div>
-            <h2 className="text-white font-semibold text-xl">
-              {user.name} {user.last_name}
-            </h2>
-            <p className="text-gray-400">{user.roles.name}</p>
-          </div>
-        </div>
+      {/* User Details Card */}
+      <div className="bg-[#1A1515] border border-[#2E2E2E] rounded-lg p-4 lg:p-6 mb-6">
+        <h2 className="text-white font-semibold text-lg lg:text-xl mb-4 lg:mb-6">
+          Información del Usuario
+        </h2>
 
-        {/* User Information Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
           {/* Personal Information */}
-          <div>
-            <h3 className="text-white font-semibold mb-4">
-              Información Personal
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <p className="text-gray-400 text-sm">Email Institucional</p>
-                <p className="text-white">{user.email}</p>
-              </div>
-              {user.personal_email && (
-                <div>
-                  <p className="text-gray-400 text-sm">Email Personal</p>
-                  <p className="text-white">{user.personal_email}</p>
-                </div>
-              )}
-              <div>
-                <p className="text-gray-400 text-sm">Semestre</p>
-                <p className="text-white">Semestre {user.semester}</p>
-              </div>
+          <div className="space-y-3 lg:space-y-4">
+            <div>
+              <label className="block text-gray-400 text-xs lg:text-sm font-medium mb-1">
+                Nombre Completo
+              </label>
+              <p className="text-white text-sm lg:text-base">
+                {user.name} {user.last_name}
+              </p>
             </div>
+
+            <div>
+              <label className="block text-gray-400 text-xs lg:text-sm font-medium mb-1">
+                Email Universitario
+              </label>
+              <p className="text-white text-sm lg:text-base">{user.email}</p>
+            </div>
+
+            {user.personal_email && (
+              <div>
+                <label className="block text-gray-400 text-xs lg:text-sm font-medium mb-1">
+                  Email Personal
+                </label>
+                <p className="text-white text-sm lg:text-base">
+                  {user.personal_email}
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Skills */}
-          <div>
-            <h3 className="text-white font-semibold mb-4">Habilidades</h3>
-            {user.user_skills.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {user.user_skills.map((skill, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-[#2E2E2E] text-white text-sm rounded-full"
-                  >
-                    {skill.skills.name}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-400">No se registraron habilidades</p>
-            )}
+          {/* Academic Information */}
+          <div className="space-y-3 lg:space-y-4">
+            <div>
+              <label className="block text-gray-400 text-xs lg:text-sm font-medium mb-1">
+                Semestre
+              </label>
+              <p className="text-white text-sm lg:text-base">{user.semester}</p>
+            </div>
+
+            <div>
+              <label className="block text-gray-400 text-xs lg:text-sm font-medium mb-1">
+                Rol Solicitado
+              </label>
+              <p className="text-white text-sm lg:text-base capitalize">
+                {user.roles.name}
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Motivation */}
-        <div className="mt-6">
-          <h3 className="text-white font-semibold mb-4">Motivación</h3>
-          <div className="bg-[#0A0808] border border-[#2E2E2E] rounded-lg p-4">
-            <p className="text-white whitespace-pre-wrap">{user.motivation}</p>
+        <div className="mt-4 lg:mt-6">
+          <label className="block text-gray-400 text-xs lg:text-sm font-medium mb-2">
+            Motivación
+          </label>
+          <div className="bg-[#0A0808] border border-[#2E2E2E] rounded-lg p-3 lg:p-4">
+            <p className="text-white text-sm lg:text-base leading-relaxed">
+              {user.motivation}
+            </p>
           </div>
         </div>
+
+        {/* Skills */}
+        {user.user_skills.length > 0 && (
+          <div className="mt-4 lg:mt-6">
+            <label className="block text-gray-400 text-xs lg:text-sm font-medium mb-2">
+              Habilidades
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {user.user_skills.map((userSkill, index) => (
+                <span
+                  key={index}
+                  className="bg-[#2E2E2E] text-white text-xs lg:text-sm px-2 lg:px-3 py-1 rounded-full"
+                >
+                  {userSkill.skills.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-4 justify-end">
-        <button
-          onClick={handleReject}
-          disabled={processing}
-          className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {processing ? "Procesando..." : "Rechazar"}
-        </button>
+      <div className="flex flex-col sm:flex-row gap-3 lg:gap-4">
         <button
           onClick={handleApprove}
           disabled={processing}
-          className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 px-4 lg:px-6 py-2 lg:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm lg:text-base"
         >
-          {processing ? "Procesando..." : "Aprobar"}
+          {processing ? "Procesando..." : "Aprobar Solicitud"}
+        </button>
+
+        <button
+          onClick={handleReject}
+          disabled={processing}
+          className="flex-1 px-4 lg:px-6 py-2 lg:py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm lg:text-base"
+        >
+          {processing ? "Procesando..." : "Rechazar Solicitud"}
         </button>
       </div>
     </div>

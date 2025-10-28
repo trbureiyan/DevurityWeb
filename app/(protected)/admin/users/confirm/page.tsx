@@ -84,13 +84,13 @@ export default function ConfirmUsersPage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-white mb-2">
-          Confirmación de Usuarios
+    <div className="p-4 lg:p-8">
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-xl lg:text-2xl font-semibold text-white mb-2">
+          Solicitudes de Registro Pendientes
         </h1>
-        <p className="text-gray-400">
-          Gestiona las solicitudes de registro pendientes de aprobación
+        <p className="text-gray-400 text-sm lg:text-base">
+          Revisa y aprueba las solicitudes de registro de nuevos usuarios
         </p>
       </div>
 
@@ -116,7 +116,7 @@ export default function ConfirmUsersPage() {
             ))}
           </div>
         ) : users.length === 0 ? (
-          <div className="bg-[#1A1515] border border-[#2E2E2E] rounded-lg p-8 text-center">
+          <div className="bg-[#1A1515] border border-[#2E2E2E] rounded-lg p-4 lg:p-6">
             <p className="text-white text-lg mb-4">
               No hay solicitudes de registro pendientes
             </p>
@@ -155,8 +155,8 @@ export default function ConfirmUsersPage() {
       {/* Pagination */}
       {users.length > 0 && (
         <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-4">
-            <span className="text-gray-400 text-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+            <span className="text-gray-400 text-xs lg:text-sm">
               Mostrando {(pagination.page - 1) * pagination.limit + 1} -{" "}
               {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
               de {pagination.total} usuarios
@@ -164,7 +164,7 @@ export default function ConfirmUsersPage() {
             <select
               value={pagination.limit}
               onChange={(e) => handleLimitChange(Number(e.target.value))}
-              className="bg-[#1A1515] border border-[#2E2E2E] text-white rounded px-3 py-1 text-sm"
+              className="bg-[#1A1515] border border-[#2E2E2E] text-white rounded px-2 py-1 text-xs lg:text-sm"
             >
               <option value="8">8 por página</option>
               <option value="12">12 por página</option>
@@ -172,21 +172,21 @@ export default function ConfirmUsersPage() {
               <option value="20">20 por página</option>
             </select>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1 lg:gap-2">
             <button
               onClick={() => handlePageChange(pagination.page - 1)}
               disabled={pagination.page === 1}
-              className="px-3 py-1 bg-[#1A1515] border border-[#2E2E2E] text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2E2E2E] transition-colors"
+              className="px-2 py-1 lg:px-3 lg:py-1 bg-[#1A1515] border border-[#2E2E2E] text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2E2E2E] transition-colors text-xs lg:text-sm"
             >
               Anterior
             </button>
-            <span className="px-3 py-1 text-white text-sm">
+            <span className="px-2 py-1 lg:px-3 lg:py-1 text-white text-xs lg:text-sm">
               Página {pagination.page} de {pagination.totalPages}
             </span>
             <button
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={pagination.page === pagination.totalPages}
-              className="px-3 py-1 bg-[#1A1515] border border-[#2E2E2E] text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2E2E2E] transition-colors"
+              className="px-2 py-1 lg:px-3 lg:py-1 bg-[#1A1515] border border-[#2E2E2E] text-white rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2E2E2E] transition-colors text-xs lg:text-sm"
             >
               Siguiente
             </button>
