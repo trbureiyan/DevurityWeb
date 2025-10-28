@@ -68,6 +68,12 @@ export default function AdminLayout({
             Contenidos pagina
           </Link>
           <Link
+            href="/admin/skills"
+            className="block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 border-transparent"
+          >
+            Habilidades
+          </Link>
+          <Link
             href="/admin/configuracion"
             className="block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 border-transparent"
           >
