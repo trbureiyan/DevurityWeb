@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { useCsrf } from "./useCsrf";
 
 interface User {
   id: string;
@@ -29,14 +28,14 @@ export function useAuth() {
     isLoading: true,
     isAuthenticated: false,
   });
-  const { fetchWithCsrf } = useCsrf();
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(
     null,
   );
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   const logout = useCallback(async (): Promise<void> => {
     try {
-      const response = await fetchWithCsrf("/api/auth/logout", {
+      const response = await fetch("/api/auth/logout", {
         method: "POST",
       });
 
@@ -64,11 +63,11 @@ export function useAuth() {
         isAuthenticated: false,
       });
     }
-  }, [fetchWithCsrf, refreshInterval]);
+  }, [refreshInterval]);
 
   const refreshToken = useCallback(async () => {
     try {
-      const response = await fetchWithCsrf("/api/auth/refresh", {
+      const response = await fetch("/api/auth/refresh", {
         method: "POST",
       });
 
@@ -87,11 +86,11 @@ export function useAuth() {
       console.error("Error renovando token:", error);
       logout();
     }
-  }, [fetchWithCsrf, logout]);
+  }, [logout]);
 
   const checkAuth = useCallback(async () => {
     try {
-      const response = await fetchWithCsrf("/api/auth/me");
+      const response = await fetch("/api/auth/me");
 
       if (response.ok) {
         const data = await response.json();
@@ -114,14 +113,16 @@ export function useAuth() {
         isLoading: false,
         isAuthenticated: false,
       });
+    } finally {
+      setHasCheckedAuth(true);
     }
-  }, [fetchWithCsrf]);
+  }, []);
 
   const login = async (
     email: string,
     password: string,
   ): Promise<LoginResponse> => {
-    const response = await fetchWithCsrf("/api/auth/login", {
+    const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -171,10 +172,12 @@ export function useAuth() {
     refreshInterval,
   ]);
 
-  // Verificar autenticación al montar el componente
+  // Verificar autenticación solo una vez al montar el componente
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    if (!hasCheckedAuth) {
+      checkAuth();
+    }
+  }, [checkAuth, hasCheckedAuth]);
 
   return {
     ...authState,

@@ -24,6 +24,7 @@ export default function LoginPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [errors, setErrors] = useState<FormErrors>({});
   const { login, isLoading } = useAuth();
+
   const router = useRouter();
   const searchParams = useSearchParams();
 
