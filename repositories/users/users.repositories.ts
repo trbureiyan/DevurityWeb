@@ -1,7 +1,15 @@
 import prisma from "../../lib/postgresDriver";
 
 function toBigInt(id: string | number): bigint {
-  return BigInt(id);
+  console.log("toBigInt: Converting ID:", id, "Type:", typeof id);
+  try {
+    const result = BigInt(id);
+    console.log("toBigInt: Conversion successful:", result);
+    return result;
+  } catch (error) {
+    console.error("toBigInt: Error converting ID:", id, "Error:", error);
+    throw error;
+  }
 }
 
 export interface PaginatedUsersResponse {
@@ -78,16 +86,25 @@ export async function findByEmailWithRole(email: string) {
 }
 
 export async function findByIdWithRole(id: string) {
-  return await prisma.users.findUnique({
-    where: { id: toBigInt(id) },
-    include: {
-      roles: {
-        select: {
-          name: true,
+  console.log("findByIdWithRole: Searching for user with ID:", id);
+  try {
+    const bigIntId = toBigInt(id);
+    const user = await prisma.users.findUnique({
+      where: { id: bigIntId },
+      include: {
+        roles: {
+          select: {
+            name: true,
+          },
         },
       },
-    },
-  });
+    });
+    console.log("findByIdWithRole: User found:", !!user);
+    return user;
+  } catch (error) {
+    console.error("findByIdWithRole: Error finding user:", error);
+    throw error;
+  }
 }
 
 export async function findByIdWithSkills(id: string) {

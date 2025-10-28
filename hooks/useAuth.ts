@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 interface User {
   id: string;
@@ -23,6 +24,7 @@ interface LoginResponse {
 }
 
 export function useAuth() {
+  const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     isLoading: true,
@@ -53,6 +55,9 @@ export function useAuth() {
         isLoading: false,
         isAuthenticated: false,
       });
+
+      // Redirigir a login después de cerrar sesión
+      router.push("/auth/login");
     } catch (error) {
       console.error("Error en logout:", error);
       setAuthState({
@@ -60,8 +65,10 @@ export function useAuth() {
         isLoading: false,
         isAuthenticated: false,
       });
+      // Redirigir a login incluso en caso de error
+      router.push("/auth/login");
     }
-  }, []);
+  }, [router]);
 
   const refreshToken = useCallback(async () => {
     try {
@@ -92,6 +99,7 @@ export function useAuth() {
 
       if (response.ok) {
         const data = await response.json();
+
         setAuthState({
           user: data.user,
           isLoading: false,
@@ -105,7 +113,7 @@ export function useAuth() {
         });
       }
     } catch (error) {
-      console.error("Error verificando autenticación:", error);
+      console.error("useAuth: Error verificando autenticación:", error);
       setAuthState({
         user: null,
         isLoading: false,
@@ -175,10 +183,22 @@ export function useAuth() {
     }
   }, [checkAuth, hasCheckedAuth]);
 
+  // Función para verificar si el usuario tiene un rol específico
+  const hasRole = (role: string): boolean => {
+    return authState.user?.role === role;
+  };
+
+  // Función para verificar si el usuario es admin
+  const isAdmin = (): boolean => {
+    return hasRole("admin");
+  };
+
   return {
     ...authState,
     login,
     logout,
     checkAuth,
+    hasRole,
+    isAdmin,
   };
 }
