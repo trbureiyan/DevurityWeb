@@ -7,23 +7,24 @@ import {
 } from "@/repositories/skills/skills.repositories";
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const id = parseInt(params.id);
+    const { id } = await params;
+    const skillId = parseInt(id);
 
-    if (isNaN(id)) {
+    if (isNaN(skillId)) {
       return NextResponse.json(
         { success: false, error: "Invalid skill ID" },
         { status: 400 },
       );
     }
 
-    const skill = await getSkillById(id);
+    const skill = await getSkillById(skillId);
 
     if (!skill) {
       return NextResponse.json(
@@ -44,9 +45,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    const id = parseInt(params.id);
+    const { id } = await params;
+    const skillId = parseInt(id);
 
-    if (isNaN(id)) {
+    if (isNaN(skillId)) {
       return NextResponse.json(
         { success: false, error: "Invalid skill ID" },
         { status: 400 },
@@ -67,7 +69,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       name: name.trim(),
     };
 
-    const updatedSkill = await updateSkill(id, updateData);
+    const updatedSkill = await updateSkill(skillId, updateData);
     return NextResponse.json({ success: true, data: updatedSkill });
   } catch (error: any) {
     console.error("Error updating skill:", error);
@@ -95,16 +97,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const id = parseInt(params.id);
+    const { id } = await params;
+    const skillId = parseInt(id);
 
-    if (isNaN(id)) {
+    if (isNaN(skillId)) {
       return NextResponse.json(
         { success: false, error: "Invalid skill ID" },
         { status: 400 },
       );
     }
 
-    const deletedSkill = await deleteSkill(id);
+    const deletedSkill = await deleteSkill(skillId);
     return NextResponse.json({
       success: true,
       message: "Skill deleted successfully",

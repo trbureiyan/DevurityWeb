@@ -27,7 +27,7 @@ export default function QRDynamic({ userId }: QRDynamicProps) {
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const { fetchWithCsrf } = useCsrf();
-  const generateNewQRRef = useRef<() => Promise<void>>();
+  const generateNewQRRef = useRef<() => Promise<void>>(null);
 
   // Función para generar nuevo QR dinámico
   const generateNewQR = useCallback(async () => {
