@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useCsrf } from "./useCsrf";
 
 interface User {
   id: string;
@@ -28,14 +29,69 @@ export function useAuth() {
     isLoading: true,
     isAuthenticated: false,
   });
+  const { fetchWithCsrf } = useCsrf();
+  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(
+    null,
+  );
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
+  const logout = useCallback(async (): Promise<void> => {
     try {
-      const response = await fetch("/api/auth/me");
+      const response = await fetchWithCsrf("/api/auth/logout", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al cerrar sesión");
+      }
+
+      // Limpiar intervalo de refresh
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+        setRefreshInterval(null);
+      }
+
+      // Actualizar estado local
+      setAuthState({
+        user: null,
+        isLoading: false,
+        isAuthenticated: false,
+      });
+    } catch (error) {
+      console.error("Error en logout:", error);
+      setAuthState({
+        user: null,
+        isLoading: false,
+        isAuthenticated: false,
+      });
+    }
+  }, [fetchWithCsrf, refreshInterval]);
+
+  const refreshToken = useCallback(async () => {
+    try {
+      const response = await fetchWithCsrf("/api/auth/refresh", {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAuthState({
+          user: data.user,
+          isLoading: false,
+          isAuthenticated: true,
+        });
+      } else {
+        // Si el refresh falla, forzar logout
+        logout();
+      }
+    } catch (error) {
+      console.error("Error renovando token:", error);
+      logout();
+    }
+  }, [fetchWithCsrf, logout]);
+
+  const checkAuth = useCallback(async () => {
+    try {
+      const response = await fetchWithCsrf("/api/auth/me");
 
       if (response.ok) {
         const data = await response.json();
@@ -59,13 +115,13 @@ export function useAuth() {
         isAuthenticated: false,
       });
     }
-  };
+  }, [fetchWithCsrf]);
 
   const login = async (
     email: string,
     password: string,
   ): Promise<LoginResponse> => {
-    const response = await fetch("/api/auth/login", {
+    const response = await fetchWithCsrf("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -91,31 +147,34 @@ export function useAuth() {
     };
   };
 
-  const logout = async (): Promise<void> => {
-    try {
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("Error al cerrar sesión");
-      }
-
-      // Actualizar estado local independientemente de la respuesta del servidor
-      setAuthState({
-        user: null,
-        isLoading: false,
-        isAuthenticated: false,
-      });
-    } catch (error) {
-      console.error("Error en logout:", error);
-      setAuthState({
-        user: null,
-        isLoading: false,
-        isAuthenticated: false,
-      });
+  // Configurar refresh automático cuando el usuario está autenticado
+  useEffect(() => {
+    if (refreshInterval) {
+      clearInterval(refreshInterval);
     }
-  };
+
+    if (authState.isAuthenticated && authState.user) {
+      // Renovar token cada 3.5 horas (antes de que expire a las 4 horas)
+      const interval = setInterval(refreshToken, 3.5 * 60 * 60 * 1000);
+      setRefreshInterval(interval);
+    }
+
+    return () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
+  }, [
+    authState.isAuthenticated,
+    authState.user,
+    refreshToken,
+    refreshInterval,
+  ]);
+
+  // Verificar autenticación al montar el componente
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   return {
     ...authState,

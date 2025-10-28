@@ -1,5 +1,5 @@
 import { validateToken } from "@/lib/jwt";
-import { findByIdWithRole } from "@/repositories/users/users.respositories";
+import { findByIdWithRole } from "@/repositories/users/users.repositories";
 
 export async function GET(request: Request) {
   try {

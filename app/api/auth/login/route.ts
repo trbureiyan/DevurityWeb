@@ -113,7 +113,7 @@ export async function POST(request: Request) {
       redirectTo = "/profile";
     }
 
-    const cookie = `auth_token=${token}; HttpOnly; Path=/; SameSite=Strict; Max-Age=1800${
+    const cookie = `auth_token=${token}; HttpOnly; Path=/; SameSite=Strict; Max-Age=14400${
       process.env.NODE_ENV === "production" ? "; Secure" : ""
     }`;
 
