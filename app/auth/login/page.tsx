@@ -3,6 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Slide {
   title: string;
@@ -21,20 +23,29 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, isLoading } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Obtener redirect URL desde query params o usar la sugerida por backend
+  const redirectFromParam = searchParams.get("redirect");
 
   useEffect(() => {
     // Ocultar elementos con type casting
-    const header = document.querySelector('header, [class*="header"], nav') as HTMLElement | null;
-    const footer = document.querySelector('footer, [class*="footer"]') as HTMLElement | null;
-    
-    if (header) header.style.display = 'none';
-    if (footer) footer.style.display = 'none';
+    const header = document.querySelector(
+      'header, [class*="header"], nav',
+    ) as HTMLElement | null;
+    const footer = document.querySelector(
+      'footer, [class*="footer"]',
+    ) as HTMLElement | null;
+
+    if (header) header.style.display = "none";
+    if (footer) footer.style.display = "none";
 
     // Limpiar al desmontar
     return () => {
-      if (header) header.style.display = '';
-      if (footer) footer.style.display = '';
+      if (header) header.style.display = "";
+      if (footer) footer.style.display = "";
     };
   }, []);
 
@@ -93,20 +104,25 @@ export default function LoginPage() {
       return;
     }
 
-    setIsLoading(true);
-
     try {
-      // Aquí irá la lógica de autenticación 
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      // Si la autenticación es exitosa, redirigir
+      const result = await login(email, password);
+
+      // Redirigir según prioridad:
+      // 1. Redirect desde query param (intento original)
+      // 2. Redirect sugerido por backend (basado en rol)
+      // 3. Por defecto a profile
+      const redirectTo = redirectFromParam || result.redirectTo || "/profile";
+      router.push(redirectTo);
     } catch (error) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const errorMessage = error instanceof Error ? error.message : "Error desconocido";
-      setErrors({
-        general: "Error al iniciar sesión. Por favor, intenta nuevamente.",
-      });
-    } finally {
-      setIsLoading(false);
+      if (error instanceof Error) {
+        setErrors({
+          general: error.message,
+        });
+      } else {
+        setErrors({
+          general: "Error desconocido en el login",
+        });
+      }
     }
   };
 
@@ -160,10 +176,10 @@ export default function LoginPage() {
                       priority={index === 0}
                     />
                   </div>
-                  
+
                   {/* Overlay oscuro para mejor legibilidad */}
                   <div className="absolute inset-0 bg-black/30"></div>
-                  
+
                   {/* Título del slide en dos líneas */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center text-white px-8">
@@ -194,7 +210,6 @@ export default function LoginPage() {
                 />
               ))}
             </div>
-            
           </div>
 
           {/* Panel Derecho - Formulario con contenedor */}
@@ -205,24 +220,38 @@ export default function LoginPage() {
                 <h1 className="font-orbitron font-bold text-3xl md:text-4xl text-white mb-3 text-center">
                   Iniciar Sesión
                 </h1>
-                
+
                 <p className="font-ubuntu text-white/70 mb-8 text-center">
                   Aún no tienes cuenta?{" "}
-                  <Link href="/auth/register" className="text-red-500 hover:underline font-semibold">
+                  <Link
+                    href="/auth/register"
+                    className="text-red-500 hover:underline font-semibold"
+                  >
                     Regístrate Aquí
                   </Link>
                 </p>
 
+                {redirectFromParam && (
+                  <p className="text-sm text-gray-400 mb-4 text-center">
+                    Redirigiendo a: {redirectFromParam}
+                  </p>
+                )}
+
                 {errors.general && (
                   <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
-                    <p className="text-red-300 text-sm font-ubuntu">{errors.general}</p>
+                    <p className="text-red-300 text-sm font-ubuntu">
+                      {errors.general}
+                    </p>
                   </div>
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6" noValidate>
                   {/* Email/Usuario */}
                   <div>
-                    <label htmlFor="email" className="block font-ubuntu text-white mb-3 text-lg">
+                    <label
+                      htmlFor="email"
+                      className="block font-ubuntu text-white mb-3 text-lg"
+                    >
                       Email/Usuario
                     </label>
                     <input
@@ -232,7 +261,8 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => {
                         setEmail(e.target.value);
-                        if (errors.email) setErrors({ ...errors, email: undefined });
+                        if (errors.email)
+                          setErrors({ ...errors, email: undefined });
                       }}
                       autoComplete="email"
                       className={`w-full bg-[#1A1616] text-white font-ubuntu px-5 py-4 rounded-lg border ${
@@ -241,10 +271,15 @@ export default function LoginPage() {
                           : "border-white/10 focus:ring-red-500"
                       } focus:outline-none focus:ring-2 focus:border-transparent transition-all placeholder:text-white/40`}
                       aria-invalid={errors.email ? "true" : "false"}
-                      aria-describedby={errors.email ? "email-error" : undefined}
+                      aria-describedby={
+                        errors.email ? "email-error" : undefined
+                      }
                     />
                     {errors.email && (
-                      <p id="email-error" className="mt-2 text-red-400 text-sm font-ubuntu">
+                      <p
+                        id="email-error"
+                        className="mt-2 text-red-400 text-sm font-ubuntu"
+                      >
                         {errors.email}
                       </p>
                     )}
@@ -252,7 +287,10 @@ export default function LoginPage() {
 
                   {/* Contraseña */}
                   <div>
-                    <label htmlFor="password" className="block font-ubuntu text-white mb-3 text-lg">
+                    <label
+                      htmlFor="password"
+                      className="block font-ubuntu text-white mb-3 text-lg"
+                    >
                       Contraseña
                     </label>
                     <div className="relative">
@@ -263,7 +301,8 @@ export default function LoginPage() {
                         value={password}
                         onChange={(e) => {
                           setPassword(e.target.value);
-                          if (errors.password) setErrors({ ...errors, password: undefined });
+                          if (errors.password)
+                            setErrors({ ...errors, password: undefined });
                         }}
                         autoComplete="current-password"
                         className={`w-full bg-[#1A1616] text-white font-ubuntu px-5 py-4 rounded-lg border ${
@@ -272,28 +311,62 @@ export default function LoginPage() {
                             : "border-white/10 focus:ring-red-500"
                         } focus:outline-none focus:ring-2 focus:border-transparent transition-all placeholder:text-white/40`}
                         aria-invalid={errors.password ? "true" : "false"}
-                        aria-describedby={errors.password ? "password-error" : undefined}
+                        aria-describedby={
+                          errors.password ? "password-error" : undefined
+                        }
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
-                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        aria-label={
+                          showPassword
+                            ? "Ocultar contraseña"
+                            : "Mostrar contraseña"
+                        }
                       >
                         {showPassword ? (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                            />
                           </svg>
                         ) : (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                            />
                           </svg>
                         )}
                       </button>
                     </div>
                     {errors.password && (
-                      <p id="password-error" className="mt-2 text-red-400 text-sm font-ubuntu">
+                      <p
+                        id="password-error"
+                        className="mt-2 text-red-400 text-sm font-ubuntu"
+                      >
                         {errors.password}
                       </p>
                     )}
@@ -317,9 +390,25 @@ export default function LoginPage() {
                   >
                     {isLoading ? (
                       <>
-                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <svg
+                          className="animate-spin h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
                         </svg>
                         Iniciando...
                       </>
