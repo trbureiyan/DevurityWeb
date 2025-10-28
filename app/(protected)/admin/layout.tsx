@@ -36,7 +36,10 @@ export default function AdminLayout({
       >
         {/* Profile Section */}
         <div className="p-6 border-b border-[#2E2E2E]">
-          <div className="flex items-center gap-3 mb-6">
+          <Link
+            href="/profile"
+            className="flex items-center gap-3 mb-6 hover:opacity-80 transition-opacity cursor-pointer"
+          >
             <div className="w-16 h-16 bg-white rounded-lg overflow-hidden relative">
               <Image
                 src="/images/logo/RoundyBIGLogoWBgOnly.png"
@@ -48,8 +51,9 @@ export default function AdminLayout({
             <div className="flex flex-col">
               <h2 className="text-white font-semibold text-lg">Brayan Toro</h2>
               <p className="text-white text-sm">Bustos</p>
+              <p className="text-link text-xs mt-1">Ver mi perfil →</p>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Navigation */}
@@ -142,6 +146,21 @@ export default function AdminLayout({
           >
             Configuración página
           </Link>
+
+          {/* Profile Link */}
+          <div className="mt-4 pt-4 border-t border-[#2E2E2E]">
+            <Link
+              href="/profile"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`block px-6 py-3 text-link hover:bg-[#2E2E2E] border-l-4 ${
+                pathname.startsWith("/profile")
+                  ? "border-link bg-[#2E2E2E]"
+                  : "border-transparent"
+              }`}
+            >
+              Mi Perfil
+            </Link>
+          </div>
         </nav>
       </aside>
 
