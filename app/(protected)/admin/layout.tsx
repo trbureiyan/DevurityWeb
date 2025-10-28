@@ -11,10 +11,29 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
   return (
     <div className="flex min-h-screen bg-background text-foreground">
+      {/* Mobile Menu Overlay */}
+      <div
+        className={`fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden transition-opacity duration-300 ${
+          isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"
+        }`}
+        onClick={() => setIsMobileMenuOpen(false)}
+        aria-hidden={!isMobileMenuOpen}
+      />
+
       {/* Sidebar */}
-      <aside className="w-64 bg-[#0A0808] border-r border-[#2E2E2E] flex flex-col">
+      <aside
+        className={`w-64 bg-[#0A0808] border-r border-[#2E2E2E] flex flex-col fixed top-0 left-0 h-screen z-50 transition-transform duration-300 lg:relative lg:translate-x-0 ${
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
         {/* Profile Section */}
         <div className="p-6 border-b border-[#2E2E2E]">
           <div className="flex items-center gap-3 mb-6">
@@ -34,9 +53,10 @@ export default function AdminLayout({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-6">
+        <nav className="flex-1 overflow-y-auto py-6">
           <Link
             href="/admin"
+            onClick={() => setIsMobileMenuOpen(false)}
             className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
               pathname === "/admin"
                 ? "border-link bg-[#2E2E2E]"
@@ -47,6 +67,7 @@ export default function AdminLayout({
           </Link>
           <Link
             href="/admin/users/confirm"
+            onClick={() => setIsMobileMenuOpen(false)}
             className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
               pathname.startsWith("/admin/users")
                 ? "border-link bg-[#2E2E2E]"
@@ -57,6 +78,7 @@ export default function AdminLayout({
           </Link>
           <Link
             href="/admin/projects"
+            onClick={() => setIsMobileMenuOpen(false)}
             className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
               pathname.startsWith("/admin/projects")
                 ? "border-link bg-[#2E2E2E]"
@@ -67,6 +89,7 @@ export default function AdminLayout({
           </Link>
           <Link
             href="/admin/eventos"
+            onClick={() => setIsMobileMenuOpen(false)}
             className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
               pathname.startsWith("/admin/eventos")
                 ? "border-link bg-[#2E2E2E]"
@@ -77,6 +100,7 @@ export default function AdminLayout({
           </Link>
           <Link
             href="/admin/perfiles"
+            onClick={() => setIsMobileMenuOpen(false)}
             className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
               pathname.startsWith("/admin/perfiles")
                 ? "border-link bg-[#2E2E2E]"
@@ -87,16 +111,18 @@ export default function AdminLayout({
           </Link>
           <Link
             href="/admin/contenidos"
+            onClick={() => setIsMobileMenuOpen(false)}
             className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
               pathname.startsWith("/admin/contenidos")
                 ? "border-link bg-[#2E2E2E]"
                 : "border-transparent"
             }`}
           >
-            Contenidos pagina
+            Contenidos página
           </Link>
           <Link
             href="/admin/skills"
+            onClick={() => setIsMobileMenuOpen(false)}
             className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
               pathname.startsWith("/admin/skills")
                 ? "border-link bg-[#2E2E2E]"
@@ -107,43 +133,51 @@ export default function AdminLayout({
           </Link>
           <Link
             href="/admin/configuracion"
+            onClick={() => setIsMobileMenuOpen(false)}
             className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
               pathname.startsWith("/admin/configuracion")
                 ? "border-link bg-[#2E2E2E]"
                 : "border-transparent"
             }`}
           >
-            Configuracion pagina
+            Configuración página
           </Link>
         </nav>
-
-        {/* Bottom Section */}
-        <div className="border-t border-[#2E2E2E] py-6">
-          <Link
-            href="/logout"
-            className="block px-6 py-3 text-white hover:bg-[#2E2E2E]"
-          >
-            Salir
-          </Link>
-          <Link
-            href="/admin/profile/edit"
-            className="block px-6 py-3 text-white hover:bg-[#2E2E2E] flex items-center gap-2"
-          >
-            <span className="text-lg">📝</span>
-            Editar perfil
-          </Link>
-          <Link
-            href="/admin/projects/edit"
-            className="block px-6 py-3 text-white hover:bg-[#2E2E2E] flex items-center gap-2"
-          >
-            <span className="text-lg">📁</span>
-            Editar pag. proyecto
-          </Link>
-        </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 lg:ml-0">
+        {/* Mobile Header */}
+        <div className="lg:hidden bg-[#0A0808] border-b border-[#2E2E2E] p-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={toggleMobileMenu}
+              className="flex flex-col justify-center items-center w-8 h-8 relative focus:outline-none"
+              aria-label="Abrir menú de administración"
+              aria-expanded={isMobileMenuOpen}
+            >
+              <span
+                className={`w-6 h-0.5 bg-white transition-all duration-300 ${
+                  isMobileMenuOpen ? "rotate-45 translate-y-1.5" : ""
+                }`}
+              />
+              <span
+                className={`w-6 h-0.5 bg-white transition-all duration-300 my-1.5 ${
+                  isMobileMenuOpen ? "opacity-0" : "opacity-100"
+                }`}
+              />
+              <span
+                className={`w-6 h-0.5 bg-white transition-all duration-300 ${
+                  isMobileMenuOpen ? "-rotate-45 -translate-y-1.5" : ""
+                }`}
+              />
+            </button>
+            <h1 className="text-white font-semibold text-lg">Administración</h1>
+            <div className="w-8"></div>
+          </div>
+        </div>
+        {children}
+      </main>
     </div>
   );
 }

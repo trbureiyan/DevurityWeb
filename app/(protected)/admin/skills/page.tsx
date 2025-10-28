@@ -187,17 +187,17 @@ export default function SkillsPage() {
         <div className="mb-6">
           <button
             onClick={() => setShowAddForm(true)}
-            className="px-6 py-3 bg-buttons text-white rounded-lg hover:bg-buttons/80 transition-colors font-medium"
+            className="w-full sm:w-auto px-4 py-2 lg:px-6 lg:py-3 bg-buttons text-white rounded-lg hover:bg-buttons/80 transition-colors font-medium text-sm lg:text-base"
           >
-            + Añadir Nueva Habilidad
+            + Nueva Habilidad
           </button>
         </div>
       )}
 
       {/* Add/Edit Form */}
       {showAddForm && (
-        <div className="mb-8 bg-[#1A1515] border border-[#2E2E2E] rounded-lg p-6">
-          <h3 className="text-white font-semibold text-lg mb-4">
+        <div className="mb-8 bg-[#1A1515] border border-[#2E2E2E] rounded-lg p-4 lg:p-6">
+          <h3 className="text-white font-semibold text-base lg:text-lg mb-4">
             {editingSkill ? "Editar Habilidad" : "Nueva Habilidad"}
           </h3>
 
@@ -216,7 +216,7 @@ export default function SkillsPage() {
                 value={formData.name}
                 onChange={handleInputChange}
                 placeholder="Ej: React, Node.js, PostgreSQL..."
-                className="w-full px-4 py-2 bg-[#0A0808] border border-[#2E2E2E] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-link"
+                className="w-full px-4 py-2 bg-[#0A0808] border border-[#2E2E2E] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-link text-sm lg:text-base"
                 required
               />
             </div>
@@ -272,16 +272,16 @@ export default function SkillsPage() {
                     {skill.name}
                   </h4>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-1 lg:gap-2">
                   <button
                     onClick={() => handleEdit(skill)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    className="px-2 py-1 lg:px-3 lg:py-1 bg-blue-600 text-white rounded text-xs lg:text-sm hover:bg-blue-700 transition-colors"
                   >
                     Editar
                   </button>
                   <button
                     onClick={() => handleDelete(skill)}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                    className="px-2 py-1 lg:px-3 lg:py-1 bg-red-600 text-white rounded text-xs lg:text-sm hover:bg-red-700 transition-colors"
                   >
                     Eliminar
                   </button>
