@@ -71,7 +71,6 @@ export interface createUserInterface {
   skills: string[];
   semester: number;
 }
-
 export async function findByEmailWithRole(email: string) {
   return await prisma.users.findUnique({
     where: { email },
