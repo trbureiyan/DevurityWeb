@@ -2,7 +2,6 @@
 
 import React from "react";
 import Link from "next/link";
-import RegistrationRequestsList from "../../../components/admin/registration-requests/RegistrationRequestsList";
 
 export default function AdminDashboard() {
   return (
@@ -78,8 +77,6 @@ export default function AdminDashboard() {
             Más información
           </Link>
         </div>
-
-        <RegistrationRequestsList />
       </section>
     </div>
   );
