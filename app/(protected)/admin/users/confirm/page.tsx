@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useCsrf } from "@/hooks/useCsrf";
 
@@ -42,34 +42,37 @@ export default function ConfirmUsersPage() {
   });
   const { fetchWithCsrf, loading: csrfLoading } = useCsrf();
 
-  const fetchPendingUsers = async (page: number = 1, limit: number = 12) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const fetchPendingUsers = useCallback(
+    async (page: number = 1, limit: number = 12) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const response = await fetchWithCsrf(
-        `/api/auth/admin/users?page=${page}&limit=${limit}`,
-      );
-      const result = await response.json();
+        const response = await fetchWithCsrf(
+          `/api/auth/admin/users?page=${page}&limit=${limit}`,
+        );
+        const result = await response.json();
 
-      if (result.success) {
-        setUsers(result.data.users);
-        setPagination({
-          page: result.data.page,
-          limit: result.data.limit,
-          total: result.data.total,
-          totalPages: result.data.totalPages,
-        });
-      } else {
-        setError(result.error || "Error al cargar los usuarios pendientes");
+        if (result.success) {
+          setUsers(result.data.users);
+          setPagination({
+            page: result.data.page,
+            limit: result.data.limit,
+            total: result.data.total,
+            totalPages: result.data.totalPages,
+          });
+        } else {
+          setError(result.error || "Error al cargar los usuarios pendientes");
+        }
+      } catch (error) {
+        console.error("Error fetching pending users:", error);
+        setError("Error de conexión al cargar los usuarios pendientes");
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching pending users:", error);
-      setError("Error de conexión al cargar los usuarios pendientes");
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [fetchWithCsrf],
+  );
 
   useEffect(() => {
     if (!csrfLoading) {

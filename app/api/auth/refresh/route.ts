@@ -8,21 +8,18 @@ export async function POST(request: NextRequest) {
     const currentToken = request.cookies.get("auth_token")?.value;
 
     if (!currentToken) {
-      return NextResponse.json(
-        { error: "No autenticado" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
     // Validar token actual
     let decoded;
     try {
-      decoded = await validateToken(currentToken) as { sub: string };
+      decoded = (await validateToken(currentToken)) as { sub: string };
     } catch (error) {
       // Token inválido o expirado
       return NextResponse.json(
         { error: "Token inválido o expirado" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -32,15 +29,12 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json(
         { error: "Usuario no encontrado" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (!user.is_active) {
-      return NextResponse.json(
-        { error: "Cuenta inactiva" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Cuenta inactiva" }, { status: 403 });
     }
 
     // Generar nuevo token con los mismos datos
@@ -74,14 +68,13 @@ export async function POST(request: NextRequest) {
           "Content-Type": "application/json",
           "Set-Cookie": newCookie,
         },
-      }
+      },
     );
-
   } catch (error) {
     console.error("Error en refresh:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
