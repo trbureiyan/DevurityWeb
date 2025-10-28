@@ -52,12 +52,8 @@ export async function GET(request: Request) {
     return new Response(
       JSON.stringify({
         user: {
-          id: user.id.toString(),
-          email: user.email,
           name: user.name,
           lastName: user.last_name,
-          role: user.roles.name,
-          isActive: user.is_active,
         },
       }),
       {

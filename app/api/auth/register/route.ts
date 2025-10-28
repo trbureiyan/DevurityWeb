@@ -62,6 +62,7 @@ export async function POST(request: Request) {
     name,
     lastname,
   });
+  console.log(token);
   const htmlBody: string = registerEmailTemplate(String(token));
   const emailToSent: EmailOptions = {
     to: email,

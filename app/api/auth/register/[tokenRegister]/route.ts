@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, { params }: Params) {
   const timeUnixNow = Math.floor(Date.now() / 1000);
   const { tokenRegister: token } = await params;
   try {
-    const payload = await validateToken(token) as TokenPayload;
+    const payload = (await validateToken(token)) as TokenPayload;
     const { email, name, exp } = payload;
     if (await existUserByEmail(email)) {
       return new Response(
@@ -67,9 +67,9 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { tokenRegister: token } = await params;
   const timeUnixNow = Math.floor(Date.now() / 1000);
   let payload: TokenPayload;
-  
+
   try {
-    payload = await validateToken(token) as TokenPayload;
+    payload = (await validateToken(token)) as TokenPayload;
     if (timeUnixNow > payload.exp) {
       throw new Error("Token expired");
     }
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       },
     );
   }
-  
+
   const { name, email, lastname } = payload;
 
   const { semester, motivation, skills, password } = await req.json();
@@ -98,12 +98,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
   // Validaciones
-  if (isNaN(semester) || !semester) {
+  if (isNaN(semester) || !semester || semester < 1 || semester > 13) {
     return new Response(
       JSON.stringify(
         errorRequest(
           "semestre",
-          "semestre no valido, por favor ingrese correctamente el ",
+          "Semestre no válido. Por favor ingresa un semestre válido",
         ),
       ),
       {
