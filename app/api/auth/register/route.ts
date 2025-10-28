@@ -2,7 +2,7 @@ import { errorRequest } from "@/lib/error";
 import { EmailOptions, sendEmail } from "@/lib/email";
 import { generateToken } from "@/lib/jwt";
 import { emailUniversity } from "@/lib/regex";
-import { existUserByEmail } from "@/repositories/users/users.respositories";
+import { existUserByEmail } from "@/repositories/users/users.repositories";
 // api/auth/register
 export async function POST(request: Request) {
   const { name, lastname, email } = await request.json();

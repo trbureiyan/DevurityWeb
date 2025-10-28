@@ -28,7 +28,6 @@ export async function GET(request: NextRequest) {
       isAdmin,
       userId: user.id.toString(),
     });
-
   } catch (error) {
     console.error("Error verificando si es admin:", error);
     return NextResponse.json({ isAdmin: false }, { status: 200 });
