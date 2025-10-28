@@ -89,6 +89,28 @@ export async function findByIdWithRole(id: string) {
     },
   });
 }
+
+export async function findByIdWithSkills(id: string) {
+  return await prisma.users.findUnique({
+    where: { id: toBigInt(id) },
+    include: {
+      roles: {
+        select: {
+          name: true,
+        },
+      },
+      user_skills: {
+        include: {
+          skills: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
 export async function createUser(users: createUserInterface) {
   const { name, password, email, lastname, skills, motivation, semester } =
     users;

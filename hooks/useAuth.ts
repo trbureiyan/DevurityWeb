@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 interface User {
   id: string;
@@ -28,9 +28,7 @@ export function useAuth() {
     isLoading: true,
     isAuthenticated: false,
   });
-  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(
-    null,
-  );
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   const logout = useCallback(async (): Promise<void> => {
@@ -44,9 +42,9 @@ export function useAuth() {
       }
 
       // Limpiar intervalo de refresh
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-        setRefreshInterval(null);
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
       }
 
       // Actualizar estado local
@@ -63,7 +61,7 @@ export function useAuth() {
         isAuthenticated: false,
       });
     }
-  }, [refreshInterval]);
+  }, []);
 
   const refreshToken = useCallback(async () => {
     try {
@@ -150,27 +148,25 @@ export function useAuth() {
 
   // Configurar refresh automático cuando el usuario está autenticado
   useEffect(() => {
-    if (refreshInterval) {
-      clearInterval(refreshInterval);
+    // Limpiar intervalo existente
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+      refreshIntervalRef.current = null;
     }
 
     if (authState.isAuthenticated && authState.user) {
       // Renovar token cada 3.5 horas (antes de que expire a las 4 horas)
       const interval = setInterval(refreshToken, 3.5 * 60 * 60 * 1000);
-      setRefreshInterval(interval);
-    }
+      refreshIntervalRef.current = interval;
 
-    return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-      }
-    };
-  }, [
-    authState.isAuthenticated,
-    authState.user,
-    refreshToken,
-    refreshInterval,
-  ]);
+      return () => {
+        if (refreshIntervalRef.current) {
+          clearInterval(refreshIntervalRef.current);
+          refreshIntervalRef.current = null;
+        }
+      };
+    }
+  }, [authState.isAuthenticated, authState.user, refreshToken]);
 
   // Verificar autenticación solo una vez al montar el componente
   useEffect(() => {
