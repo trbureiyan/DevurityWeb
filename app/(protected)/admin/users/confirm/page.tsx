@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useCsrf } from "@/hooks/useCsrf";
 
 interface User {
   id: string;
@@ -39,13 +40,14 @@ export default function ConfirmUsersPage() {
     total: 0,
     totalPages: 0,
   });
+  const { fetchWithCsrf, loading: csrfLoading } = useCsrf();
 
   const fetchPendingUsers = async (page: number = 1, limit: number = 12) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(
+      const response = await fetchWithCsrf(
         `/api/auth/admin/users?page=${page}&limit=${limit}`,
       );
       const result = await response.json();
@@ -70,8 +72,10 @@ export default function ConfirmUsersPage() {
   };
 
   useEffect(() => {
-    fetchPendingUsers();
-  }, []);
+    if (!csrfLoading) {
+      fetchPendingUsers();
+    }
+  }, [csrfLoading]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {

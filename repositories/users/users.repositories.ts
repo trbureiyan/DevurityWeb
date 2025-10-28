@@ -128,6 +128,47 @@ export async function findByIdWithSkills(id: string) {
     },
   });
 }
+
+export async function findById(id: string) {
+  console.log("findById: Searching for user with ID:", id);
+  try {
+    const bigIntId = toBigInt(id);
+    const user = await prisma.users.findUnique({
+      where: { id: bigIntId },
+      select: {
+        id: true,
+        name: true,
+        last_name: true,
+        motivation: true,
+        semester: true,
+        user_skills: {
+          include: {
+            skills: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        roles: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+    console.log("findById: User found:", !!user);
+    console.log("findById: User data:", user);
+    if (user) {
+      console.log("findById: User ID type:", typeof user.id);
+      console.log("findById: User ID value:", user.id);
+    }
+    return user;
+  } catch (error) {
+    console.error("findById: Error finding user:", error);
+    throw error;
+  }
+}
 export async function createUser(users: createUserInterface) {
   const { name, password, email, lastname, skills, motivation, semester } =
     users;

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useCsrf } from "@/hooks/useCsrf";
 
 interface User {
   id: string;
@@ -29,6 +30,7 @@ export default function UserDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const { fetchWithCsrf, loading: csrfLoading } = useCsrf();
 
   const fetchUser = async () => {
     try {
@@ -60,7 +62,7 @@ export default function UserDetailPage() {
 
     setProcessing(true);
     try {
-      const response = await fetch(`/api/auth/admin/users/${user.id}`, {
+      const response = await fetchWithCsrf(`/api/auth/admin/users/${user.id}`, {
         method: "PUT",
       });
       const result = await response.json();
@@ -87,7 +89,7 @@ export default function UserDetailPage() {
 
     setProcessing(true);
     try {
-      const response = await fetch(`/api/auth/admin/users/${user.id}`, {
+      const response = await fetchWithCsrf(`/api/auth/admin/users/${user.id}`, {
         method: "DELETE",
       });
       const result = await response.json();

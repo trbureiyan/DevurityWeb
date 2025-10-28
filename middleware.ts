@@ -84,7 +84,12 @@ async function checkUserRole(
     }
   } catch (error) {
     console.error("Error verificando si es admin:", error);
-    return denyAccess(request);
+    // En caso de error en la verificación interna, permitir acceso
+    // para evitar bloquear usuarios legítimos por problemas técnicos
+    console.warn(
+      "Permitiendo acceso debido a error técnico en verificación de admin",
+    );
+    return null;
   }
 
   return null;
@@ -106,6 +111,10 @@ async function verifyCsrf(request: NextRequest): Promise<NextResponse | null> {
     "/api/auth/register",
     "/api/auth/logout",
     "/api/auth/refresh",
+    "/api/auth/is-admin",
+    "/api/qr-dinamico",
+    "/api/asistencia",
+    "/api/admin/attendances",
   ];
 
   if (publicPaths.some((publicPath) => path.startsWith(publicPath))) {

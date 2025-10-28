@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import QRDynamic from "@/components/qr-dynamic";
 
 interface UserData {
   id: string;
@@ -240,16 +241,8 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Codigo QR */}
-                <div className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/50">
-                  <h2 className="font-bold text-white text-lg md:text-xl mb-4 flex items-center gap-2">
-                    <div className="w-2 h-2 bg-variable-collection-botones rounded-full"></div>
-                    Código QR
-                  </h2>
-                  <Button className="w-full bg-variable-collection-botones hover:bg-variable-collection-botones/90 text-white font-bold rounded-lg h-12 transition-all duration-300 shadow-lg hover:shadow-xl">
-                    Ver Código QR
-                  </Button>
-                </div>
+                {/* Codigo QR Dinámico */}
+                <QRDynamic userId={id} />
               </div>
             </div>
           </div>
