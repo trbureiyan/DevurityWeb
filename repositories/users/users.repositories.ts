@@ -1,5 +1,17 @@
 import prisma from "../../lib/postgresDriver";
 
+function toBigInt(id: string | number): bigint {
+  return BigInt(id);
+}
+
+export interface PaginatedUsersResponse {
+  users: any[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 /* Includes */
 
 const allIncludes = {
@@ -67,7 +79,7 @@ export async function findByEmailWithRole(email: string) {
 
 export async function findByIdWithRole(id: string) {
   return await prisma.users.findUnique({
-    where: { id: BigInt(id) },
+    where: { id: toBigInt(id) },
     include: {
       roles: {
         select: {
@@ -129,4 +141,116 @@ export async function existUserByEmail(email: string) {
     select: { id: true },
   });
   return !!user;
+}
+
+export async function findInactiveUsersWithPagination(
+  page: number = 1,
+  limit: number = 10,
+): Promise<PaginatedUsersResponse> {
+  const skip = (page - 1) * limit;
+
+  const [users, total] = await Promise.all([
+    prisma.users.findMany({
+      where: {
+        is_active: false,
+      },
+      include: {
+        roles: {
+          select: {
+            name: true,
+          },
+        },
+        user_skills: {
+          select: {
+            skills: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      skip,
+      take: limit,
+      orderBy: {
+        id: "desc",
+      },
+    }),
+    prisma.users.count({
+      where: {
+        is_active: false,
+      },
+    }),
+  ]);
+
+  const totalPages = Math.ceil(total / limit);
+
+  // Convert BigInt IDs to strings for JSON serialization
+  const usersWithStringIds = users.map((user) => ({
+    ...user,
+    id: user.id.toString(),
+    role_id: user.role_id.toString(),
+  }));
+
+  return {
+    users: usersWithStringIds,
+    total,
+    page,
+    limit,
+    totalPages,
+  };
+}
+
+export async function activateUser(userId: string): Promise<boolean> {
+  try {
+    const result = await prisma.users.update({
+      where: {
+        id: toBigInt(userId),
+        is_active: false, // Solo actualizar si está inactivo
+      },
+      data: {
+        is_active: true,
+      },
+    });
+    return !!result;
+  } catch (error) {
+    console.error("Error activating user:", error);
+    return false;
+  }
+}
+
+export async function deleteInactiveUser(userId: string): Promise<boolean> {
+  try {
+    // Usar transacción para asegurar que todas las dependencias se eliminen correctamente
+    await prisma.$transaction(async (tx) => {
+      // Eliminar relaciones primero
+      await tx.user_skills.deleteMany({
+        where: { user_id: toBigInt(userId) },
+      });
+
+      await tx.user_platforms.deleteMany({
+        where: { user_id: toBigInt(userId) },
+      });
+
+      await tx.user_projects.deleteMany({
+        where: { user_id: toBigInt(userId) },
+      });
+
+      await tx.attendances.deleteMany({
+        where: { user_id: toBigInt(userId) },
+      });
+
+      // Finalmente eliminar el usuario
+      await tx.users.delete({
+        where: {
+          id: toBigInt(userId),
+          is_active: false, // Solo eliminar usuarios inactivos
+        },
+      });
+    });
+    return true;
+  } catch (error) {
+    console.error("Error deleting inactive user:", error);
+    return false;
+  }
 }

@@ -1,12 +1,16 @@
+"use client";
+
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar */}
@@ -33,49 +37,81 @@ export default function AdminLayout({
         <nav className="flex-1 py-6">
           <Link
             href="/admin"
-            className="block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 border-link bg-[#2E2E2E]"
+            className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
+              pathname === "/admin"
+                ? "border-link bg-[#2E2E2E]"
+                : "border-transparent"
+            }`}
           >
             Panel de control
           </Link>
           <Link
-            href="/admin/registro"
-            className="block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 border-transparent"
+            href="/admin/users/confirm"
+            className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
+              pathname.startsWith("/admin/users")
+                ? "border-link bg-[#2E2E2E]"
+                : "border-transparent"
+            }`}
           >
             Solicitudes de registro
           </Link>
           <Link
             href="/admin/projects"
-            className="block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 border-transparent"
+            className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
+              pathname.startsWith("/admin/projects")
+                ? "border-link bg-[#2E2E2E]"
+                : "border-transparent"
+            }`}
           >
             Proyectos
           </Link>
           <Link
             href="/admin/eventos"
-            className="block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 border-transparent"
+            className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
+              pathname.startsWith("/admin/eventos")
+                ? "border-link bg-[#2E2E2E]"
+                : "border-transparent"
+            }`}
           >
             Eventos y noticias
           </Link>
           <Link
             href="/admin/perfiles"
-            className="block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 border-transparent"
+            className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
+              pathname.startsWith("/admin/perfiles")
+                ? "border-link bg-[#2E2E2E]"
+                : "border-transparent"
+            }`}
           >
             Perfiles
           </Link>
           <Link
             href="/admin/contenidos"
-            className="block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 border-transparent"
+            className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
+              pathname.startsWith("/admin/contenidos")
+                ? "border-link bg-[#2E2E2E]"
+                : "border-transparent"
+            }`}
           >
             Contenidos pagina
           </Link>
           <Link
             href="/admin/skills"
-            className="block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 border-transparent"
+            className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
+              pathname.startsWith("/admin/skills")
+                ? "border-link bg-[#2E2E2E]"
+                : "border-transparent"
+            }`}
           >
             Habilidades
           </Link>
           <Link
             href="/admin/configuracion"
-            className="block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 border-transparent"
+            className={`block px-6 py-3 text-white hover:bg-[#2E2E2E] border-l-4 ${
+              pathname.startsWith("/admin/configuracion")
+                ? "border-link bg-[#2E2E2E]"
+                : "border-transparent"
+            }`}
           >
             Configuracion pagina
           </Link>
