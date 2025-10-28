@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useCsrf } from "@/hooks/useCsrf";
 
 interface Slide {
   title: string;
@@ -24,6 +25,7 @@ export default function RegistroPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const { fetchWithCsrf } = useCsrf();
 
   useEffect(() => {
     // Ocultar elementos con type casting
@@ -110,7 +112,7 @@ export default function RegistroPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await fetchWithCsrf("/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

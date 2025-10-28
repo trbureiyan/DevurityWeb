@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useCsrf } from "@/hooks/useCsrf";
 
 export default function ValidacionPage() {
   const [formData, setFormData] = useState({
@@ -27,6 +28,7 @@ export default function ValidacionPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [tokenValid, setTokenValid] = useState(true);
   const router = useRouter();
+  const { fetchWithCsrf, loading: csrfLoading } = useCsrf();
 
   useEffect(() => {
     // Ocultar elementos con type casting
@@ -152,7 +154,7 @@ export default function ValidacionPage() {
 
     try {
       const token = window.location.pathname.split("/").pop();
-      const response = await fetch(`/api/auth/register/${token}`, {
+      const response = await fetchWithCsrf(`/api/auth/register/${token}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { authMiddleware } from "./lib/auth/middleware";
+import { csrfAdapter } from "./lib/csrf";
 
 // Middleware principal
 export async function middleware(
@@ -15,6 +16,12 @@ export async function middleware(
     return NextResponse.redirect(loginUrl);
   }
 
+  // Verificar CSRF para requests que lo requieran
+  const csrfResult = await verifyCsrf(request);
+  if (csrfResult) {
+    return csrfResult;
+  }
+
   return await authMiddleware(request);
 }
 
@@ -23,6 +30,54 @@ function isProtectedPath(path: string): boolean {
   const protectedPaths = ["/admin", "/projects", "/profile", "/attendance"];
 
   return protectedPaths.some((protectedPath) => path.startsWith(protectedPath));
+}
+
+// Función para verificar CSRF
+async function verifyCsrf(request: NextRequest): Promise<NextResponse | null> {
+  const method = request.method;
+  const path = request.nextUrl.pathname;
+
+  // Solo verificar CSRF para métodos que modifican datos
+  if (!csrfAdapter.requiresCsrfProtection(method)) {
+    return null;
+  }
+
+  // Excluir rutas públicas que no necesitan CSRF
+  const publicPaths = [
+    "/api/auth/login",
+    "/api/auth/register",
+    "/api/auth/logout",
+    "/api/auth/refresh",
+  ];
+
+  if (publicPaths.some((publicPath) => path.startsWith(publicPath))) {
+    return null;
+  }
+
+  // Obtener tokens
+  const csrfTokenFromHeader = request.headers.get("x-csrf-token");
+  const csrfTokenFromCookie = request.cookies.get("csrf_token")?.value;
+
+  // Verificar que ambos tokens existan y coincidan
+  if (!csrfTokenFromHeader || !csrfTokenFromCookie) {
+    return NextResponse.json(
+      { error: "Token CSRF requerido" },
+      {
+        status: 403,
+      },
+    );
+  }
+
+  if (!csrfAdapter.validateToken(csrfTokenFromHeader, csrfTokenFromCookie)) {
+    return NextResponse.json(
+      { error: "Token CSRF inválido" },
+      {
+        status: 403,
+      },
+    );
+  }
+
+  return null;
 }
 
 export const config = {

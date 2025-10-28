@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useCsrf } from "@/hooks/useCsrf";
 
 interface Skill {
   id: number;
@@ -17,6 +18,7 @@ export default function SkillsPage() {
     name: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const { fetchWithCsrf, loading: csrfLoading } = useCsrf();
 
   // Cargar habilidades desde la API
   const fetchSkills = async () => {
@@ -39,8 +41,10 @@ export default function SkillsPage() {
   };
 
   useEffect(() => {
-    fetchSkills();
-  }, []);
+    if (!csrfLoading) {
+      fetchSkills();
+    }
+  }, [csrfLoading]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -64,7 +68,7 @@ export default function SkillsPage() {
     try {
       if (editingSkill) {
         // Editar habilidad existente
-        const response = await fetch(`/api/skills/${editingSkill.id}`, {
+        const response = await fetchWithCsrf(`/api/skills/${editingSkill.id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -88,7 +92,7 @@ export default function SkillsPage() {
         }
       } else {
         // Crear nueva habilidad
-        const response = await fetch("/api/skills", {
+        const response = await fetchWithCsrf("/api/skills", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -131,7 +135,7 @@ export default function SkillsPage() {
     }
 
     try {
-      const response = await fetch(`/api/skills/${skill.id}`, {
+      const response = await fetchWithCsrf(`/api/skills/${skill.id}`, {
         method: "DELETE",
       });
 
