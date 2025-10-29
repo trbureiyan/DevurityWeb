@@ -633,10 +633,20 @@ export default function ValidacionPage() {
               revisará tu registro y te notificará cuando sea aprobado.
             </p>
             <button
-              onClick={() => router.push("/")}
+              onClick={() => {
+                setShowSuccessModal(false);
+                // Restablecer el formulario con los datos originales
+                setFormData({
+                  semester: originalFormData.semester,
+                  motivation: originalFormData.motivation,
+                  skills: [...originalFormData.skills],
+                  password: originalFormData.password,
+                  confirmPassword: originalFormData.confirmPassword,
+                });
+              }}
               className="bg-[#CA2B26] hover:bg-[#a82320] text-white px-8 py-3 rounded-lg font-medium transition-colors w-full"
             >
-              Ir al Inicio
+              Aceptar
             </button>
           </div>
         </div>
@@ -664,10 +674,10 @@ export default function ValidacionPage() {
             <h3 className="text-2xl font-bold text-white mb-2">Error</h3>
             <p className="text-gray-300 mb-6">{submissionError}</p>
             <button
-              onClick={() => router.push("/")}
+              onClick={() => setShowErrorModal(false)}
               className="bg-[#CA2B26] hover:bg-[#a82320] text-white px-8 py-3 rounded-lg font-medium transition-colors w-full"
             >
-              Ir al Inicio
+              Aceptar
             </button>
           </div>
         </div>
