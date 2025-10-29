@@ -50,11 +50,19 @@ export async function PUT(
     }
 
     const result = await activateUser(userId);
-
     if (result) {
-      const { email } = await findById(userId);
+      const user = await findById(userId);
+      if (!user) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Usuario no encontrado",
+          },
+          { status: 404 },
+        );
+      }
       const emailToSent: EmailOptions = {
-        to: email,
+        to: user.email,
         subject: "Bienvenido a devurity",
         htmlBody: emailTemplate,
       };
@@ -63,7 +71,10 @@ export async function PUT(
       if (!isSent) {
         return new Response(
           JSON.stringify(
-            errorRequest("registro", "Ha ocurrido un error en el "),
+            errorRequest(
+              "registro",
+              "Ha ocurrido un error en el envío del correo",
+            ),
           ),
           {
             status: 500,

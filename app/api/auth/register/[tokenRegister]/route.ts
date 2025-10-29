@@ -7,7 +7,6 @@ import {
 } from "@/repositories/users/users.repositories";
 import { bcryptAdapter } from "@/lib/bcrypt";
 import { isValidPassword } from "@/lib/regex";
-import { EmailOptions, sendEmail } from "@/lib/email";
 
 interface Params {
   params: Promise<{
@@ -99,12 +98,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
   // Validaciones
-  if (isNaN(semester) || !semester || semester < 1 || semester > 13) {
+  if (isNaN(semester) || !semester || semester < 1 || semester > 10) {
     return new Response(
       JSON.stringify(
         errorRequest(
           "semestre",
-          "Semestre no válido. Por favor ingresa un semestre válido",
+          "Semestre no válido. Por favor ingresa un semestre entre 1 y 10",
         ),
       ),
       {
@@ -144,7 +143,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       JSON.stringify(
         errorRequest(
           "Contraseña",
-          "Debe tener mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número. Verifica tu ",
+          "La contraseña debe tener mínimo 8 caracteres, incluyendo al menos una mayúscula, una minúscula, un número y un símbolo especial (!@#$%^&*()_+-=[]{};:'\",.<>?/\\|`~). Verifica tu ",
         ),
       ),
       {

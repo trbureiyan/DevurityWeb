@@ -103,7 +103,7 @@ export async function POST(request: Request) {
       sub: user.id.toString(),
     };
 
-    const token = await generateToken(tokenPayload, 30 * 60);
+    const token = await generateToken(tokenPayload, 14400);
 
     let redirectTo = "/profile";
 
