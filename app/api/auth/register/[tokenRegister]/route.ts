@@ -88,7 +88,19 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { name, email, lastname } = payload;
 
   const { semester, motivation, skills, password } = await req.json();
-  if (!semester && !motivation && skills == undefined && !password) {
+
+  // Normalización de datos
+  const normalizedSemester = semester;
+  const normalizedMotivation = motivation?.trim() || "";
+  const normalizedSkills = skills || [];
+  const normalizedPassword = password?.trim() || "";
+
+  if (
+    !normalizedSemester &&
+    !normalizedMotivation &&
+    normalizedSkills.length === 0 &&
+    !normalizedPassword
+  ) {
     return new Response(
       JSON.stringify(errorRequest("", "Rellena los campos para el registro")),
       {
@@ -98,7 +110,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
   // Validaciones
-  if (isNaN(semester) || !semester || semester < 1 || semester > 10) {
+  if (
+    isNaN(normalizedSemester) ||
+    !normalizedSemester ||
+    normalizedSemester < 1 ||
+    normalizedSemester > 10
+  ) {
     return new Response(
       JSON.stringify(
         errorRequest(
@@ -112,7 +129,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       },
     );
   }
-  if (!motivation) {
+  if (!normalizedMotivation) {
     return new Response(
       JSON.stringify(
         errorRequest(
@@ -126,7 +143,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       },
     );
   }
-  if (!password) {
+  if (!normalizedPassword) {
     return new Response(
       JSON.stringify(
         errorRequest("Contraseña", "Por favor rellena el campo: "),
@@ -138,7 +155,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
-  if (!isValidPassword(password)) {
+  if (!isValidPassword(normalizedPassword)) {
     return new Response(
       JSON.stringify(
         errorRequest(
@@ -153,7 +170,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
-  if (skills == undefined) {
+  if (normalizedSkills == undefined) {
     return new Response(
       JSON.stringify(
         errorRequest(
@@ -182,10 +199,10 @@ export async function POST(req: NextRequest, { params }: Params) {
       name,
       email,
       lastname,
-      password: bcryptAdapter.hash(password),
-      semester,
-      skills,
-      motivation,
+      password: bcryptAdapter.hash(normalizedPassword),
+      semester: normalizedSemester,
+      skills: normalizedSkills,
+      motivation: normalizedMotivation,
     });
   } catch (e) {
     return new Response(
