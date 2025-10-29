@@ -2,7 +2,7 @@ import { errorRequest } from "@/lib/error";
 import { generateToken } from "@/lib/jwt";
 import { bcryptAdapter } from "@/lib/bcrypt";
 import { emailUniversity } from "@/lib/regex";
-import { findByEmailWithRole } from "@/repositories/users/users.respositories";
+import { findByEmailWithRole } from "@/repositories/users/users.repositories";
 
 const loginAttempts = new Map<string, { count: number; lastAttempt: number }>();
 const MAX_ATTEMPTS = 5;
@@ -110,10 +110,10 @@ export async function POST(request: Request) {
     if (user.roles.name === "admin") {
       redirectTo = "/admin";
     } else if (user.roles.name === "user") {
-      redirectTo = "/profile";
+      redirectTo = `/profile/${user.id}`;
     }
 
-    const cookie = `auth_token=${token}; HttpOnly; Path=/; SameSite=Strict; Max-Age=1800${
+    const cookie = `auth_token=${token}; HttpOnly; Path=/; SameSite=Strict; Max-Age=14400${
       process.env.NODE_ENV === "production" ? "; Secure" : ""
     }`;
 

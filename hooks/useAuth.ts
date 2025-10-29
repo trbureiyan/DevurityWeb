@@ -1,7 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 
-interface User {
+export interface User {
   id: string;
   email: string;
   name: string;
@@ -23,22 +24,82 @@ interface LoginResponse {
 }
 
 export function useAuth() {
+  const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     isLoading: true,
     isAuthenticated: false,
   });
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
+  const logout = useCallback(async (): Promise<void> => {
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
 
-  const checkAuth = async () => {
+      if (!response.ok) {
+        throw new Error("Error al cerrar sesión");
+      }
+
+      // Limpiar intervalo de refresh
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+
+      // Actualizar estado local
+      setAuthState({
+        user: null,
+        isLoading: false,
+        isAuthenticated: false,
+      });
+
+      // Redirigir a login después de cerrar sesión
+      router.push("/auth/login");
+    } catch (error) {
+      console.error("Error en logout:", error);
+      setAuthState({
+        user: null,
+        isLoading: false,
+        isAuthenticated: false,
+      });
+      // Redirigir a login incluso en caso de error
+      router.push("/auth/login");
+    }
+  }, [router]);
+
+  const refreshToken = useCallback(async () => {
+    try {
+      const response = await fetch("/api/auth/refresh", {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAuthState({
+          user: data.user,
+          isLoading: false,
+          isAuthenticated: true,
+        });
+      } else {
+        // Si el refresh falla, forzar logout
+        logout();
+      }
+    } catch (error) {
+      console.error("Error renovando token:", error);
+      logout();
+    }
+  }, [logout]);
+
+  const checkAuth = useCallback(async () => {
     try {
       const response = await fetch("/api/auth/me");
 
       if (response.ok) {
         const data = await response.json();
+
         setAuthState({
           user: data.user,
           isLoading: false,
@@ -52,14 +113,16 @@ export function useAuth() {
         });
       }
     } catch (error) {
-      console.error("Error verificando autenticación:", error);
+      console.error("useAuth: Error verificando autenticación:", error);
       setAuthState({
         user: null,
         isLoading: false,
         isAuthenticated: false,
       });
+    } finally {
+      setHasCheckedAuth(true);
     }
-  };
+  }, []);
 
   const login = async (
     email: string,
@@ -91,30 +154,43 @@ export function useAuth() {
     };
   };
 
-  const logout = async (): Promise<void> => {
-    try {
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("Error al cerrar sesión");
-      }
-
-      // Actualizar estado local independientemente de la respuesta del servidor
-      setAuthState({
-        user: null,
-        isLoading: false,
-        isAuthenticated: false,
-      });
-    } catch (error) {
-      console.error("Error en logout:", error);
-      setAuthState({
-        user: null,
-        isLoading: false,
-        isAuthenticated: false,
-      });
+  // Configurar refresh automático cuando el usuario está autenticado
+  useEffect(() => {
+    // Limpiar intervalo existente
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+      refreshIntervalRef.current = null;
     }
+
+    if (authState.isAuthenticated && authState.user) {
+      // Renovar token cada 3.5 horas (antes de que expire a las 4 horas)
+      const interval = setInterval(refreshToken, 3.5 * 60 * 60 * 1000);
+      refreshIntervalRef.current = interval;
+
+      return () => {
+        if (refreshIntervalRef.current) {
+          clearInterval(refreshIntervalRef.current);
+          refreshIntervalRef.current = null;
+        }
+      };
+    }
+  }, [authState.isAuthenticated, authState.user, refreshToken]);
+
+  // Verificar autenticación solo una vez al montar el componente
+  useEffect(() => {
+    if (!hasCheckedAuth) {
+      checkAuth();
+    }
+  }, [checkAuth, hasCheckedAuth]);
+
+  // Función para verificar si el usuario tiene un rol específico
+  const hasRole = (role: string): boolean => {
+    return authState.user?.role === role;
+  };
+
+  // Función para verificar si el usuario es admin
+  const isAdmin = (): boolean => {
+    return hasRole("admin");
   };
 
   return {
@@ -122,5 +198,7 @@ export function useAuth() {
     login,
     logout,
     checkAuth,
+    hasRole,
+    isAdmin,
   };
 }
