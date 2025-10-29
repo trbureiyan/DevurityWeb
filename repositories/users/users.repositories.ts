@@ -137,6 +137,7 @@ export async function findById(id: string) {
       select: {
         id: true,
         name: true,
+        email: true,
         last_name: true,
         motivation: true,
         semester: true,
@@ -156,15 +157,8 @@ export async function findById(id: string) {
         },
       },
     });
-    console.log("findById: User found:", !!user);
-    console.log("findById: User data:", user);
-    if (user) {
-      console.log("findById: User ID type:", typeof user.id);
-      console.log("findById: User ID value:", user.id);
-    }
     return user;
   } catch (error) {
-    console.error("findById: Error finding user:", error);
     throw error;
   }
 }
