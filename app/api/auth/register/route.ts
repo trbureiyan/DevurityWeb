@@ -7,7 +7,12 @@ import { existUserByEmail } from "@/repositories/users/users.repositories";
 export async function POST(request: Request) {
   const { name, lastname, email } = await request.json();
 
-  if (!email && !name && !lastname) {
+  // Normalización de datos
+  const normalizedName = name?.trim() || "";
+  const normalizedLastname = lastname?.trim() || "";
+  const normalizedEmail = email?.trim().toLowerCase() || "";
+
+  if (!normalizedEmail && !normalizedName && !normalizedLastname) {
     return new Response(
       JSON.stringify(errorRequest("", "Rellena los campos para el registro")),
       {
@@ -17,28 +22,28 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!name) {
+  if (!normalizedName) {
     return new Response(JSON.stringify(errorRequest("nombre")), {
       status: 422,
       headers: { "Content-Type": "application/json" },
     });
   }
 
-  if (!lastname) {
+  if (!normalizedLastname) {
     return new Response(JSON.stringify(errorRequest("apellido")), {
       status: 422,
       headers: { "Content-Type": "application/json" },
     });
   }
 
-  if (!email) {
+  if (!normalizedEmail) {
     return new Response(JSON.stringify(errorRequest("correo")), {
       status: 422,
       headers: { "Content-Type": "application/json" },
     });
   }
 
-  if (!emailUniversity(email)) {
+  if (!emailUniversity(normalizedEmail)) {
     return new Response(
       JSON.stringify(errorRequest("correo", "No es valido el ")),
       {
@@ -48,7 +53,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (await existUserByEmail(email)) {
+  if (await existUserByEmail(normalizedEmail)) {
     return new Response(
       JSON.stringify(
         errorRequest("registro", "Ya existe un usuario con este correo."),
@@ -58,14 +63,14 @@ export async function POST(request: Request) {
   }
 
   const token = await generateToken({
-    email,
-    name,
-    lastname,
+    email: normalizedEmail,
+    name: normalizedName,
+    lastname: normalizedLastname,
   });
   console.log(token);
   const htmlBody: string = registerEmailTemplate(String(token));
   const emailToSent: EmailOptions = {
-    to: email,
+    to: normalizedEmail,
     subject: "Continua tu registro en Devurity",
     htmlBody,
   };
