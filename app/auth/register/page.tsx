@@ -24,7 +24,11 @@ export default function RegistroPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
   const { fetchWithCsrf } = useCsrf();
 
   useEffect(() => {
@@ -104,8 +108,10 @@ export default function RegistroPage() {
     e.preventDefault();
     setErrors({});
     setIsSuccess(false);
+    setIsSubmitting(true);
 
     if (!validateForm()) {
+      setIsSubmitting(false);
       return;
     }
 
@@ -127,23 +133,50 @@ export default function RegistroPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        // Manejar errores del backend
-        if (data.error && data.field) {
-          setErrors({
-            [data.field === "nombre"
-              ? "name"
-              : data.field === "apellido"
-                ? "lastname"
-                : data.field === "correo"
-                  ? "email"
-                  : "general"]: data.message || "Error en el campo",
-          });
+        // Manejar errores del backend con modales
+        if (response.status === 422) {
+          // Detectar error de email inválido por el mensaje de error
+          if (data.Error && data.Error.includes("correo")) {
+            setModalMessage(
+              "El correo electrónico no es válido. Por favor, verifica que sea un correo universitario válido.",
+            );
+            setShowErrorModal(true);
+            return;
+          } else {
+            // Para otros errores 422, mantener validaciones en línea
+            if (data.Error) {
+              // Extraer el campo del mensaje de error
+              const errorMessage = data.Error;
+              if (errorMessage.includes("nombre")) {
+                setErrors({ name: "El nombre es requerido" });
+              } else if (errorMessage.includes("apellido")) {
+                setErrors({ lastname: "Los apellidos son requeridos" });
+              } else if (errorMessage.includes("correo")) {
+                setErrors({ email: "El correo es requerido" });
+              } else {
+                setErrors({ general: errorMessage });
+              }
+            }
+          }
+        } else if (response.status === 409) {
+          setModalMessage(
+            "Ya existe un usuario registrado con este correo electrónico.",
+          );
+          setShowErrorModal(true);
+          return;
+        } else if (response.status === 500) {
+          setModalMessage(
+            "Error al enviar el correo de confirmación. Por favor, intenta nuevamente más tarde.",
+          );
+          setShowErrorModal(true);
+          return;
         } else {
-          setErrors({
-            general:
-              data.message ||
+          setModalMessage(
+            data.message ||
               "Error al crear la cuenta. Por favor, intenta nuevamente.",
-          });
+          );
+          setShowErrorModal(true);
+          return;
         }
         return;
       }
@@ -151,23 +184,32 @@ export default function RegistroPage() {
       // Registro exitoso
       console.log("Registro exitoso:", data);
       setIsSuccess(true);
-      setErrors({
-        general:
-          "¡Registro exitoso! Verifica tu correo para completar el registro.",
-      });
+      setModalMessage(
+        "¡Registro exitoso! Verifica tu correo para completar el registro.",
+      );
+      setShowSuccessModal(true);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Error desconocido";
-      setErrors({
-        general: "Error de conexión. Por favor, intenta nuevamente.",
-      });
+      setModalMessage(
+        "Error de conexión. Por favor, verifica tu conexión e intenta nuevamente.",
+      );
+      setShowErrorModal(true);
+      return;
     } finally {
       setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const handleCloseErrorModal = () => {
+    setShowErrorModal(false);
+  };
+
+  const handleCloseSuccessModal = () => {
+    setShowSuccessModal(false);
   };
 
   const prevSlide = () => {
@@ -279,19 +321,9 @@ export default function RegistroPage() {
                   </Link>
                 </p>
 
-                {errors.general && (
-                  <div
-                    className={`mb-6 p-4 rounded-lg border ${
-                      isSuccess
-                        ? "bg-green-500/20 border-green-500/50"
-                        : "bg-red-500/20 border-red-500/50"
-                    }`}
-                  >
-                    <p
-                      className={`text-sm font-ubuntu ${
-                        isSuccess ? "text-green-300" : "text-red-300"
-                      }`}
-                    >
+                {errors.general && !isSuccess && (
+                  <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
+                    <p className="text-red-300 text-sm font-ubuntu">
                       {errors.general}
                     </p>
                   </div>
@@ -425,10 +457,10 @@ export default function RegistroPage() {
                   {/* Botón de registro */}
                   <button
                     type="submit"
-                    disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-ubuntu font-bold py-4 rounded-lg transition-all duration-300 hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2 text-lg"
+                    disabled={isLoading || isSubmitting}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-ubuntu font-bold py-4 rounded-lg transition-all duration-300 hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2 text-lg"
                   >
-                    {isLoading ? (
+                    {isLoading || isSubmitting ? (
                       <>
                         <svg
                           className="animate-spin h-5 w-5 text-white"
@@ -450,10 +482,10 @@ export default function RegistroPage() {
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                           ></path>
                         </svg>
-                        Creando cuenta...
+                        Registrando...
                       </>
                     ) : (
-                      "Siguiente →"
+                      "Registrarse"
                     )}
                   </button>
                 </form>
@@ -462,6 +494,67 @@ export default function RegistroPage() {
           </div>
         </div>
       </div>
+      {/* Modal de Error */}
+      {showErrorModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1f1a1a] rounded-2xl p-8 max-w-md w-full text-center">
+            <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">Error</h3>
+            <p className="text-gray-300 mb-6">{modalMessage}</p>
+            <button
+              onClick={handleCloseErrorModal}
+              className="bg-[#CA2B26] hover:bg-[#a82320] text-white px-8 py-3 rounded-lg font-medium transition-colors w-full"
+            >
+              Reintentar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Éxito */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1f1a1a] rounded-2xl p-8 max-w-md w-full text-center">
+            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M5 13l4 4L19 7"
+                ></path>
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">¡Éxito!</h3>
+            <p className="text-gray-300 mb-6">{modalMessage}</p>
+            <button
+              onClick={handleCloseSuccessModal}
+              className="bg-[#CA2B26] hover:bg-[#a82320] text-white px-8 py-3 rounded-lg font-medium transition-colors w-full"
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
