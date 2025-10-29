@@ -4,21 +4,22 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import LoginButton from "@/components/ui/LoginButton";
 
 // Importar el menú móvil sin SSR para evitar errores de hidratación
 const MobileMenu = dynamic(() => import('./MobileMenu'), { 
   ssr: false 
 });
 
+const NAVIGATION_ITEMS = [
+  { label: "Nosotros", href: "/about" },
+  { label: "Proyectos", href: "/projects" },
+  { label: "Eventos", href: "/updates" },
+  { label: "Asistencia", href: "/attendance" },
+];
+
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const navigationItems = [
-    { label: "Nosotros", href: "/about" },
-    { label: "Proyectos", href: "/projects" },
-    { label: "Eventos", href: "/updates" },
-    { label: "Asistencia", href: "/attendance" },
-  ];
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -64,7 +65,7 @@ export default function Navbar() {
           aria-label="Main navigation"
         >
           <ul className="flex items-center gap-9">
-            {navigationItems.map((item, index) => (
+            {NAVIGATION_ITEMS.map((item, index) => (
               <li key={index} className="flex flex-col items-center justify-center">
                 <Link
                   href={item.href}
@@ -77,29 +78,13 @@ export default function Navbar() {
           </ul>
 
           {/* Desktop Login Button */}
-          <Link
-            href="/auth/login"
-            className="w-[105px] h-[30px] flex items-center justify-center px-4 bg-variable-collection-botones rounded-lg overflow-hidden hover:opacity-90 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-variable-collection-link focus:ring-offset-2 focus:ring-offset-variable-collection-fondo"
-            aria-label="Iniciar Sesión"
-          >
-            <span className="font-ubuntu font-bold text-white text-sm text-center tracking-[0] leading-[21px] whitespace-nowrap">
-              Iniciar Sesión
-            </span>
-          </Link>
+          <LoginButton variant="desktop" />
         </nav>
 
         {/* Mobile Navigation */}
         <div className="flex lg:hidden items-center gap-4">
           {/* Mobile Login Button */}
-          <Link
-            href="/auth/login"
-            className="w-[90px] h-[30px] flex items-center justify-center px-3 bg-variable-collection-botones rounded-lg overflow-hidden hover:opacity-90 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-variable-collection-link focus:ring-offset-2 focus:ring-offset-variable-collection-fondo"
-            aria-label="Iniciar Sesión"
-          >
-            <span className="font-ubuntu font-bold text-white text-xs text-center tracking-[0] leading-[21px] whitespace-nowrap">
-              Iniciar Sesión
-            </span>
-          </Link>
+          <LoginButton variant="mobile" />
 
           {/* Mobile Menu Button - Hamburguesa */}
           <button
@@ -131,7 +116,7 @@ export default function Navbar() {
       <MobileMenu 
         isMenuOpen={isMenuOpen} 
         closeMenu={closeMenu}
-        navigationItems={navigationItems}
+        navigationItems={NAVIGATION_ITEMS}
       />
     </header>
   );
