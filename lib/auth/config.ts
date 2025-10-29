@@ -16,6 +16,7 @@ export const authConfig = {
     "/api/auth/login",
     "/api/auth/register",
     "/api/auth/me",
+    "/api/auth/refresh",
   ],
 
   // Rutas de PÁGINAS que redirigen a /login cuando no autenticado
