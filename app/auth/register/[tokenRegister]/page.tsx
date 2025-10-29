@@ -27,6 +27,17 @@ export default function ValidacionPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [tokenValid, setTokenValid] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [submissionError, setSubmissionError] = useState("");
+  const [originalFormData, setOriginalFormData] = useState({
+    semester: "",
+    motivation: "",
+    skills: [] as string[],
+    password: "",
+    confirmPassword: "",
+  });
   const router = useRouter();
   const { fetchWithCsrf, loading: csrfLoading } = useCsrf();
 
@@ -82,7 +93,6 @@ export default function ValidacionPage() {
           setTokenValid(true);
         }
       } catch (error) {
-        console.error("Error validando token:", error);
         setErrors({
           general:
             "Error de conexión al validar el enlace. Por favor intenta nuevamente.",
@@ -107,7 +117,7 @@ export default function ValidacionPage() {
           setFilteredSkills(data.skills || []);
         }
       } catch (error) {
-        console.error("Error fetching skills:", error);
+        // Error fetching skills
       }
     };
 
@@ -146,9 +156,21 @@ export default function ValidacionPage() {
     e.preventDefault();
     setErrors({});
     setIsSuccess(false);
+    setIsSubmitting(true);
+
+    // Guardar datos originales antes del envío
+    setOriginalFormData({
+      semester: formData.semester,
+      motivation: formData.motivation,
+      skills: [...formData.skills],
+      password: formData.password,
+      confirmPassword: formData.confirmPassword,
+    });
 
     if (formData.password !== formData.confirmPassword) {
-      setErrors({ general: "Las contraseñas no coinciden" });
+      setSubmissionError("Las contraseñas no coinciden");
+      setShowErrorModal(true);
+      setIsSubmitting(false);
       return;
     }
 
@@ -171,27 +193,26 @@ export default function ValidacionPage() {
 
       if (!response.ok) {
         // Mostrar mensaje específico del backend
+        let errorMessage = "Error al enviar la solicitud";
         if (data.Error) {
-          setErrors({ general: data.Error });
+          errorMessage = data.Error;
         } else if (data.message) {
-          setErrors({ general: data.message });
-        } else {
-          setErrors({ general: "Error al enviar la solicitud" });
+          errorMessage = data.message;
         }
+        setSubmissionError(errorMessage);
+        setShowErrorModal(true);
+        setIsSubmitting(false);
         return;
       }
 
-      setIsSuccess(true);
-      setErrors({
-        general:
-          "¡Solicitud enviada exitosamente! Un administrador validará tu petición.",
-      });
-      console.log("Registro completado:", data);
+      setIsSubmitting(false);
+      setShowSuccessModal(true);
+      // Registro completado exitosamente
     } catch (error) {
-      console.error("Error:", error);
-      setErrors({
-        general: "Error de conexión. Por favor, intenta nuevamente.",
-      });
+      // Error submitting form
+      setSubmissionError("Error de conexión. Por favor intenta nuevamente.");
+      setShowErrorModal(true);
+      setIsSubmitting(false);
     }
   };
 
@@ -226,6 +247,22 @@ export default function ValidacionPage() {
     });
   };
 
+  const handleCloseSuccessModal = () => {
+    setShowSuccessModal(false);
+  };
+
+  const handleCloseErrorModal = () => {
+    setShowErrorModal(false);
+    // Restaurar datos originales
+    setFormData({
+      semester: originalFormData.semester,
+      motivation: originalFormData.motivation,
+      skills: [...originalFormData.skills],
+      password: originalFormData.password,
+      confirmPassword: originalFormData.confirmPassword,
+    });
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && skillInput.trim() && filteredSkills.length > 0) {
       e.preventDefault();
@@ -237,6 +274,11 @@ export default function ValidacionPage() {
     ) {
       handleRemoveSkill(formData.skills[formData.skills.length - 1]);
     }
+  };
+
+  // Prevenir scroll del contenedor padre cuando se hace scroll en el dropdown
+  const handleDropdownScroll = (e: React.WheelEvent<HTMLDivElement>) => {
+    e.stopPropagation();
   };
 
   return (
@@ -379,7 +421,9 @@ export default function ValidacionPage() {
                     onChange={handleSkillInputChange}
                     onKeyDown={handleKeyDown}
                     onFocus={() => setShowSuggestions(true)}
-                    onBlur={() => setShowSuggestions(false)}
+                    onBlur={() =>
+                      setTimeout(() => setShowSuggestions(false), 150)
+                    }
                     placeholder={
                       formData.skills.length === 0
                         ? "Escribe para buscar habilidades..."
@@ -391,12 +435,18 @@ export default function ValidacionPage() {
 
                 {/* Sugerencias */}
                 {showSuggestions && filteredSkills.length > 0 && (
-                  <div className="bg-[#2e2e2e] border border-gray-600 rounded-lg mt-1 max-h-48 overflow-y-auto">
+                  <div
+                    className="bg-[#2e2e2e] border border-gray-600 rounded-lg mt-1 max-h-48 overflow-y-auto"
+                    onTouchStart={(e) => e.stopPropagation()} // Prevenir scroll del padre en móviles
+                    onTouchMove={(e) => e.stopPropagation()} // Prevenir scroll del padre en móviles
+                    onWheel={handleDropdownScroll} // Prevenir scroll del padre en desktop
+                  >
                     {filteredSkills.map((skill) => (
                       <div
                         key={skill}
                         onClick={() => handleSkillSelect(skill)}
                         onMouseDown={(e) => e.preventDefault()} // Prevenir blur inmediato
+                        onTouchStart={(e) => e.stopPropagation()} // Prevenir scroll en móviles
                         className="px-4 py-2 text-white hover:bg-[#3a3a3a] cursor-pointer border-b border-gray-600 last:border-b-0"
                       >
                         {skill}
@@ -455,7 +505,8 @@ export default function ValidacionPage() {
 
               {/* Privacy Policy Text */}
               <p className="text-xs text-center text-gray-400 max-w-md mx-auto pt-4">
-                Al hacer clic en "Enviar solicitud", aceptas nuestras{" "}
+                Al hacer clic en &ldquo;Enviar solicitud&rdquo;, aceptas
+                nuestras{" "}
                 <Link
                   href="/condiciones"
                   className="text-[#F66661] hover:underline"
@@ -483,9 +534,40 @@ export default function ValidacionPage() {
               <div className="flex justify-center pt-4">
                 <button
                   type="submit"
-                  className="bg-[#CA2B26] hover:bg-[#a82320] text-white px-12 py-6 text-base font-medium rounded-lg transition-colors"
+                  disabled={isSubmitting}
+                  className={`${
+                    isSubmitting
+                      ? "bg-gray-500 cursor-not-allowed"
+                      : "bg-[#CA2B26] hover:bg-[#a82320]"
+                  } text-white px-12 py-6 text-base font-medium rounded-lg transition-colors flex items-center gap-2`}
                 >
-                  Enviar solicitud
+                  {isSubmitting ? (
+                    <>
+                      <svg
+                        className="animate-spin h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Enviando...
+                    </>
+                  ) : (
+                    "Enviar solicitud"
+                  )}
                 </button>
               </div>
             </form>
@@ -527,6 +609,71 @@ export default function ValidacionPage() {
           />
         </svg>
       </button>
+
+      {/* Modal de Éxito */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1f1a1a] rounded-2xl p-8 max-w-md w-full text-center">
+            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M5 13l4 4L19 7"
+                ></path>
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">¡Éxito!</h3>
+            <p className="text-gray-300 mb-6">
+              Tu solicitud ha sido enviada exitosamente. Te contactaremos pronto
+              con los siguientes pasos.
+            </p>
+            <button
+              onClick={handleCloseSuccessModal}
+              className="bg-[#CA2B26] hover:bg-[#a82320] text-white px-8 py-3 rounded-lg font-medium transition-colors w-full"
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Error */}
+      {showErrorModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1f1a1a] rounded-2xl p-8 max-w-md w-full text-center">
+            <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">Error</h3>
+            <p className="text-gray-300 mb-6">{submissionError}</p>
+            <button
+              onClick={handleCloseErrorModal}
+              className="bg-[#CA2B26] hover:bg-[#a82320] text-white px-8 py-3 rounded-lg font-medium transition-colors w-full"
+            >
+              Reintentar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
