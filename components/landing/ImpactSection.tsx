@@ -9,15 +9,12 @@ export default function ImpactSection() {
       <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-10">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-16 max-w-7xl mx-auto">
           {/* Contenido del cuadro negro */}
-          <div className="relative w-full max-w-[695px] lg:max-w-[560px] xl:max-w-[640px] mx-auto lg:mx-0 flex-shrink-0 rounded-[20px] sm:rounded-[25px] p-6 sm:p-8 md:pt-[35px] md:pr-[42px] md:pb-[40px] md:pl-[35px] bg-black/70 backdrop-blur-sm">
+          <div className="relative w-full max-w-[695px] lg:max-w-[560px] xl:max-w-[664px] mx-auto lg:mx-0 flex-shrink-0 rounded-[20px] sm:rounded-[25px] p-6 sm:p-8 md:pt-[35px] md:pr-[22px] md:pb-[40px] md:pl-[35px] bg-black/70 backdrop-blur-sm">
             {/* Título */}
             <h2 className="font-orbitron font-extrabold text-white leading-[1.1] mb-6 sm:mb-8">
               <span className="block text-[24px] sm:text-[28px] md:text-[32px] lg:text-[36px] tracking-[0.15em] sm:tracking-[0.19em]">
-                DEL APRENDIZAJE
-              </span>
-              <span className="block text-[16px] sm:text-[18px] md:text-[20px] lg:text-[24px] tracking-[0.15em] sm:tracking-[0.19em] mt-1">
-                AL
-              </span>
+                DEL APRENDIZAJE AL
+              </span>              
               <span className="block text-[32px] sm:text-[38px] md:text-[44px] lg:text-[50px] tracking-[0.15em] sm:tracking-[0.19em] mt-1">
                 IMPACTO REAL
               </span>

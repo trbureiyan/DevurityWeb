@@ -4,6 +4,8 @@ import AboutSection from "@/components/landing/AboutSection";
 import ProjectsPreviewSection from "@/components/landing/ProjectsPreviewSection";
 import EventsSection from "@/components/landing/EventsSection";
 import ContactSection from "@/components/landing/ContactSection";
+import CTASection from "@/components/landing/CTASection";
+import GalleryPreviewSection from "@/components/landing/GalleryPreviewSection";
 
 // Landing-page 
 export default function Home() {
@@ -12,8 +14,10 @@ export default function Home() {
       <HeroSection />
       <ImpactSection />
       <AboutSection />
-      <ProjectsPreviewSection />
       <EventsSection />
+      <ProjectsPreviewSection />
+      <CTASection />
+      <GalleryPreviewSection />
       <ContactSection />
     </main>
   );
