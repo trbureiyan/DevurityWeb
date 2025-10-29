@@ -7,6 +7,8 @@ export const IMAGES = {
     devBG: '/images/landing/pexels-simonptr-33607952.jpg',
     urityBG: '/images/landing/pexels-googledeepmind-17483910.jpg',
     cuboAbstracto: '/images/landing/abstractCubeEdit.svg',
+    coinCellAbstract: '/images/landing/coinCellAbstract.png',
+    ctaBackground: '/images/landing/pexels-matreding-10289009.jpg',
   },
   
   // Logo
