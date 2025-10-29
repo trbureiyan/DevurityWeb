@@ -23,7 +23,6 @@ export default function ValidacionPage() {
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(
     null,
   );
-  const [errors, setErrors] = useState<{ general?: string }>({});
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [tokenValid, setTokenValid] = useState(true);
@@ -69,34 +68,31 @@ export default function ValidacionPage() {
         const data = await response.json();
 
         if (!response.ok) {
-          if (response.status === 409) {
-            setErrors({
-              general:
-                data.Error ||
-                "Este enlace de registro ya ha sido utilizado. El correo ya está registrado en el sistema.",
-            });
-          } else if (response.status === 422) {
-            setErrors({
-              general:
-                data.Error ||
-                "Este enlace de registro ha expirado o es inválido. Por favor solicita un nuevo enlace.",
-            });
-          } else {
-            setErrors({
-              general:
-                data.Error ||
-                "Error al validar el enlace de registro. Por favor intenta nuevamente.",
-            });
-          }
           setTokenValid(false);
+          if (response.status === 409) {
+            setSubmissionError(
+              "Este enlace de registro ya ha sido utilizado. Por favor solicita un nuevo enlace.",
+            );
+            setShowErrorModal(true);
+          } else if (response.status === 422) {
+            setSubmissionError(
+              "Este enlace de registro ha expirado o es inválido. Por favor solicita un nuevo enlace.",
+            );
+            setShowErrorModal(true);
+          } else {
+            setSubmissionError(
+              "Error al validar el enlace de registro. Por favor intenta nuevamente.",
+            );
+            setShowErrorModal(true);
+          }
         } else {
           setTokenValid(true);
         }
       } catch (error) {
-        setErrors({
-          general:
-            "Error de conexión al validar el enlace. Por favor intenta nuevamente.",
-        });
+        setSubmissionError(
+          "Error de conexión al validar el enlace. Por favor intenta nuevamente.",
+        );
+        setShowErrorModal(true);
         setTokenValid(false);
       } finally {
         setIsLoading(false);
@@ -117,7 +113,7 @@ export default function ValidacionPage() {
           setFilteredSkills(data.skills || []);
         }
       } catch (error) {
-        // Error fetching skills
+        // Error fetching skills - no mostrar modal para este error
       }
     };
 
@@ -154,8 +150,6 @@ export default function ValidacionPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrors({});
-    setIsSuccess(false);
     setIsSubmitting(true);
 
     // Guardar datos originales antes del envío
@@ -192,13 +186,45 @@ export default function ValidacionPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        // Mostrar mensaje específico del backend
-        let errorMessage = "Error al enviar la solicitud";
-        if (data.Error) {
-          errorMessage = data.Error;
-        } else if (data.message) {
-          errorMessage = data.message;
+        // Mapear códigos de error a mensajes genéricos
+        let errorMessage =
+          "Error al procesar la solicitud. Por favor intenta nuevamente.";
+
+        if (response.status === 422) {
+          // Detectar tipo específico de error 422
+          if (data.Error) {
+            if (data.Error.includes("semestre")) {
+              errorMessage =
+                "Semestre no válido. Por favor ingresa un semestre entre 1 y 10.";
+            } else if (data.Error.includes("Motivacion")) {
+              errorMessage =
+                "La motivación es requerida. Por favor explica tu motivación para ingresar al semillero.";
+            } else if (data.Error.includes("Contraseña")) {
+              if (data.Error.includes("mínimo 8 caracteres")) {
+                errorMessage =
+                  "La contraseña no cumple con los requisitos de seguridad. Debe tener mínimo 8 caracteres, incluyendo mayúsculas, minúsculas, números y símbolos especiales.";
+              } else {
+                errorMessage = "La contraseña es requerida.";
+              }
+            } else if (data.Error.includes("habilidades")) {
+              errorMessage =
+                "Error en la selección de habilidades. Por favor intenta nuevamente.";
+            } else {
+              errorMessage =
+                "Datos del formulario no válidos. Por favor verifica la información ingresada.";
+            }
+          } else {
+            errorMessage =
+              "Datos del formulario no válidos. Por favor verifica la información ingresada.";
+          }
+        } else if (response.status === 409) {
+          errorMessage =
+            "Ya existe un usuario registrado con este correo electrónico.";
+        } else if (response.status === 500) {
+          errorMessage =
+            "Error interno del servidor. Por favor intenta más tarde.";
         }
+
         setSubmissionError(errorMessage);
         setShowErrorModal(true);
         setIsSubmitting(false);
@@ -253,14 +279,6 @@ export default function ValidacionPage() {
 
   const handleCloseErrorModal = () => {
     setShowErrorModal(false);
-    // Restaurar datos originales
-    setFormData({
-      semester: originalFormData.semester,
-      motivation: originalFormData.motivation,
-      skills: [...originalFormData.skills],
-      password: originalFormData.password,
-      confirmPassword: originalFormData.confirmPassword,
-    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -323,26 +341,6 @@ export default function ValidacionPage() {
             <div className="mb-6 p-4 bg-blue-500/20 border border-blue-500/50 rounded-lg">
               <p className="text-blue-300 text-sm font-ubuntu text-center">
                 Validando enlace de registro...
-              </p>
-            </div>
-          )}
-
-          {errors.general && (
-            <div
-              className={`mb-6 p-4 rounded-lg border ${
-                isSuccess
-                  ? "bg-green-500/20 border-green-500/50"
-                  : "bg-red-500/20 border-red-500/50"
-              }`}
-            >
-              <p
-                className={`${isSuccess ? "text-green-300" : "text-red-300"} ${
-                  errors.general && errors.general.length > 50
-                    ? "text-base"
-                    : "text-sm"
-                } font-ubuntu`}
-              >
-                {errors.general}
               </p>
             </div>
           )}
@@ -631,14 +629,14 @@ export default function ValidacionPage() {
             </div>
             <h3 className="text-2xl font-bold text-white mb-2">¡Éxito!</h3>
             <p className="text-gray-300 mb-6">
-              Tu solicitud ha sido enviada exitosamente. Te contactaremos pronto
-              con los siguientes pasos.
+              Tu solicitud ha sido enviada exitosamente. Un administrador
+              revisará tu registro y te notificará cuando sea aprobado.
             </p>
             <button
-              onClick={handleCloseSuccessModal}
+              onClick={() => router.push("/")}
               className="bg-[#CA2B26] hover:bg-[#a82320] text-white px-8 py-3 rounded-lg font-medium transition-colors w-full"
             >
-              Aceptar
+              Ir al Inicio
             </button>
           </div>
         </div>
@@ -666,10 +664,10 @@ export default function ValidacionPage() {
             <h3 className="text-2xl font-bold text-white mb-2">Error</h3>
             <p className="text-gray-300 mb-6">{submissionError}</p>
             <button
-              onClick={handleCloseErrorModal}
+              onClick={() => router.push("/")}
               className="bg-[#CA2B26] hover:bg-[#a82320] text-white px-8 py-3 rounded-lg font-medium transition-colors w-full"
             >
-              Reintentar
+              Ir al Inicio
             </button>
           </div>
         </div>
