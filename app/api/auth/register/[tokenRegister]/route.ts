@@ -88,19 +88,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { name, email, lastname } = payload;
 
   const { semester, motivation, skills, password } = await req.json();
-
-  // Normalización de datos
-  const normalizedSemester = semester;
-  const normalizedMotivation = motivation?.trim() || "";
-  const normalizedSkills = skills || [];
-  const normalizedPassword = password?.trim() || "";
-
-  if (
-    !normalizedSemester &&
-    !normalizedMotivation &&
-    normalizedSkills.length === 0 &&
-    !normalizedPassword
-  ) {
+  if (!semester && !motivation && skills == undefined && !password) {
     return new Response(
       JSON.stringify(errorRequest("", "Rellena los campos para el registro")),
       {
@@ -110,17 +98,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
   // Validaciones
-  if (
-    isNaN(normalizedSemester) ||
-    !normalizedSemester ||
-    normalizedSemester < 1 ||
-    normalizedSemester > 10
-  ) {
+  if (isNaN(semester) || !semester) {
     return new Response(
       JSON.stringify(
         errorRequest(
           "semestre",
-          "Semestre no válido. Por favor ingresa un semestre entre 1 y 10",
+          "semestre no valido, por favor ingrese correctamente el ",
         ),
       ),
       {
@@ -129,7 +112,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       },
     );
   }
-  if (!normalizedMotivation) {
+  if (!motivation) {
     return new Response(
       JSON.stringify(
         errorRequest(
@@ -143,7 +126,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       },
     );
   }
-  if (!normalizedPassword) {
+  if (!password) {
     return new Response(
       JSON.stringify(
         errorRequest("Contraseña", "Por favor rellena el campo: "),
@@ -155,12 +138,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
-  if (!isValidPassword(normalizedPassword)) {
+  if (!isValidPassword(password)) {
     return new Response(
       JSON.stringify(
         errorRequest(
           "Contraseña",
-          "La contraseña debe tener mínimo 8 caracteres, incluyendo al menos una mayúscula, una minúscula, un número y un símbolo especial (!@#$%^&*()_+-=[]{};:'\",.<>?/\\|`~). Verifica tu ",
+          "Debe tener mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número. Verifica tu ",
         ),
       ),
       {
@@ -170,7 +153,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
-  if (normalizedSkills == undefined) {
+  if (skills == undefined) {
     return new Response(
       JSON.stringify(
         errorRequest(
@@ -196,15 +179,16 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   try {
     await createUser({
-      name,
-      email,
-      lastname,
-      password: bcryptAdapter.hash(normalizedPassword),
-      semester: normalizedSemester,
-      skills: normalizedSkills,
-      motivation: normalizedMotivation,
+      name: name.toLowerCase(),
+      email: email.toLowerCase(),
+      lastname: lastname.toLowerCase(),
+      password: bcryptAdapter.hash(password),
+      semester,
+      skills,
+      motivation,
     });
   } catch (e) {
+    console.log(e);
     return new Response(
       JSON.stringify(
         errorRequest("Usuario", "Ha ocurrido un error en la creacion del "),
@@ -219,7 +203,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   return new Response(
     JSON.stringify({
       message:
-        "Tu registro ha sido completado, un administrador validara tu peticion para aprobarte o rechazarte al semillero. Este pendiente de tu correo.",
+        "Tu registro ha sido copmletado, un administrador validara tu peticion para aprobarte o rechazarte al semillero. Este pendiente de tu correo.",
     }),
   );
 }
