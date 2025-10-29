@@ -2,10 +2,8 @@ import Image from "next/image";
 import { IMAGES } from '@/public/images';
 import { QUICK_NAV_ITEMS } from "@/lib/constants/landing";
 
-/**
- * Hero section component for the landing page
- * Displays the main banner with logo, title, and navigation
- */
+// Hero con el main banner, logo, titulo, y navegacion rápida
+
 export default function HeroSection() {
   return (
     <section id="hero" className="relative h-225 w-full overflow-hidden">
