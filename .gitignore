@@ -56,4 +56,8 @@ next-env.d.ts
 .cache/
 .eslintcache
 .prettiercache
+
+# generated files
 generated/prisma
+generated/figma
+lib/generated/
