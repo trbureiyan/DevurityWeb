@@ -31,7 +31,9 @@ export default function MobileMenu({
   onLogout,
 }: MobileMenuProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { isAdmin } = useAuth();
+  
+  // Compute isAdmin from user prop
+  const isAdmin = user?.role === UserRole.ADMIN;
 
   const handleLogout = async () => {
     if (onLogout) {
