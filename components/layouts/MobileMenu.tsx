@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface User {
   name: string;
@@ -29,6 +30,7 @@ export default function MobileMenu({
   onLogout,
 }: MobileMenuProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { isAdmin } = useAuth();
 
   const handleLogout = async () => {
     if (onLogout) {
@@ -84,7 +86,7 @@ export default function MobileMenu({
               DEVURITY
             </span>
           </Link>
-          
+
           {/* Botón X para cerrar el menú */}
           <button
             onClick={closeMenu}

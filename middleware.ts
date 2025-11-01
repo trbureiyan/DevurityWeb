@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { authMiddleware } from "./lib/auth/middleware";
+import { csrfAdapter } from "./lib/csrf";
 
 // Middleware principal
 export async function middleware(
@@ -11,8 +12,22 @@ export async function middleware(
 
   // Si no hay token y es ruta protegida, guardar intent URL
   if (!token && isProtectedPath(currentPath)) {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL("/auth/login", request.url);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Verificar roles para rutas de admin
+  if (currentPath.startsWith("/admin")) {
+    const roleCheck = await checkUserRole(request);
+    if (roleCheck) {
+      return roleCheck;
+    }
+  }
+
+  // Verificar CSRF para requests que lo requieran
+  const csrfResult = await verifyCsrf(request);
+  if (csrfResult) {
+    return csrfResult;
   }
 
   return await authMiddleware(request);
@@ -23,6 +38,113 @@ function isProtectedPath(path: string): boolean {
   const protectedPaths = ["/admin", "/projects", "/profile", "/attendance"];
 
   return protectedPaths.some((protectedPath) => path.startsWith(protectedPath));
+}
+
+// Función helper para denegar acceso
+function denyAccess(request: NextRequest): NextResponse {
+  if (request.nextUrl.pathname.startsWith("/api")) {
+    return NextResponse.json(
+      {
+        error: "403 - Acceso restringido.",
+      },
+      { status: 403 },
+    );
+  } else {
+    return NextResponse.redirect(new URL("/access-denied", request.url));
+  }
+}
+
+// Función para verificar roles de usuario
+async function checkUserRole(
+  request: NextRequest,
+): Promise<NextResponse | null> {
+  try {
+    // Usar el endpoint simple de verificación de admin
+    const adminResponse = await fetch(
+      `${request.nextUrl.origin}/api/auth/is-admin`,
+      {
+        headers: {
+          cookie: request.headers.get("cookie") || "",
+        },
+      },
+    );
+
+    if (!adminResponse.ok) {
+      console.error(
+        `Error en is-admin: ${adminResponse.status} ${adminResponse.statusText}`,
+      );
+      return denyAccess(request);
+    }
+
+    const adminData = await adminResponse.json();
+
+    // Verificar que el usuario sea admin
+    if (!adminData.isAdmin) {
+      return denyAccess(request);
+    }
+  } catch (error) {
+    console.error("Error verificando si es admin:", error);
+    // En caso de error en la verificación interna, permitir acceso
+    // para evitar bloquear usuarios legítimos por problemas técnicos
+    console.warn(
+      "Permitiendo acceso debido a error técnico en verificación de admin",
+    );
+    return null;
+  }
+
+  return null;
+}
+
+// Función para verificar CSRF
+async function verifyCsrf(request: NextRequest): Promise<NextResponse | null> {
+  const method = request.method;
+  const path = request.nextUrl.pathname;
+
+  // Solo verificar CSRF para métodos que modifican datos
+  if (!csrfAdapter.requiresCsrfProtection(method)) {
+    return null;
+  }
+
+  // Excluir rutas públicas que no necesitan CSRF
+  const publicPaths = [
+    "/api/auth/login",
+    "/api/auth/register",
+    "/api/auth/logout",
+    "/api/auth/refresh",
+    "/api/auth/is-admin",
+    "/api/qr-dinamico",
+    "/api/asistencia",
+    "/api/admin/attendances",
+  ];
+
+  if (publicPaths.some((publicPath) => path.startsWith(publicPath))) {
+    return null;
+  }
+
+  // Obtener tokens
+  const csrfTokenFromHeader = request.headers.get("x-csrf-token");
+  const csrfTokenFromCookie = request.cookies.get("csrf_token")?.value;
+
+  // Verificar que ambos tokens existan y coincidan
+  if (!csrfTokenFromHeader || !csrfTokenFromCookie) {
+    return NextResponse.json(
+      { error: "Token CSRF requerido" },
+      {
+        status: 403,
+      },
+    );
+  }
+
+  if (!csrfAdapter.validateToken(csrfTokenFromHeader, csrfTokenFromCookie)) {
+    return NextResponse.json(
+      { error: "Token CSRF inválido" },
+      {
+        status: 403,
+      },
+    );
+  }
+
+  return null;
 }
 
 export const config = {

@@ -1,72 +1,54 @@
+import { NextRequest, NextResponse } from "next/server";
 import { validateToken } from "@/lib/jwt";
-import { findByIdWithRole } from "@/repositories/users/users.respositories";
+import { findByIdWithRole } from "@/repositories/users/users.repositories";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const cookies = request.headers.get("cookie");
-    if (!cookies) {
-      return new Response(
-        JSON.stringify({ error: "No autenticado - Sin cookies" }),
-        {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
-    }
+    console.log("API /me: Iniciando verificación de autenticación");
 
-    const token = cookies
-      .split("; ")
-      .find((row) => row.startsWith("auth_token="))
-      ?.split("=")[1];
+    // Obtener token de las cookies
+    const token = request.cookies.get("auth_token")?.value;
+    console.log("API /me: Token encontrado:", !!token);
 
     if (!token) {
-      return new Response(
-        JSON.stringify({ error: "No autenticado - Token no encontrado" }),
-        {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    const decoded = (await validateToken(token)) as {
-      sub: string;
-    };
+    // Validar token
+    const decoded = (await validateToken(token)) as { sub: string };
+    console.log("API /me: Token válido, user ID:", decoded.sub);
 
+    // Obtener usuario con rol
     const user = await findByIdWithRole(decoded.sub);
+    console.log("API /me: Usuario encontrado:", !!user);
 
     if (!user) {
-      return new Response(JSON.stringify({ error: "Usuario no encontrado" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+      console.log("API /me: Usuario no encontrado en BD");
+      return NextResponse.json(
+        { error: "Usuario no encontrado" },
+        { status: 404 },
+      );
     }
 
     if (!user.is_active) {
-      return new Response(JSON.stringify({ error: "Cuenta inactiva" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
+      console.log("API /me: Usuario inactivo");
+      return NextResponse.json({ error: "Cuenta inactiva" }, { status: 403 });
     }
 
-    return new Response(
-      JSON.stringify({
-        user: {
-          id: user.id.toString(),
-          email: user.email,
-          name: user.name,
-          lastName: user.last_name,
-          role: user.roles.name,
-          isActive: user.is_active,
-        },
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
+    // Retornar información del usuario
+    console.log("API /me: Retornando datos del usuario:", user.email);
+    return NextResponse.json({
+      user: {
+        id: user.id.toString(),
+        email: user.email,
+        name: user.name,
+        lastName: user.last_name,
+        role: user.roles.name,
+        isActive: user.is_active,
       },
-    );
+    });
   } catch (error) {
-    console.error("Error en endpoint /me:", error);
+    console.error("API /me: Error obteniendo datos del usuario:", error);
 
     if (error instanceof Error) {
       if (
@@ -74,22 +56,16 @@ export async function GET(request: Request) {
         error.message.includes("jwt expired") ||
         error.message.includes("jwt malformed")
       ) {
-        return new Response(
-          JSON.stringify({ error: "Token inválido o expirado" }),
-          {
-            status: 401,
-            headers: { "Content-Type": "application/json" },
-          },
+        return NextResponse.json(
+          { error: "Token inválido o expirado" },
+          { status: 401 },
         );
       }
     }
 
-    return new Response(
-      JSON.stringify({ error: "Error interno del servidor" }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      },
+    return NextResponse.json(
+      { error: "Error interno del servidor" },
+      { status: 500 },
     );
   }
 }
