@@ -2,18 +2,50 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useState } from "react";
+
+interface User {
+  name: string;
+  lastName?: string;
+  email: string;
+  role?: string;
+}
 
 interface MobileMenuProps {
   isMenuOpen: boolean;
   closeMenu: () => void;
   navigationItems: Array<{ label: string; href: string }>;
+  user?: User | null;
+  isAuthenticated?: boolean;
+  onLogout?: () => Promise<void>;
 }
 
-export default function MobileMenu({ 
-  isMenuOpen, 
-  closeMenu, 
+export default function MobileMenu({
+  isMenuOpen,
+  closeMenu,
   navigationItems,
+  user,
+  isAuthenticated,
+  onLogout,
 }: MobileMenuProps) {
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (onLogout) {
+      setIsLoggingOut(true);
+      await onLogout();
+      setIsLoggingOut(false);
+      closeMenu();
+      // Redirección manejada por el hook useAuth
+    }
+  };
+
+  const getInitials = (name: string, lastName?: string) => {
+    if (!lastName) return name.charAt(0).toUpperCase();
+    return `${name.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  };
+
+  const isAdmin = user?.role === "ADMIN";
   return (
     <>
       <div
@@ -65,6 +97,41 @@ export default function MobileMenu({
 
         {/* Navegación del menú móvil */}
         <nav className="p-6" aria-label="Navegación móvil">
+          {/* User Info Section */}
+          {isAuthenticated && user && (
+            <div className="mb-6 p-4 bg-[#1A1515] rounded-lg border border-[#2E2E2E]">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-variable-collection-botones rounded-full flex items-center justify-center text-white font-semibold">
+                  {getInitials(user.name, user.lastName)}
+                </div>
+                <div className="flex-1">
+                  <p className="text-white font-medium text-sm">
+                    {user.name} {user.lastName}
+                  </p>
+                  <p className="text-gray-400 text-xs">{user.email}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Link
+                  href="/profile"
+                  onClick={closeMenu}
+                  className="flex-1 text-center bg-variable-collection-botones text-white py-2 px-3 rounded text-sm hover:bg-variable-collection-botones/90 transition-colors"
+                >
+                  Mi Perfil
+                </Link>
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={closeMenu}
+                    className="flex-1 text-center bg-gray-600 text-white py-2 px-3 rounded text-sm hover:bg-gray-500 transition-colors"
+                  >
+                    Admin
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
+
           <ul className="space-y-1">
             {navigationItems.map((item, index) => (
               <li key={index}>
@@ -79,8 +146,29 @@ export default function MobileMenu({
             ))}
           </ul>
 
+          {/* Auth Section */}
+          <div className="mt-6 pt-6 border-t border-[#b3b5b7]">
+            {isAuthenticated && user ? (
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="w-full text-center bg-red-600 text-white py-3 px-4 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoggingOut ? "Cerrando sesión..." : "Cerrar Sesión"}
+              </button>
+            ) : (
+              <Link
+                href="/auth/login"
+                onClick={closeMenu}
+                className="block w-full text-center bg-variable-collection-botones text-white py-3 px-4 rounded-lg text-sm font-medium hover:bg-variable-collection-botones/90 transition-colors"
+              >
+                Iniciar Sesión
+              </Link>
+            )}
+          </div>
+
           {/* Información adicional del semillero */}
-          <div className="mt-8 pt-6 border-t border-[#b3b5b7]">
+          <div className="mt-6 pt-6 border-t border-[#b3b5b7]">
             <div className="text-white/80">
               <p className="font-ubuntu font-medium text-sm mb-2">
                 Semillero de Investigación
