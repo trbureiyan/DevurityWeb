@@ -3,8 +3,8 @@
 export const ICONS = {
     // HeroIcons
     hero: {
-        check: '/icons/hero/search.svg',
-        user: '/icons/hero/user.svg',
+        check: '/icons/heroicons/check.svg',
+        user: '/icons/heroicons/user.svg',
     },
 } as const;
 
