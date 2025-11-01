@@ -21,7 +21,7 @@ const ubuntu = Ubuntu({
 
 export const metadata: Metadata = {
   title: "Devurity - Semillero de Investigación",
-  description: "Plataforma oficial del semillero universitario Devurity",
+  description: "Plataforma oficial del semillero universitario Devurity"
 };
 
 export default function RootLayout({

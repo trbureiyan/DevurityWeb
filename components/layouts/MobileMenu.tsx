@@ -46,6 +46,8 @@ export default function MobileMenu({
     if (!lastName) return name.charAt(0).toUpperCase();
     return `${name.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
+
+  const isAdmin = user?.role === "ADMIN";
   return (
     <>
       <div
@@ -119,7 +121,7 @@ export default function MobileMenu({
                 >
                   Mi Perfil
                 </Link>
-                {isAdmin() && (
+                {isAdmin && (
                   <Link
                     href="/admin"
                     onClick={closeMenu}
