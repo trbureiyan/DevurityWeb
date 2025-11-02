@@ -179,9 +179,9 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   try {
     await createUser({
-      name: name.toLowerCase(),
+      name: name,
       email: email.toLowerCase(),
-      lastname: lastname.toLowerCase(),
+      lastname: lastname,
       password: bcryptAdapter.hash(password),
       semester,
       skills,
