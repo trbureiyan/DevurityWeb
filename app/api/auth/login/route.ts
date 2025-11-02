@@ -12,7 +12,11 @@ export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
 
-    if (!email || !password) {
+    // Normalización de datos
+    const normalizedEmail = email?.trim().toLowerCase() || "";
+    const normalizedPassword = password?.trim() || "";
+
+    if (!normalizedEmail || !normalizedPassword) {
       return new Response(
         JSON.stringify(errorRequest("", "Email y contraseña son requeridos")),
         {
@@ -22,7 +26,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!emailUniversity(email)) {
+    if (!emailUniversity(normalizedEmail)) {
       return new Response(
         JSON.stringify(
           errorRequest("email", "Debe ser un email universitario válido"),
@@ -56,7 +60,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const user = await findByEmailWithRole(email);
+    const user = await findByEmailWithRole(normalizedEmail);
 
     if (!user) {
       updateLoginAttempts(clientIP, now);
@@ -83,7 +87,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const isPasswordValid = bcryptAdapter.compare(password, user.password);
+    const isPasswordValid = bcryptAdapter.compare(
+      normalizedPassword,
+      user.password,
+    );
     if (!isPasswordValid) {
       updateLoginAttempts(clientIP, now);
       return new Response(
