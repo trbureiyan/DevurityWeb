@@ -1,8 +1,13 @@
-import { LATEST_NEWS } from "@/lib/constants/landing";
 import Image from "next/image";
+import type { NewsEvent } from "@/lib/constants/updates";
+
+// props para items de noticias
+type EventsSectionProps = {
+  news: NewsEvent[];
+};
 
 // Segmento de eventos y noticias
-export default function EventsSection() {
+export default function EventsSection({ news }: EventsSectionProps) {
   return (
     <section id="eventos" className="relative w-full py-10 md:py-16 overflow-hidden">
       <div className="container mx-auto px-6 md:px-10 lg:px-12">
@@ -78,27 +83,27 @@ export default function EventsSection() {
 
             {/* Grid de tarjetas de noticias */}
             <div className="flex flex-col gap-6 lg:gap-[35px] max-w-[671px] lg:ml-auto">
-              {LATEST_NEWS.map((news) => (
+              {news.map((item) => (
                 <div
-                  key={news.id}
+                  key={item.id}
                   className="relative h-auto min-h-[166px] rounded-sm border-4 transition-all duration-300 hover:scale-[1.02] cursor-pointer"
-                  style={{ borderColor: news.borderColor }}
+                  style={{ borderColor: item.borderColor }}
                 >
                   <div className="flex flex-col gap-3 px-6 lg:px-7 py-3 lg:py-[14px] justify-center h-full">
                     {/* Título */}
                     <h3 className="font-ubuntu font-bold italic text-white text-[22px] leading-normal">
-                      {news.title}
+                      {item.title}
                     </h3>
 
                     {/* Fecha y descripción */}
                     <div className="font-ubuntu text-[#b0b4c3] text-base leading-[105.49%]">
-                      <p className="mb-0">| {news.date}</p>
-                      <p className="mt-1">{news.description}</p>
+                      <p className="mb-0">| {item.date}</p>
+                      <p className="mt-1">{item.description}</p>
                     </div>
 
                     {/* Tags */}
                     <div className="flex flex-wrap gap-2.5 items-center">
-                      {news.tags.map((tag, index) => (
+                      {item.tags.map((tag, index) => (
                         <span
                           key={index}
                           className="font-ubuntu text-[#d5d9e9] text-base leading-normal"

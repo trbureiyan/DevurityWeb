@@ -1,8 +1,10 @@
-import { FEATURED_PROJECTS } from "@/lib/constants/landing";
 import Link from "next/link";
 import Image from "next/image";
+import type { ProjectPreview } from "@/lib/constants/landing";
 
 // Componente para mostrar los avatares de los miembros del equipo
+
+// Fila horizontal de avatares con indicador de desbordamiento opcional
 function TeamAvatars({ 
   members, 
   maxVisible = 7 
@@ -10,17 +12,22 @@ function TeamAvatars({
   members: { id: number; avatarUrl: string; name: string }[]; 
   maxVisible?: number;
 }) {
+  // Limita los miembros visibles según maxVisible (7)
   const visibleMembers = members.slice(0, maxVisible);
+  // Calculo de cuántos miembros quedan sin mostrar
   const remainingCount = Math.max(0, members.length - maxVisible);
 
   return (
+    // Contenedor flex horizontal con espaciado entre avatares
     <div className="flex items-center gap-2.5 px-0.5">
+      {/* Renderiza cada miembro visible como un avatar circular de 30x30px */}
       {visibleMembers.map((member) => (
         <div
           key={member.id}
           className="relative w-[30px] h-[30px] rounded-full overflow-hidden flex-shrink-0 bg-[#5b616e]"
           title={member.name}
         >
+          {/* Si el miembro tiene avatar, muestra la imagen; si no, muestra ícono de usuario por defecto */}
           {member.avatarUrl ? (
             <Image
               src={member.avatarUrl}
@@ -41,6 +48,7 @@ function TeamAvatars({
           )}
         </div>
       ))}
+      {/* Si hay más miembros que el máximo visible, muestra tres puntos como indicador */}
       {remainingCount > 0 && (
         <>
           <div className="w-[9px] h-[9px] rounded-full bg-[#5b616e] flex-shrink-0" />
@@ -53,7 +61,11 @@ function TeamAvatars({
 }
 
 // Segmento de previews de proyectos -> Grid de tarjetas
-export default function ProjectsPreviewSection() {
+type ProjectsPreviewSectionProps = {
+  projects: ProjectPreview[];
+};
+
+export default function ProjectsPreviewSection({ projects }: ProjectsPreviewSectionProps) {
   return (
     <section id="proyectos" className="container mx-auto px-6 md:px-10 py-16 md:py-20">
       {/* Título */}
@@ -65,7 +77,7 @@ export default function ProjectsPreviewSection() {
 
       {/* Grid de tarjetas de proyectos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 xl:gap-10 max-w-[1400px] mx-auto mb-12">
-        {FEATURED_PROJECTS.map((project) => (
+  {projects.map((project) => (
           <div
             key={project.id}
             className="relative h-[200px] rounded-[13px] overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02] duration-300"

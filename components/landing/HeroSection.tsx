@@ -1,10 +1,15 @@
 import Image from "next/image";
-import { IMAGES } from '@/public/images';
-import { QUICK_NAV_ITEMS } from "@/lib/constants/landing";
+import { IMAGES } from "@/public/images";
+import type { QuickNavItem } from "@/lib/types/landing";
+
+// Props para items de navegación rápida -> array de objetos con label y href
+type HeroSectionProps = {
+  quickNavItems: QuickNavItem[];
+};
 
 // Hero con el main banner, logo, titulo, y navegacion rápida
 
-export default function HeroSection() {
+export default function HeroSection({ quickNavItems }: HeroSectionProps) {
   return (
     <section id="hero" className="relative h-225 w-full overflow-hidden">
       {/* Fondo con imagen de ondas */}
@@ -70,7 +75,7 @@ export default function HeroSection() {
 
       {/* Menú de navegación rápida lateral derecho */}
       <nav className="hidden xl:flex fixed right-8 top-1/2 -translate-y-1/2 flex-col gap-8 z-10">
-        {QUICK_NAV_ITEMS.map((item, index) => (
+        {quickNavItems.map((item, index) => (
           <a
             key={index}
             href={item.href}

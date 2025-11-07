@@ -9,43 +9,6 @@ export const QUICK_NAV_ITEMS: QuickNavItem[] = [
   { label: 'Contacto', href: '#contacto' },
 ];
 
-// Info eventos y noticias
-export interface NewsEvent {
-  id: number;
-  title: string;
-  date: string;
-  description: string;
-  tags: string[];
-  borderColor: string;
-}
-
-export const LATEST_NEWS: NewsEvent[] = [
-  {
-    id: 1,
-    title: "Indigo Tech abre vacantes junior en cloud y backend",
-    date: "13 de agosto 2025",
-    description: "Indigo Tech visitó el semillero ofreciendo vacantes junior en cloud, DevOps y backend.",
-    tags: ["Pasantias", "Frontend", "Backend", "Cloud", "Latam"],
-    borderColor: "#d5d9e9",
-  },
-  {
-    id: 2,
-    title: "Semillero participará en AmiTIC con ponencias y ...",
-    date: "24–26 de septiembre 2025",
-    description: "El semillero presentará ponencias en AmiTIC con oportunidad de indexar proyectos.",
-    tags: ["AmiTIC", "USCO", "indexación", "ponencias", "Internacional"],
-    borderColor: "#63768d",
-  },
-  {
-    id: 3,
-    title: "Visita a la granja USCO",
-    date: "2024-2",
-    description: "El semillero visitó la granja USCO para plantear proyectos de modernización y apoyo técnico.",
-    tags: ["Granja", "USCO", "modernización", "proyectos", "Interdisciplinario"],
-    borderColor: "#b89e9e",
-  },
-];
-
 // Legacy - mantener por compatibilidad
 export const UPCOMING_EVENTS: Event[] = [
   { 
