@@ -13,7 +13,7 @@ model attendances {
   id              BigInt   @id @default(autoincrement())
   attendance_date DateTime @db.Date
   user_id         BigInt?
-  users           users?   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "attendances_fk_users")
+  users           users?   @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "attendances_fk_users")
 }
 
 model platforms {

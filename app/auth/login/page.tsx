@@ -23,6 +23,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const { login, isLoading } = useAuth();
 
   const router = useRouter();
@@ -100,8 +102,10 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+    setIsSubmitting(true);
 
     if (!validateForm()) {
+      setIsSubmitting(false);
       return;
     }
 
@@ -116,15 +120,16 @@ export default function LoginPage() {
       router.push(redirectTo);
     } catch (error) {
       if (error instanceof Error) {
-        setErrors({
-          general: error.message,
-        });
+        setShowErrorModal(true);
       } else {
-        setErrors({
-          general: "Error desconocido en el login",
-        });
+        setShowErrorModal(true);
       }
+      setIsSubmitting(false);
     }
+  };
+
+  const handleCloseErrorModal = () => {
+    setShowErrorModal(false);
   };
 
   return (
@@ -236,14 +241,6 @@ export default function LoginPage() {
                   <p className="text-sm text-gray-400 mb-4 text-center">
                     Redirigiendo a: {redirectFromParam}
                   </p>
-                )}
-
-                {errors.general && (
-                  <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
-                    <p className="text-red-300 text-sm font-ubuntu">
-                      {errors.general}
-                    </p>
-                  </div>
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6" noValidate>
@@ -386,10 +383,10 @@ export default function LoginPage() {
                   {/* Botón de iniciar sesión */}
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || isSubmitting}
                     className="w-full bg-red-600 hover:bg-red-700 text-white font-ubuntu font-bold py-4 rounded-lg transition-all duration-300 hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2 text-lg"
                   >
-                    {isLoading ? (
+                    {isLoading || isSubmitting ? (
                       <>
                         <svg
                           className="animate-spin h-5 w-5 text-white"
@@ -423,6 +420,41 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+      {/* Modal de Error */}
+      {showErrorModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1f1a1a] rounded-2xl p-8 max-w-md w-full text-center">
+            <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">
+              Error de Login
+            </h3>
+            <p className="text-gray-300 mb-6">
+              Credenciales incorrectas o cuenta pendiente de aprobación.
+              Verifica tus datos e intenta nuevamente.
+            </p>
+            <button
+              onClick={handleCloseErrorModal}
+              className="bg-[#CA2B26] hover:bg-[#a82320] text-white px-8 py-3 rounded-lg font-medium transition-colors w-full"
+            >
+              Reintentar
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
