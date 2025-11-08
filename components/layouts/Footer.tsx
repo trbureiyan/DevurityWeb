@@ -6,9 +6,8 @@ export default function Footer() {
   const footerLinks = [
     { label: "Sobre Nosotros", href: "/about" },
     { label: "Proyectos", href: "/projects" },
+    { label: "Eventos", href: "/updates" },
     { label: "Contacto", href: "/contact" },
-    { label: "Política de Privacidad", href: "/privacy" },
-    { label: "Términos de Servicio", href: "/terms" },
   ];
 
   const socialLinks = [

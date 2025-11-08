@@ -2,6 +2,19 @@ import Link from "next/link";
 import Image from "next/image";
 import type { ProjectPreview } from "@/lib/constants/landing";
 
+const truncateText = (value: string, maxLength = 100): string => {
+  const normalized = value.trim();
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  const safeSlice = normalized.slice(0, maxLength - 3);
+  const lastSeparator = safeSlice.lastIndexOf(" ");
+  const trimmed = lastSeparator > 0 ? safeSlice.slice(0, lastSeparator) : safeSlice;
+
+  return `${trimmed.trimEnd()}...`;
+};
+
 // Componente para mostrar los avatares de los miembros del equipo
 
 // Fila horizontal de avatares con indicador de desbordamiento opcional
@@ -80,7 +93,7 @@ export default function ProjectsPreviewSection({ projects }: ProjectsPreviewSect
   {projects.map((project) => (
           <div
             key={project.id}
-            className="relative h-[200px] rounded-[13px] overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02] duration-300"
+            className="relative h-[250px] rounded-[13px] overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02] duration-300"
           >
             {/* Imagen de fondo */}
             <div className="absolute inset-0">
@@ -113,7 +126,7 @@ export default function ProjectsPreviewSection({ projects }: ProjectsPreviewSect
 
               {/* Descripción */}
               <p className="font-ubuntu text-[#b0b4c3] text-base leading-normal mb-4">
-                {project.description}
+                {truncateText(project.description)}
               </p>
 
               {/* Avatares del equipo */}

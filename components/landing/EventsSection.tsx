@@ -1,4 +1,6 @@
 import Image from "next/image";
+import Link from "next/link";
+import type { CSSProperties } from "react";
 import type { NewsEvent } from "@/lib/constants/updates";
 
 // props para items de noticias
@@ -6,8 +8,38 @@ type EventsSectionProps = {
   news: NewsEvent[];
 };
 
+const CTA_HREF = "/updates";
+
+// Replica el acento cromático usado en las tarjetas del módulo de updates
+const createAccentStyles = (color: string): CSSProperties => {
+  const normalized = color.startsWith("#") ? color : `#${color}`;
+
+  return {
+    borderColor: normalized,
+  };
+};
+
+const resolveNewsHref = (item: NewsEvent): string => {
+  const slug = item.slug?.trim();
+  const rawHref = item.href?.trim();
+
+  if (rawHref && rawHref !== "#") {
+    return rawHref;
+  }
+
+  if (slug) {
+    return `/updates/${slug}`;
+  }
+
+  return CTA_HREF;
+};
+
+const isExternalHref = (href: string): boolean => href.startsWith("http");
+
 // Segmento de eventos y noticias
 export default function EventsSection({ news }: EventsSectionProps) {
+  const latestNews = news.slice(0, 3);
+
   return (
     <section id="eventos" className="relative w-full py-10 md:py-16 overflow-hidden">
       <div className="container mx-auto px-6 md:px-10 lg:px-12">
@@ -83,39 +115,89 @@ export default function EventsSection({ news }: EventsSectionProps) {
 
             {/* Grid de tarjetas de noticias */}
             <div className="flex flex-col gap-6 lg:gap-[35px] max-w-[671px] lg:ml-auto">
-              {news.map((item) => (
-                <div
-                  key={item.id}
-                  className="relative h-auto min-h-[166px] rounded-sm border-4 transition-all duration-300 hover:scale-[1.02] cursor-pointer"
-                  style={{ borderColor: item.borderColor }}
-                >
-                  <div className="flex flex-col gap-3 px-6 lg:px-7 py-3 lg:py-[14px] justify-center h-full">
-                    {/* Título */}
-                    <h3 className="font-ubuntu font-bold italic text-white text-[22px] leading-normal">
-                      {item.title}
-                    </h3>
+              {latestNews.map((item, index) => {
+                const itemHref = resolveNewsHref(item);
+                const accentStyles = createAccentStyles(item.borderColor);
+                const useExternal = isExternalHref(itemHref);
+                const isLastCard = index === latestNews.length - 1;
 
-                    {/* Fecha y descripción */}
-                    <div className="font-ubuntu text-[#b0b4c3] text-base leading-[105.49%]">
-                      <p className="mb-0">| {item.date}</p>
-                      <p className="mt-1">{item.description}</p>
-                    </div>
+                const TitleLink = useExternal ? (
+                  <a
+                    href={itemHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-start text-left text-white transition-colors duration-200 hover:text-variable-collection-link"
+                  >
+                    {item.title}
+                  </a>
+                ) : (
+                  <Link
+                    href={itemHref}
+                    className="inline-flex items-start text-left text-white transition-colors duration-200 hover:text-variable-collection-link"
+                  >
+                    {item.title}
+                  </Link>
+                );
 
-                    {/* Tags */}
-                    <div className="flex flex-wrap gap-2.5 items-center">
-                      {item.tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="font-ubuntu text-[#d5d9e9] text-base leading-normal"
-                          style={{ textShadow: "rgba(0,0,0,0.12) 0px 4px 4px" }}
-                        >
-                          #{tag}
-                        </span>
-                      ))}
+                return (
+                  <article
+                    key={item.id}
+                    className="relative h-auto min-h-[166px] rounded-xl border-2 px-7 py-6 lg:px-8 lg:py-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_25px_60px_-40px_rgba(0,0,0,0.7)]"
+                    style={accentStyles}
+                  >
+                    <div className="flex flex-col gap-4 justify-center h-full">
+                      {/* Título */}
+                      <h3 className="font-ubuntu font-bold italic text-[22px] leading-snug">
+                        {TitleLink}
+                      </h3>
+
+                      {/* Fecha y descripción */}
+                      <div className="font-ubuntu text-[#b0b4c3] text-[15px] leading-relaxed space-y-2">
+                        <p className="uppercase tracking-[0.22em] text-[13px] text-white/60">| {item.date}</p>
+                        <p className="text-white/80">{item.description}</p>
+                      </div>
+
+                      {/* Tags */}
+                      <div className="flex flex-wrap gap-3 items-center pt-1">
+                        {item.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="font-ubuntu text-[#d5d9e9] text-sm uppercase tracking-[0.18em]"
+                            style={{ textShadow: "rgba(0,0,0,0.12) 0px 4px 4px" }}
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+
+                      {isLastCard && (
+                        <div className="pt-4">
+                          <Link
+                            href={CTA_HREF}
+                            className="inline-flex items-center gap-2 font-ubuntu text-sm uppercase tracking-[0.2em] text-variable-collection-link transition-colors duration-200 hover:text-white"
+                          >
+                            Conocer más noticias y eventos
+                            <svg
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M5 12h14M13 6l6 6-6 6"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </Link>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </div>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           </div>
         </div>
