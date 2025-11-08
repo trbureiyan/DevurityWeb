@@ -46,6 +46,9 @@
     width: 100%;
     max-width: 100vw;
     overflow-x: hidden;
+    color-scheme: dark;
+    scrollbar-width: thin;
+    scrollbar-color: var(--variable-collection-selected) var(--variable-collection-fondo);
   }
   body {
     background: var(--background);
@@ -63,6 +66,25 @@
     background: transparent;
     border: 0;
     outline: none;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: var(--variable-collection-fondo);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--variable-collection-selected);
+    border-radius: 9999px;
+    border: 2px solid var(--variable-collection-fondo);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--variable-collection-link);
   }
 }
 
