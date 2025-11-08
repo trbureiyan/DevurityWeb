@@ -11,6 +11,14 @@ interface QRData {
   expiresAt: number;
 }
 
+interface AttendanceResponse {
+  id: string;
+  usuario?: {
+    nombre: string;
+    correo: string;
+  };
+}
+
 interface DuplicateInfo {
   fecha: string;
   usuario: string;

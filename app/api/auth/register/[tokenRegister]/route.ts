@@ -7,6 +7,7 @@ import {
 } from "@/repositories/users/users.repositories";
 import { bcryptAdapter } from "@/lib/bcrypt";
 import { isValidPassword } from "@/lib/regex";
+import { EmailOptions, sendEmail } from "@/lib/email";
 
 interface Params {
   params: Promise<{
@@ -98,12 +99,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
   // Validaciones
-  if (isNaN(semester) || !semester) {
+  if (isNaN(semester) || !semester || semester < 1 || semester > 13) {
     return new Response(
       JSON.stringify(
         errorRequest(
           "semestre",
-          "semestre no valido, por favor ingrese correctamente el ",
+          "Semestre no válido. Por favor ingresa un semestre válido",
         ),
       ),
       {
@@ -188,7 +189,6 @@ export async function POST(req: NextRequest, { params }: Params) {
       motivation,
     });
   } catch (e) {
-    console.log(e);
     return new Response(
       JSON.stringify(
         errorRequest("Usuario", "Ha ocurrido un error en la creacion del "),
@@ -203,7 +203,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   return new Response(
     JSON.stringify({
       message:
-        "Tu registro ha sido copmletado, un administrador validara tu peticion para aprobarte o rechazarte al semillero. Este pendiente de tu correo.",
+        "Tu registro ha sido completado, un administrador validara tu peticion para aprobarte o rechazarte al semillero. Este pendiente de tu correo.",
     }),
   );
 }

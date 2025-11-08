@@ -4,12 +4,20 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import LoginButton from "@/components/ui/LoginButton";
 import { useAuth } from "@/hooks/useAuth";
 
 // Importar el menú móvil sin SSR para evitar errores de hidratación
 const MobileMenu = dynamic(() => import("./MobileMenu"), {
   ssr: false,
 });
+
+const NAVIGATION_ITEMS = [
+  { label: "Nosotros", href: "/about" },
+  { label: "Proyectos", href: "/projects" },
+  { label: "Eventos", href: "/updates" },
+  { label: "Asistencia", href: "/attendance" },
+];
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -97,11 +105,8 @@ export default function Navbar() {
           aria-label="Main navigation"
         >
           <ul className="flex items-center gap-9">
-            {navigationItems.map((item, index) => (
-              <li
-                key={index}
-                className="flex flex-col items-center justify-center"
-              >
+            {NAVIGATION_ITEMS.map((item, index) => (
+              <li key={index} className="flex flex-col items-center justify-center">
                 <Link
                   href={item.href}
                   className="font-ubuntu font-medium text-white text-sm text-center tracking-[0] leading-[21px] whitespace-nowrap hover:text-variable-collection-link transition-colors duration-200"
@@ -281,7 +286,7 @@ export default function Navbar() {
       <MobileMenu
         isMenuOpen={isMenuOpen}
         closeMenu={closeMenu}
-        navigationItems={navigationItems}
+        navigationItems={NAVIGATION_ITEMS}
         isAuthenticated={isAuthenticated}
         user={user}
         onLogout={logout}
