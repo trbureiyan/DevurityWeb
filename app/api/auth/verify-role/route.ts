@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateToken } from "@/lib/jwt";
 import { findByIdWithRole } from "@/repositories/users/users.repositories";
-import prisma from "@/lib/postgresDriver";
 export async function POST(request: NextRequest) {
   try {
     console.log("API /verify-role: Iniciando verificación de rol");

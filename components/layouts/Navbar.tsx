@@ -24,6 +24,12 @@ export default function Navbar() {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const { user, isAuthenticated, isLoading, logout, isAdmin } = useAuth();
 
+  const navigationItems = [
+    { label: "Nosotros", href: "/about" },
+    { label: "Proyectos", href: "/projects" },
+    { label: "Eventos", href: "/updates" },
+  ];
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };

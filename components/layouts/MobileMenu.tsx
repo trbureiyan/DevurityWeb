@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { UserRole } from "@/lib/constants/roles";
+import { useAuth } from "@/hooks/useAuth";
 
 interface User {
   name: string;
@@ -30,9 +30,7 @@ export default function MobileMenu({
   onLogout,
 }: MobileMenuProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  
-  // Compute isAdmin from user prop - single source of truth
-  const isAdmin = user?.role === UserRole.ADMIN;
+  const { isAdmin } = useAuth();
 
   const handleLogout = async () => {
     if (onLogout) {
@@ -48,7 +46,6 @@ export default function MobileMenu({
     if (!lastName) return name.charAt(0).toUpperCase();
     return `${name.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
-
   return (
     <>
       <div
@@ -122,7 +119,7 @@ export default function MobileMenu({
                 >
                   Mi Perfil
                 </Link>
-                {isAdmin && (
+                {isAdmin() && (
                   <Link
                     href="/admin"
                     onClick={closeMenu}
