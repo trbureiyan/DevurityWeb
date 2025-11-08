@@ -49,44 +49,44 @@ export interface ProjectPreview {
 export const FEATURED_PROJECTS: ProjectPreview[] = [
   {
     id: 1,
-    title: "Proyecto 1",
-    description: "Exploración visual y lógica de sistemas integrados",
-    imageUrl: "", // Placeholder - se mostrará gradiente
-    tags: ["Aplicacion Web", "Agro", "React", "Node.js", "DB"],
+    title: "SecOps Honeynet",
+    description:
+      "Infraestructura contenida de honeypots para observar tacticas reales y ajustar la postura defensiva con datos verificables.",
+    imageUrl: "",
+    tags: ["Ciberseguridad", "Python", "Honeypots", "ThreatIntel"],
     teamMembers: [
-      { id: 1, avatarUrl: "", name: "Miembro 1" },
-      { id: 2, avatarUrl: "", name: "Miembro 2" },
-      { id: 3, avatarUrl: "", name: "Miembro 3" },
-      { id: 4, avatarUrl: "", name: "Miembro 4" },
+      { id: 1, avatarUrl: "", name: "Sara Rincon" },
+      { id: 2, avatarUrl: "", name: "Juan Alvarez" },
+      { id: 3, avatarUrl: "", name: "Miguel Rios" },
+      { id: 4, avatarUrl: "", name: "Paula Torres" },
     ],
   },
   {
     id: 2,
-    title: "Proyecto 2",
-    description: "Minimalismo funcional para entornos digitales",
-    imageUrl: "", // Placeholder - se mostrará gradiente
-    tags: ["SaaS", "Azure", "Gaming"],
+    title: "MaqAgr compatibilidad tractor implemento",
+    description:
+      "Aplicativo web que reduce la brecha de mecanizacion rural validando potencia, terreno y match tractor implemento para decisiones claras.",
+    imageUrl: "",
+    tags: ["Agritech", "Node.js", "React", "MongoDB"],
     teamMembers: [
-      { id: 5, avatarUrl: "", name: "Miembro 5" },
-      { id: 6, avatarUrl: "", name: "Miembro 6" },
-      { id: 7, avatarUrl: "", name: "Miembro 7" },
-      { id: 8, avatarUrl: "", name: "Miembro 8" },
+      { id: 5, avatarUrl: "", name: "Diana Herrera" },
+      { id: 6, avatarUrl: "", name: "Luis Camacho" },
+      { id: 7, avatarUrl: "", name: "Carlos Paez" },
+      { id: 8, avatarUrl: "", name: "Maria Gomez" },
     ],
   },
   {
     id: 3,
-    title: "Proyecto 3",
-    description: "Minimalismo funcional para entornos digitales",
-    imageUrl: "", // Placeholder - se mostrará gradiente
-    tags: ["AWS", "Campo", "IoT", "Java"],
+    title: "Devurity Web",
+    description:
+      "Plataforma oficial del semillero que centraliza proyectos, eventos y operacion con una base en Next.js y Prisma.",
+    imageUrl: "",
+    tags: ["Next.js", "TailwindCSS", "Prisma", "OpenSource"],
     teamMembers: [
-      { id: 9, avatarUrl: "", name: "Miembro 9" },
-      { id: 10, avatarUrl: "", name: "Miembro 10" },
-      { id: 11, avatarUrl: "", name: "Miembro 11" },
-      { id: 12, avatarUrl: "", name: "Miembro 12" },
-      { id: 13, avatarUrl: "", name: "Miembro 13" },
-      { id: 14, avatarUrl: "", name: "Miembro 14" },
-      { id: 15, avatarUrl: "", name: "Miembro 15" },
+      { id: 9, avatarUrl: "", name: "Tatiana Rojas" },
+      { id: 10, avatarUrl: "", name: "Brayan Trujillo" },
+      { id: 11, avatarUrl: "", name: "Kevin Riano" },
+      { id: 12, avatarUrl: "", name: "Camila Lopez" },
     ],
   },
 ];
