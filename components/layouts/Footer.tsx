@@ -142,17 +142,17 @@ export default function Footer() {
           </p>
           <div className="flex gap-4 order-1 sm:order-2">
             <Link
-              href="/privacy"
+              href="/help"
               className="font-ubuntu text-[#6b7280] text-xs hover:text-variable-collection-link transition-colors duration-200"
             >
-              Privacidad
+              FAQ
             </Link>
             <span className="text-[#6b7280]">•</span>
             <Link
-              href="/terms"
+              href="/help"
               className="font-ubuntu text-[#6b7280] text-xs hover:text-variable-collection-link transition-colors duration-200"
             >
-              Términos
+              Preguntas frecuentes
             </Link>
           </div>
         </div>
