@@ -80,7 +80,7 @@ export async function middleware(
 
 // Función helper para verificar rutas protegidas
 function isProtectedPath(path: string): boolean {
-  const protectedPaths = ["/admin", "/projects", "/profile", "/attendance"];
+  const protectedPaths = ["/admin", "/profile", "/attendance"];
 
   return protectedPaths.some((protectedPath) => path.startsWith(protectedPath));
 }
