@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useCsrf } from "@/hooks/useCsrf";
+import { IMAGES } from "@/public/images";
 
 interface Slide {
   title: string;
@@ -51,18 +52,18 @@ export default function RegistroPage() {
   }, []);
 
   const slides: Slide[] = [
-    {
-      title: "TRAZANDO HORIZONTES DIGITALES",
-      image: "/images/login/slide1.jpeg",
-    },
-    {
-      title: "INNOVACIÓN Y TECNOLOGÍA",
-      image: "/images/login/slide2.jpeg",
-    },
-    {
-      title: "DESARROLLANDO EL FUTURO",
-      image: "/images/login/a.jpeg",
-    },
+      {
+        title: "TRAZANDO HORIZONTES DIGITALES",
+        image: IMAGES.login.slide0,
+      },
+      {
+        title: "INNOVACIÓN Y TECNOLOGÍA",
+        image: IMAGES.login.slide1,
+      },
+      {
+        title: "DESARROLLANDO EL FUTURO",
+        image: IMAGES.login.slide2,
+      },
   ];
 
   // Auto-advance carousel
@@ -227,7 +228,7 @@ export default function RegistroPage() {
               <Link href="/" className="flex items-center gap-3 group">
                 <div className="relative w-8 h-8 rounded">
                   <Image
-                    src="/images/login/Logo WoBg.png"
+                    src={IMAGES.login.logo}
                     alt="Devurity Logo"
                     width={32}
                     height={32}
