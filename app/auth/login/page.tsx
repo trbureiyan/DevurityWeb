@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { IMAGES } from "@/public/images";
 
 interface Slide {
   title: string;
@@ -53,15 +54,15 @@ export default function LoginPage() {
   const slides: Slide[] = [
     {
       title: "TRAZANDO HORIZONTES DIGITALES",
-      image: "/images/login/slide1.jpeg",
+      image: IMAGES.login.slide0,
     },
     {
       title: "INNOVACIÓN Y TECNOLOGÍA",
-      image: "/images/login/slide2.jpeg",
+      image: IMAGES.login.slide1,
     },
     {
       title: "DESARROLLANDO EL FUTURO",
-      image: "/images/login/a.jpeg",
+      image: IMAGES.login.slide2,
     },
   ];
 
@@ -138,7 +139,7 @@ export default function LoginPage() {
               <Link href="/" className="flex items-center gap-3 group">
                 <div className="relative w-8 h-8 rounded">
                   <Image
-                    src="/images/login/Logo WoBg.png"
+                    src={IMAGES.login.logo}
                     alt="Devurity Logo"
                     width={32}
                     height={32}

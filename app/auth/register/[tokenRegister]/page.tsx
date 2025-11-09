@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCsrf } from "@/hooks/useCsrf";
+import { IMAGES } from "@/public/images";
 
 export default function ValidacionPage() {
   const [formData, setFormData] = useState({
@@ -288,22 +289,30 @@ export default function ValidacionPage() {
         {/* Hero Banner with Logo and Back Button */}
         <div className="relative w-full h-48">
           <Image
-            src="/keyboard-keys-technology.jpg"
+            src={IMAGES.register.background}
             alt="Hero"
             fill
             className="object-cover"
           />
-          {/* Overlay for better text visibility */}
-          <div className="absolute inset-0 bg-black/20" />
+          {/* Overlay oscuro para mejorar contraste */}
+          <div className="absolute inset-0 bg-black/27"></div>
 
           {/* Logo and Back Button overlaid on banner */}
           <div className="absolute inset-0 flex items-start justify-between p-6">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-white rounded-sm" />
-              <span className="font-orbitron text-sm tracking-wider text-white drop-shadow-lg">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="relative w-8 h-8 rounded">
+              <Image
+                src={IMAGES.login.logo}
+                alt="Devurity Logo"
+                width={32}
+                height={32}
+                className="bg-white/10 rounded"
+              />
+              </div>
+              <h1 className="font-orbitron font-bold text-white text-lg tracking-[5px] leading-[23px] whitespace-nowrap">
                 DEVURITY
-              </span>
-            </div>
+              </h1>
+            </Link>
             <Link
               href="/"
               className="bg-white/90 hover:bg-white text-[#171212] px-4 py-2 rounded-full text-sm font-medium transition-colors"
@@ -315,7 +324,7 @@ export default function ValidacionPage() {
 
         {/* Form Content */}
         <div className="px-8 py-10">
-          <h1 className="text-3xl font-orbitron text-center mb-8 text-white">
+          <h1 className="text-3xl font-orbitron text-center mb-8 font-bold text-white tracking-[5px] leading-[23px] whitespace-nowrap">
             Validacion
           </h1>
 
@@ -502,33 +511,6 @@ export default function ValidacionPage() {
                   />
                 </div>
               </div>
-
-              {/* Privacy Policy Text */}
-              <p className="text-xs text-center text-gray-400 max-w-md mx-auto pt-4">
-                Al hacer clic en &ldquo;Enviar solicitud&rdquo;, aceptas
-                nuestras{" "}
-                <Link
-                  href="/condiciones"
-                  className="text-[#F66661] hover:underline"
-                >
-                  Condiciones
-                </Link>
-                ,{" "}
-                <Link
-                  href="/privacidad"
-                  className="text-[#F66661] hover:underline"
-                >
-                  Política de Privacidad
-                </Link>{" "}
-                y{" "}
-                <Link
-                  href="/cookies"
-                  className="text-[#F66661] hover:underline"
-                >
-                  Política de Cookies
-                </Link>
-                .
-              </p>
 
               {/* Submit Button */}
               <div className="flex justify-center pt-4">
