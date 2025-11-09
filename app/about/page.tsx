@@ -1,3 +1,90 @@
+import Image from "next/image";
+import type { StaticImageData } from "next/image";
+import { IMAGES } from "@/public/images";
+
+export const dynamic = "force-static";
+
+type TeamMember = {
+  name: string;
+  role: string;
+  tagline?: string;
+  description?: string;
+  imageSrc: string | StaticImageData;
+  imageAlt: string;
+  linkLabel?: string;
+  linkHref?: string;
+  imageBgClass?: string;
+};
+
+// Static placeholder data while profile management is implemented via the CMS.
+const coreTeamMembers: TeamMember[] = [
+  {
+    name: "Brayan Toro Bustos",
+    role: "Estudiante Ingeniería de Software",
+    tagline: "| Frontend WebDev & DevOps |",
+    description: "Líder y participante en el desarrollo de proyectos web.",
+    imageSrc: IMAGES.team.brayan,
+    imageAlt: "Brayan Toro",
+    linkLabel: "LinkedIn",
+    linkHref: "https://www.linkedin.com/in/trbureiyan/",
+  },
+  {
+    name: "Alexander Lozada Caviedes",
+    role: "Estudiante Ingeniería de Software",
+    tagline: "| Backend WebDev & DB Engineer |",
+    description: "Tutor de lenguajes y frameworks, usuario de Linux.",
+    imageSrc: IMAGES.team.alex,
+    imageAlt: "Alexander Lozada",
+    linkLabel: "GitHub",
+    linkHref: "https://github.com/Arekkazu",
+  },
+  {
+    name: "Juan Camilo Mora Castañeda",
+    role: "Estudiante Ingeniería de Software",
+    tagline: "| T-Stack WebDev |",
+    description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+    imageSrc: IMAGES.team.mora,
+    imageAlt: "Juan Camilo",
+    linkLabel: "GitHub",
+    linkHref: "https://github.com/JucaMora7",
+  },
+  {
+    name: "Pablo Trujillo Artunduaga",
+    role: "Estudiante Ingeniería de Software",
+    tagline: "| Python Data Scientist |",
+    description: "Científico de datos con Python.",
+    imageSrc: "/api/placeholder/160/160",
+    imageAlt: "Pablo Trujillo",
+    linkLabel: "GitHub",
+    linkHref: "https://github.com/PabloTrujilloArtunduaga",
+    imageBgClass: "bg-yellow-100",
+  },
+];
+
+const supportingTeamMembers: TeamMember[] = [
+  {
+    name: "María López .",
+    role: "Estudiante tecnología en desarrollo de software",
+    tagline: "| Hacker Ética |",
+    imageSrc: "/api/placeholder/160/160",
+    imageAlt: "María López",
+  },
+  {
+    name: "Carlos Gómez G",
+    role: "Estudiante Ingeniería de Software",
+    tagline: "| Cloud & Backend |",
+    imageSrc: "/api/placeholder/160/160",
+    imageAlt: "Carlos Gómez",
+  },
+  {
+    name: "Andrés Castillo Polanco",
+    role: "Estudiante Ingeniería de Software",
+    tagline: "| Frontend & UX |",
+    imageSrc: "/api/placeholder/160/160",
+    imageAlt: "Andrés Castillo",
+  },
+];
+
 export default function AboutPage() {
   return (
     <main className="min-h-screen bg-black text-white overflow-hidden">
@@ -6,10 +93,13 @@ export default function AboutPage() {
       <section className="relative h-screen w-full overflow-hidden">
         {/* Fondo con imagen y efectos */}
         <div className="absolute inset-0">
-          <img
-            src="/images/about/aboutfondo.jpg"
+          <Image
+            src={IMAGES.about.background}
             alt="About background"
-            className="w-full h-full object-cover scale-110 animate-zoom-in"
+            fill
+            priority
+            className="object-cover scale-110 animate-zoom-in"
+            sizes="100vw"
           />
           
           {/* Overlays múltiples para profundidad */}
@@ -98,10 +188,13 @@ export default function AboutPage() {
               <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 blur-3xl"></div>
               <div className="relative flex items-center justify-center">
                 <div className="relative w-full max-w-lg">
-                  <img 
-                    src="/images/about/about.svg" 
-                    alt="Mission illustration" 
+                  <Image
+                    src={IMAGES.about.missionIllustration}
+                    alt="Mission illustration"
+                    width={800}
+                    height={800}
                     className="w-full h-auto object-contain"
+                    sizes="(max-width: 768px) 100vw, 50vw"
                   />
                   {/* Glow effect */}
                   <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-600/20 rounded-full blur-3xl"></div>
@@ -131,11 +224,11 @@ export default function AboutPage() {
 
               <div className="border-l-4 pl-6 space-y-6 text-gray-300 leading-relaxed" style={{borderColor: '#b20403'}}>
                 <p className="text-lg">
-                  <strong>Devurity</strong> es el semillero de innovación tecnológica del programa de Ingeniería de Software de la Universidad Surcolombiana, una comunidad universitaria dedicada a la investigación aplicada, el desarrollo de software y la ciberseguridad.
+                  <strong>Devurity</strong> es el semillero de investigación y práctica tecnológica del Programa de Ingeniería de Software de la Universidad Surcolombiana. Impulsamos formación y producción de conocimiento aplicado en <strong>desarrollo de software, ciencia de datos y ciberseguridad</strong>, combinando investigación formativa con proyectos reales que aportan valor a la Universidad y su entorno.
                 </p>
                 
                 <p className="text-lg">
-                  Nuestra filosofía es simple pero poderosa: <strong>aprender haciendo, compartir conocimiento y transformar el aprendizaje en impacto real</strong>. Nacimos como un espacio interdisciplinario donde estudiantes, docentes y aliados externos colaboran para convertir ideas en soluciones tecnológicas tangibles.
+                  Nuestra misión es <strong>aprender haciendo, compartir lo aprendido y elevar el estándar técnico y ético</strong> de nuestros miembros. Creamos espacios de mentoría entre pares y promovemos buenas prácticas (versionamiento, pruebas, despliegue y seguridad) para entregar resultados verificables: <strong>prototipos, artículos, demos y servicios</strong> que fortalezcan el ecosistema académico y tecnológico regional.
                 </p>
               </div>
 
@@ -176,20 +269,20 @@ export default function AboutPage() {
               
               <div className="space-y-6 text-gray-300 text-lg leading-relaxed">
                 <p>
-                  Desde la universidad hacia el mundo, <strong>Devurity impulsa proyectos</strong> que abarcan desde aplicaciones para el sector agroindustrial, institucional y educativo, hasta soluciones basadas en APIs científicas y entornos de seguridad digital automatizada.
+                  Nuestra visión es ser un semillero <strong>reconocido por convertir preguntas en prototipos y evidencia</strong>, articulando docencia, investigación y extensión. Nos orientamos a soluciones <strong>sostenibles, seguras y abiertas</strong> que sirvan a la Universidad y a aliados públicos y privados.
                 </p>
                 
                 <p>
-                  Cada proyecto se convierte en un <strong>laboratorio de aprendizaje, visibilidad y colaboración</strong>, articulando investigación, innovación y emprendimiento académico.
+                  Buscamos consolidar una <strong>comunidad técnica en crecimiento</strong>, con rutas de aprendizaje, mentoría y repositorios abiertos, que documenta, mide y mejora continuamente, promoviendo prácticas modernas: diseño centrado en el usuario, calidad, <strong>seguridad por defecto</strong> y operaciones confiables.
                 </p>
 
                 <p>
-                  Participar en Devurity es integrarse a un <strong>ecosistema que potencia el talento joven</strong>, fomenta la cultura de la autogestión tecnológica y promueve la transformación digital universitaria.
+                  Nos proyectamos más allá del campus mediante <strong>colaboraciones, retos, ponencias y contribuciones open source</strong> que posicionen a la USCO y a sus estudiantes en el ecosistema tecnológico regional y nacional.
                 </p>
 
                 <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 p-6 rounded-lg border border-purple-500/30">
                   <p className="text-white font-semibold italic">
-                    Creemos en el poder del conocimiento compartido, en la ética del desarrollo seguro y en la posibilidad de construir desde la academia un futuro más confiable, inteligente y humano.
+                    Investigamos para construir, construimos para aprender y compartimos para trascender, con ética y seguridad como principios.
                   </p>
                 </div>
               </div>
@@ -210,10 +303,13 @@ export default function AboutPage() {
               <div className="absolute inset-0 bg-gradient-to-l from-purple-600/10 to-transparent blur-3xl"></div>
               <div className="relative flex items-center justify-center">
                 <div className="relative w-full max-w-lg">
-                  <img 
-                    src="/images/about/Yo xd.svg" 
-                    alt="Vision illustration" 
+                  <Image
+                    src={IMAGES.about.visionIllustration}
+                    alt="Vision illustration"
+                    width={800}
+                    height={800}
                     className="w-full h-auto object-contain"
+                    sizes="(max-width: 768px) 100vw, 50vw"
                   />
                   {/* Glow effect */}
                   <div className="absolute bottom-0 right-0 w-32 h-32 bg-purple-600/20 rounded-full blur-3xl"></div>
@@ -242,94 +338,65 @@ export default function AboutPage() {
 
           {/* Team Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-            {/* Team Member 1 */}
-            <div className="bg-zinc-900/50 rounded-3xl p-6 text-center hover:bg-zinc-800/50 transition-all">
-              <div className="w-40 h-40 mx-auto mb-4 rounded-3xl bg-[#f5e6d3] overflow-hidden">
-                <img src="/images/about/Yo xd.svg" alt="Brayan Toro" className="w-full h-full object-cover" />
+            {coreTeamMembers.map((member) => (
+              <div
+                key={member.name}
+                className="bg-zinc-900/50 rounded-3xl p-6 text-center hover:bg-zinc-800/50 transition-all"
+              >
+                <div
+                  className={`w-40 h-40 mx-auto mb-4 rounded-3xl overflow-hidden relative ${member.imageBgClass ?? ""}`}
+                >
+                  <Image
+                    src={member.imageSrc}
+                    alt={member.imageAlt}
+                    fill
+                    className="object-cover"
+                    sizes="160px"
+                  />
+                </div>
+                <h3 className="text-xl font-bold mb-2">{member.name}</h3>
+                <p className="text-sm font-semibold text-gray-400 mb-2">{member.role}</p>
+                {member.tagline ? (
+                  <p className="text-xs text-gray-500 mb-3">{member.tagline}</p>
+                ) : null}
+                {member.description ? (
+                  <p className="text-sm text-gray-400 mb-4">{member.description}</p>
+                ) : null}
+                {member.linkHref && member.linkLabel ? (
+                  <a
+                    href={member.linkHref}
+                    className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                  >
+                    <span className="text-xs">{member.linkLabel}</span>
+                  </a>
+                ) : null}
               </div>
-              <h3 className="text-xl font-bold mb-2">Brayan Toro Bustos</h3>
-              <p className="text-sm font-semibold text-gray-400 mb-2">Estudiante Ingeniería de Software</p>
-              <p className="text-xs text-gray-500 mb-3">| Frontend WebDev & DevOps |</p>
-              <p className="text-sm text-gray-400 mb-4">Líder y participante en el desarrollo de proyectos web.</p>
-              <a href="#" className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
-                <span className="text-xs">LinkedIn</span>
-              </a>
-            </div>
-
-            {/* Team Member 2 */}
-            <div className="bg-zinc-900/50 rounded-3xl p-6 text-center hover:bg-zinc-800/50 transition-all">
-              <div className="w-40 h-40 mx-auto mb-4 rounded-3xl bg-white overflow-hidden">
-                <img src="/images/about/alex.png" alt="Alexander Lozada" className="w-full h-full object-cover" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Alexander Lozada .</h3>
-              <p className="text-sm font-semibold text-gray-400 mb-2">Estudiante Ingeniería de Software</p>
-              <p className="text-xs text-gray-500 mb-3">| Backend WebDev & DB Engineer |</p>
-              <p className="text-sm text-gray-400 mb-4">Tutor de lenguajes y frameworks, usuario de Linux.</p>
-              <a href="#" className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
-                <span className="text-xs">GitHub</span>
-              </a>
-            </div>
-
-            {/* Team Member 3 */}
-            <div className="bg-zinc-900/50 rounded-3xl p-6 text-center hover:bg-zinc-800/50 transition-all">
-              <div className="w-40 h-40 mx-auto mb-4 rounded-3xl bg-purple-200 overflow-hidden">
-                <img src="/images/about/mora.jpg" alt="Juan Camilo" className="w-full h-full object-cover" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Juan Camilo Mora Castañeda</h3>
-              <p className="text-sm font-semibold text-gray-400 mb-2">Estudiante Ingeniería de Software</p>
-              <p className="text-xs text-gray-500 mb-3">| T-Stack WebDev |</p>
-              <p className="text-sm text-gray-400 mb-4">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-              <a href="#" className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
-                <span className="text-xs">GitHub</span>
-              </a>
-            </div>
-
-            {/* Team Member 4 */}
-            <div className="bg-zinc-900/50 rounded-3xl p-6 text-center hover:bg-zinc-800/50 transition-all">
-              <div className="w-40 h-40 mx-auto mb-4 rounded-3xl bg-yellow-100 overflow-hidden">
-                <img src="/images/about/pablo.png" alt="Pablo Trujillo" className="w-full h-full object-cover" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Pablo Trujillo Artunduaga</h3>
-              <p className="text-sm font-semibold text-gray-400 mb-2">Estudiante Ingeniería de Software</p>
-              <p className="text-xs text-gray-500 mb-3">| Python Data Scientist |</p>
-              <p className="text-sm text-gray-400 mb-4">Científico de datos con Python.</p>
-              <a href="#" className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
-                <span className="text-xs">GitHub</span>
-              </a>
-            </div>
+            ))}
           </div>
 
           {/* Second Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Team Member 5 */}
-            <div className="bg-zinc-900/50 rounded-3xl p-6 text-center hover:bg-zinc-800/50 transition-all">
-              <div className="w-40 h-40 mx-auto mb-4 rounded-3xl overflow-hidden">
-                <img src="/api/placeholder/160/160" alt="María López" className="w-full h-full object-cover" />
+            {supportingTeamMembers.map((member) => (
+              <div
+                key={member.name}
+                className="bg-zinc-900/50 rounded-3xl p-6 text-center hover:bg-zinc-800/50 transition-all"
+              >
+                <div className="w-40 h-40 mx-auto mb-4 rounded-3xl overflow-hidden relative">
+                  <Image
+                    src={member.imageSrc}
+                    alt={member.imageAlt}
+                    fill
+                    className="object-cover"
+                    sizes="160px"
+                  />
+                </div>
+                <h3 className="text-xl font-bold mb-2">{member.name}</h3>
+                <p className="text-sm font-semibold text-gray-400 mb-2">{member.role}</p>
+                {member.tagline ? (
+                  <p className="text-xs text-gray-500 mb-3">{member.tagline}</p>
+                ) : null}
               </div>
-              <h3 className="text-xl font-bold mb-2">María López .</h3>
-              <p className="text-sm font-semibold text-gray-400 mb-2">Estudiante tecnología en desarrollo de software</p>
-              <p className="text-xs text-gray-500 mb-3">| Hacker Ética |</p>
-            </div>
-
-            {/* Team Member 6 */}
-            <div className="bg-zinc-900/50 rounded-3xl p-6 text-center hover:bg-zinc-800/50 transition-all">
-              <div className="w-40 h-40 mx-auto mb-4 rounded-3xl overflow-hidden">
-                <img src="/api/placeholder/160/160" alt="Carlos Gómez" className="w-full h-full object-cover" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Carlos Gómez G</h3>
-              <p className="text-sm font-semibold text-gray-400 mb-2">Estudiante Ingeniería de Software</p>
-              <p className="text-xs text-gray-500 mb-3">| Cloud & Backend |</p>
-            </div>
-
-            {/* Team Member 7 */}
-            <div className="bg-zinc-900/50 rounded-3xl p-6 text-center hover:bg-zinc-800/50 transition-all">
-              <div className="w-40 h-40 mx-auto mb-4 rounded-3xl overflow-hidden">
-                <img src="/api/placeholder/160/160" alt="Andrés Castillo" className="w-full h-full object-cover" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Andrés Castillo Polanco</h3>
-              <p className="text-sm font-semibold text-gray-400 mb-2">Estudiante Ingeniería de Software</p>
-              <p className="text-xs text-gray-500 mb-3">| Frontend & UX |</p>
-            </div>
+            ))}
 
             {/* Team Member 8 */}
             <div className="bg-zinc-900/50 rounded-3xl p-6 text-center hover:bg-zinc-800/50 transition-all">
