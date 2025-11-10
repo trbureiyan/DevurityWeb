@@ -3,6 +3,20 @@ import type { NextRequest } from "next/server";
 import { authMiddleware } from "./lib/auth/middleware";
 import { csrfAdapter } from "./lib/csrf";
 
+const redirectMap: Record<string, string> = {
+  "/auth": "/auth/login",
+  "/register": "/auth/register",
+  "/login": "/auth/login"
+};
+
+const forbiddenFragments = [
+  ".env",
+  ".git",
+  "package.json",
+  "tsconfig",
+  "next.config",
+];
+
 // Middleware principal
 export async function middleware(
   request: NextRequest,
