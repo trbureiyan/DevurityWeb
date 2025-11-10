@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
+import { useCsrf } from "@/hooks/useCsrf";
 
 // Iconos SVG para redes sociales
 function LinkedInIcon({ className }: { className?: string }) {
@@ -73,22 +74,58 @@ export default function ContactSection() {
     type: "success" | "error" | null;
     message: string;
   }>({ type: null, message: "" });
+  const { fetchWithCsrf, refetch, hasToken, error: csrfError } = useCsrf();
+
+  useEffect(() => {
+    if (!hasToken) {
+      void refetch();
+    }
+  }, [hasToken, refetch]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const trimmedPayload = {
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      message: formData.message.trim(),
+    };
+
+    if (!trimmedPayload.name || !trimmedPayload.email || !trimmedPayload.message) {
+      setSubmitStatus({
+        type: "error",
+        message: "Por favor completa todos los campos antes de enviar.",
+      });
+      return;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(trimmedPayload.email)) {
+      setSubmitStatus({
+        type: "error",
+        message: "Ingresa un correo electrónico válido.",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitStatus({ type: null, message: "" });
 
     try {
-      const response = await fetch("/api/contact", {
+      const response = await fetchWithCsrf("/api/contact", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(trimmedPayload),
       });
 
-      const data = await response.json();
+      const data = await response
+        .json()
+        .catch(() => ({ message: "Error desconocido al procesar la respuesta." }));
+
+      if (response.status === 403) {
+        await refetch();
+      }
 
       if (response.ok) {
         setSubmitStatus({
@@ -102,9 +139,14 @@ export default function ContactSection() {
           message: "",
         });
       } else {
+        const errorMessage =
+          data?.message ||
+          data?.error ||
+          data?.Error ||
+          "Error al enviar el mensaje. Intenta de nuevo.";
         setSubmitStatus({
           type: "error",
-          message: data.error || "Error al enviar el mensaje. Intenta de nuevo.",
+          message: errorMessage,
         });
       }
     } catch (error) {
@@ -164,6 +206,13 @@ export default function ContactSection() {
                 }`}
               >
                 <p className="font-ubuntu text-sm">{submitStatus.message}</p>
+              </div>
+            )}
+            {csrfError && !submitStatus.type && (
+              <div className="p-4 rounded-lg border-2 bg-red-900/20 border-red-500 text-red-300">
+                <p className="font-ubuntu text-sm">
+                  No pudimos preparar el envío seguro del formulario. Intenta nuevamente en unos segundos.
+                </p>
               </div>
             )}
 
