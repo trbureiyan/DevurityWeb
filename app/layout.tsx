@@ -3,6 +3,7 @@ import { Orbitron, Ubuntu } from "next/font/google";
 import "./globals.css";
 import NavbarConditional from "@/components/layouts/NavbarConditional";
 import Footer from "@/components/layouts/Footer";
+import { siteIcons } from "@/lib/constants/metadata";
 
 // Config de fuentes
 const orbitron = Orbitron({
@@ -21,7 +22,9 @@ const ubuntu = Ubuntu({
 
 export const metadata: Metadata = {
   title: "Devurity - Semillero de Investigación",
-  description: "Plataforma oficial del semillero universitario Devurity"
+  description: "Plataforma oficial del semillero universitario Devurity",
+  icons: siteIcons,
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({
