@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import prisma from "../../lib/postgresDriver";
 
 function toBigInt(id: string | number): bigint {
@@ -12,43 +13,37 @@ function toBigInt(id: string | number): bigint {
   }
 }
 
+type InactiveUserRecord = Prisma.usersGetPayload<{
+  include: {
+    roles: {
+      select: {
+        name: true;
+      };
+    };
+    user_skills: {
+      select: {
+        skills: {
+          select: {
+            name: true;
+          };
+        };
+      };
+    };
+  };
+}>;
+
+export type InactiveUser = Omit<InactiveUserRecord, "id" | "role_id"> & {
+  id: string;
+  role_id: string;
+};
+
 export interface PaginatedUsersResponse {
-  users: any[];
+  users: InactiveUser[];
   total: number;
   page: number;
   limit: number;
   totalPages: number;
 }
-
-/* Includes */
-
-const allIncludes = {
-  roles: {
-    select: {
-      name: true,
-    },
-  },
-  user_skills: {
-    select: {
-      skills: {
-        select: {
-          name: true,
-        },
-      },
-    },
-  },
-  user_platforms: {
-    include: {
-      platforms: {
-        select: {
-          name: true,
-        },
-      },
-    },
-  },
-};
-
-/*  */
 
 export interface user {
   name: string;
@@ -166,13 +161,23 @@ export async function createUser(users: createUserInterface) {
   const { name, password, email, lastname, skills, motivation, semester } =
     users;
   return await prisma.$transaction(async (tx) => {
+    // Get the default 'user' role
+    const userRole = await tx.roles.findUnique({
+      where: { name: 'user' },
+      select: { id: true },
+    });
+
+    if (!userRole) {
+      throw new Error('USER_ROLE_NOT_FOUND: Default user role does not exist. Please run database seed.');
+    }
+
     const nuevoUsuario = await tx.users.create({
       data: {
         name,
         last_name: lastname,
         email,
         password,
-        role_id: 2,
+        role_id: userRole.id,
         motivation,
         semester,
       },
@@ -263,7 +268,7 @@ export async function findInactiveUsersWithPagination(
   const totalPages = Math.ceil(total / limit);
 
   // Convert BigInt IDs to strings for JSON serialization
-  const usersWithStringIds = users.map((user) => ({
+  const usersWithStringIds: InactiveUser[] = users.map((user) => ({
     ...user,
     id: user.id.toString(),
     role_id: user.role_id.toString(),

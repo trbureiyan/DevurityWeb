@@ -15,7 +15,7 @@ const isExternalHref = (href?: string): boolean =>
   typeof href === "string" && href.startsWith("http");
 
 // Revalidar cada 6 horas
-export const revalidate = 60 * 60 * 6;
+export const revalidate = 21600;
 
 // Genera metadatos dinámicos usando la primera actualización
 export async function generateMetadata(): Promise<Metadata> {

@@ -14,16 +14,10 @@ const createAccentStyles = (color: string): CSSProperties =>
   }) as CSSProperties;
 
 // Revalidar cada 6 horas
-export const revalidate = 60 * 60 * 6;
-
-interface UpdateDetailPageProps {
-  params: {
-    slug: string;
-  };
-}
+export const revalidate = 21600;
 
 // Generar rutas estáticas para cada update
-export async function generateStaticParams() {
+export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
   const updates = await getUpdatesFeed();
 
   return updates
@@ -34,9 +28,10 @@ export async function generateStaticParams() {
 }
 
 // Generar metadata dinámicamente para cada update
-export async function generateMetadata({
-  params,
-}: UpdateDetailPageProps): Promise<Metadata> {
+export async function generateMetadata(
+  props: PageProps<"/updates/[slug]">
+): Promise<Metadata> {
+  const params = await props.params;
   const updates = await getUpdatesFeed();
   const update = updates.find((item) => item.slug === params.slug);
 
@@ -54,9 +49,10 @@ export async function generateMetadata({
   };
 }
 
-export default async function UpdateDetailPage({
-  params,
-}: UpdateDetailPageProps) {
+export default async function UpdateDetailPage(
+  props: PageProps<"/updates/[slug]">
+) {
+  const params = await props.params;
   const updates = await getUpdatesFeed();
   const update = updates.find((item) => item.slug === params.slug);
 

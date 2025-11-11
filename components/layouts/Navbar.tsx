@@ -16,7 +16,7 @@ const NAVIGATION_ITEMS = [
   { label: "Nosotros", href: "/about" },
   { label: "Proyectos", href: "/projects" },
   { label: "Eventos", href: "/updates" },
-  { label: "Asistencia", href: "/attendance" },
+  { label: "Asistencia", href: "/admin/attendances" },
 ];
 
 export default function Navbar() {

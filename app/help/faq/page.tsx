@@ -4,15 +4,11 @@ export const dynamic = "force-static";
 const faqs = [
   {
     q: "¿Quién puede ser miembro del semillero Devurity?",
-    a: "Cualquier estudiante de la Universidad con interés en diseño, desarrollo, investigación o creación de proyectos tecnológicos puede postularse al semillero, sin necesidad de conocimientos previos."
+    a: "Cualquier estudiante de la Universidad con interés en diseño, desarrollo, investigación o creación de proyectos tecnológicos puede postularse al semillero, sin necesidad de conocimientos avanzados."
   },
   {
     q: "¿Cómo me inscribo al semillero?",
     a: "Debes diligenciar el formulario de inscripción oficial. La solicitud será revisada por el coordinador o tutor, y se te notificará la aceptación junto con la asignación de tu rol inicial."
-  },
-  {
-    q: "¿Existen roles dentro del semillero?",
-    a: "Sí. Existen roles como Miembro, Coordinador y Administrador/Tutor. Cada rol determina responsabilidades como gestión de proyectos, tutorías, organización de actividades y toma de decisiones."
   },
   {
     q: "¿Se controla la asistencia a las sesiones?",
@@ -28,7 +24,7 @@ const faqs = [
   },
   {
     q: "¿Puedo reservar el laboratorio?",
-    a: "Sí. El laboratorio puede reservarse para exposiciones, tutorías, trabajo colaborativo o sesiones de proyecto mediante solicitud previa."
+    a: "Sí. Por lo general depende, sin embargo el laboratorio puede llegar a reservarse para exposiciones, tutorías, trabajo colaborativo o sesiones de proyecto mediante solicitud previa."
   },
   {
     q: "¿Qué pasa si incumplo las normas del laboratorio?",

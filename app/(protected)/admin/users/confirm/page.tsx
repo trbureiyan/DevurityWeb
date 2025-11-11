@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useCsrf } from "@/hooks/useCsrf";
 
@@ -22,14 +22,6 @@ interface User {
   }>;
 }
 
-interface PaginatedResponse {
-  users: User[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
 export default function ConfirmUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +33,12 @@ export default function ConfirmUsersPage() {
     totalPages: 0,
   });
   const { fetchWithCsrf, loading: csrfLoading } = useCsrf();
+  const fetchWithCsrfRef = useRef(fetchWithCsrf);
+  const hasFetchedRef = useRef(false);
+
+  useEffect(() => {
+    fetchWithCsrfRef.current = fetchWithCsrf;
+  }, [fetchWithCsrf]);
 
   const fetchPendingUsers = useCallback(
     async (page: number = 1, limit: number = 12) => {
@@ -48,7 +46,7 @@ export default function ConfirmUsersPage() {
         setLoading(true);
         setError(null);
 
-        const response = await fetchWithCsrf(
+        const response = await fetchWithCsrfRef.current(
           `/api/auth/admin/users?page=${page}&limit=${limit}`,
         );
         const result = await response.json();
@@ -71,14 +69,15 @@ export default function ConfirmUsersPage() {
         setLoading(false);
       }
     },
-    [fetchWithCsrf],
+    [],
   );
 
   useEffect(() => {
-    if (!csrfLoading) {
+    if (!csrfLoading && !hasFetchedRef.current) {
+      hasFetchedRef.current = true;
       fetchPendingUsers();
     }
-  }, [csrfLoading]);
+  }, [csrfLoading, fetchPendingUsers]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {

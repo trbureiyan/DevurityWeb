@@ -37,6 +37,7 @@ export default function QRDynamic({ userId, className }: QRDynamicProps) {
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const { fetchWithCsrf } = useCsrf();
+  const fetchWithCsrfRef = useRef(fetchWithCsrf);
   const generateNewQRRef = useRef<() => Promise<void>>(null);
   const isGeneratingRef = useRef(false);
 
@@ -52,7 +53,7 @@ export default function QRDynamic({ userId, className }: QRDynamicProps) {
     setError(null);
 
     try {
-      const res = await fetchWithCsrf("/api/qr-dinamico", {
+      const res = await fetchWithCsrfRef.current("/api/qr-dinamico", {
         method: "POST",
         body: JSON.stringify({ userId: userId }),
         headers: { "Content-Type": "application/json" },
@@ -74,12 +75,16 @@ export default function QRDynamic({ userId, className }: QRDynamicProps) {
       isGeneratingRef.current = false;
       setIsGenerating(false);
     }
-  }, [userId, fetchWithCsrf]);
+  }, [userId]);
 
   // Actualizar la referencia cuando generateNewQR cambia
   useEffect(() => {
     generateNewQRRef.current = generateNewQR;
   }, [generateNewQR]);
+
+  useEffect(() => {
+    fetchWithCsrfRef.current = fetchWithCsrf;
+  }, [fetchWithCsrf]);
 
   useEffect(() => {
     if (!userId) {

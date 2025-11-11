@@ -225,22 +225,43 @@ export async function POST(req: NextRequest, { params }: Params) {
       motivation,
     });
   } catch (e) {
-    if (e instanceof Error && e.message === "INVALID_SKILLS_SELECTION") {
-      return new Response(
-        JSON.stringify(
-          errorRequest(
-            "habilidades",
-            "Alguna habilidad seleccionada no existe en el sistema.",
+    if (e instanceof Error) {
+      // Log detailed error for debugging
+      console.error("Error creating user:", e.message);
+      console.error("Stack trace:", e.stack);
+
+      if (e.message === "INVALID_SKILLS_SELECTION") {
+        return new Response(
+          JSON.stringify(
+            errorRequest(
+              "habilidades",
+              "Alguna habilidad seleccionada no existe en el sistema.",
+            ),
           ),
-        ),
-        {
-          status: 422,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
+          {
+            status: 422,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      if (e.message.includes("USER_ROLE_NOT_FOUND")) {
+        return new Response(
+          JSON.stringify(
+            errorRequest(
+              "configuración",
+              "Error de configuración del sistema. El rol de usuario por defecto no existe. Por favor contacta al administrador.",
+            ),
+          ),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
     }
 
-    console.log(e);
+    console.error("Unexpected error during registration:", e);
     return new Response(
       JSON.stringify(
         errorRequest(

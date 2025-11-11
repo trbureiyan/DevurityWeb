@@ -66,7 +66,7 @@ const reglamento: { titulo: string; subtitulo?: string; titulos: Titulo[] } = {
             "Disponer adecuadamente de residuos y basuras.",
             "Limpiar utensilios de comida o bebida (vasos, platos) inmediatamente después de su uso.",
             "Organizar el mobiliario (sillas, mesas) al finalizar su jornada.",
-            "No dejar pertenencias personales de forma permanente en áreas comunes.",
+            "No está permitido dejar pertenencias de forma permanente en las áreas comunes. Los artículos que no sean para uso académico deben ser retirados al finalizar su uso.",
           ],
         },
         {
@@ -80,7 +80,7 @@ const reglamento: { titulo: string; subtitulo?: string; titulos: Titulo[] } = {
           numero: 6,
           titulo: "Sustancias Prohibidas",
           parrafos: [
-            "Queda estrictamente prohibido el consumo, porte o distribución de sustancias psicoactivas, bebidas alcohólicas, tabaco y cigarrillos electrónicos (vapeadores) dentro de las instalaciones del semillero.",
+            "Queda estrictamente prohibido el consumo y distribución de sustancias psicoactivas, bebidas alcohólicas, tabaco y cigarrillos electrónicos (vapeadores) dentro de las instalaciones del semillero.",
           ],
         },
         {
@@ -98,14 +98,14 @@ const reglamento: { titulo: string; subtitulo?: string; titulos: Titulo[] } = {
           items: [
             "El laboratorio debe usarse exclusivamente para los fines académicos e investigativos del semillero.",
             "Se prohíbe el uso recurrente de los equipos para actividades ajenas (ver películas, series o transmisiones deportivas fuera de los tiempos de descanso designados).",
-            "Están terminantemente prohibidos los juegos de azar o apuestas.",
+            "Están terminantemente prohibidos los juegos de azar o apuestas fuera del siguiente horario: 12 a 2pm lunes - jueves y viernes toda la tarde.",
           ],
         },
         {
           numero: 9,
           titulo: "Seguridad Física y Armas",
           parrafos: [
-            "Se prohíbe el ingreso de cualquier tipo de arma (de fuego, cortopunzante, Taser) a las instalaciones, en concordancia con el reglamento general de la universidad.",
+            "Se prohíbe el uso de cualquier tipo de arma (de fuego, cortopunzante, Taser) en las instalaciones, en concordancia con el reglamento general de la universidad.",
           ],
         },
       ],
@@ -222,19 +222,16 @@ const reglamento: { titulo: string; subtitulo?: string; titulos: Titulo[] } = {
         {
           numero: 22,
           titulo: "Propiedad Intelectual",
-          parrafos: [
-            "Este artículo es complejo y debe consultarse con la oficina de investigaciones de la universidad. Propuesta base:",
-          ],
           items: [
-            "La propiedad intelectual de los desarrollos, marcas y patentes generados como parte de los proyectos del semillero se regirá por el Reglamento de Propiedad Intelectual de la Universidad [Nombre de la Universidad].",
-            "Se debe definir claramente el porcentaje de titularidad entre los estudiantes-creadores, los docentes-tutores y la universidad, especialmente si se llega a una fase de comercialización.",
+            "La propiedad intelectual de los desarrollos, marcas y patentes generados como parte de los proyectos del semillero se regirá por el Reglamento de Propiedad Intelectual de la Universidad Surcolombiana.",
+            "Los porcentajes de titularidad entre los estudiantes-creadores, los docentes-tutores y la universidad deben ser definidos claramente por el equipo de trabajo, especialmente si se llega a una fase de comercialización.",
           ],
         },
         {
           numero: 23,
           titulo: "Publicaciones y Ponencias",
           parrafos: [
-            "Cualquier publicación, ponencia o presentación de resultados de un proyecto debe contar con la aprobación previa del líder del semillero y del docente tutor, y debe otorgar los créditos correspondientes a todos los autores y al semillero.",
+            "Cualquier publicación, ponencia o presentación de resultados de un proyecto debe contar con la aprobación previa del líder del semillero y el docente tutor, y debe otorgar los créditos correspondientes a todos los autores y al semillero.",
           ],
         },
       ],
@@ -254,19 +251,13 @@ const reglamento: { titulo: string; subtitulo?: string; titulos: Titulo[] } = {
             {
               subtitulo: "Faltas Graves:",
               items: [
-                "Reincidencia en faltas leves.",
-                "Uso indebido de instalaciones (Art. 8).",
-                "Inasistencia a seguimientos (Art. 16).",
-                "Negligencia con equipos (Art. 10).",
+                "Reincidencia en faltas leves, uso indebido de instalaciones (Art. 8), inasistencia a seguimientos (Art. 16), negligencia con equipos (Art. 10).",
               ],
             },
             {
               subtitulo: "Faltas Muy Graves:",
               items: [
-                "Consumo de sustancias (Art. 6).",
-                "Ingreso de armas (Art. 9).",
-                "Hurto, acoso, vulneraciones de seguridad (Art. 18).",
-                "Violación de confidencialidad (Art. 21).",
+                "Consumo de sustancias (Art. 6), ingreso de armas (Art. 9), hurto, acoso, vulneraciones de seguridad (Art. 18), violación de confidencialidad (Art. 21).",
               ],
             },
           ],

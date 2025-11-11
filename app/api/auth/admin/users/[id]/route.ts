@@ -7,29 +7,31 @@ import {
 import { EmailOptions, sendEmail } from "@/lib/email";
 import { errorRequest } from "@/lib/error";
 
-// Helper function to serialize BigInt values
-function serializeBigInt(obj: any): any {
-  if (obj === null || obj === undefined) {
-    return obj;
+// Helper function to serialize BigInt values without leaking any
+function serializeBigInt(value: unknown): unknown {
+  if (value === null || value === undefined) {
+    return value;
   }
 
-  if (typeof obj === "bigint") {
-    return obj.toString();
+  if (typeof value === "bigint") {
+    return value.toString();
   }
 
-  if (Array.isArray(obj)) {
-    return obj.map(serializeBigInt);
+  if (Array.isArray(value)) {
+    return value.map(serializeBigInt);
   }
 
-  if (typeof obj === "object") {
-    const result: any = {};
-    for (const [key, value] of Object.entries(obj)) {
-      result[key] = serializeBigInt(value);
-    }
-    return result;
+  if (typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>).reduce<Record<string, unknown>>(
+      (acc, [key, entry]) => {
+        acc[key] = serializeBigInt(entry);
+        return acc;
+      },
+      {},
+    );
   }
 
-  return obj;
+  return value;
 }
 
 export async function PUT(

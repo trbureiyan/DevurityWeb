@@ -4,7 +4,7 @@ import { getProjectsCatalog, getProjectsFilters } from "@/lib/data/projects";
 import { siteIcons } from "@/lib/constants/metadata";
 
 // Revalidar cada 6 horas (60 min * 60 seg * 6) -> crontab: 0 */6 * * *
-export const revalidate = 60 * 60 * 6;
+export const revalidate = 21600;
 
 // Mapeo de etapas a sus etiquetas legibles
 const projectDateFormatter = new Intl.DateTimeFormat("es-CO", {

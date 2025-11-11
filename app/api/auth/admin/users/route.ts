@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findInactiveUsersWithPagination } from "@/repositories/users/users.repositories";
+import {
+  findInactiveUsersWithPagination,
+} from "@/repositories/users/users.repositories";
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,8 +10,8 @@ export async function GET(request: NextRequest) {
 
     // If userId is provided, return single user
     if (userId) {
-      const result = await findInactiveUsersWithPagination(1, 1000); // Get all inactive users
-      const user = result.users.find((u: any) => u.id === userId);
+  const result = await findInactiveUsersWithPagination(1, 1000); // Get all inactive users
+  const user = result.users.find((u) => u.id === userId);
 
       if (!user) {
         return NextResponse.json(
@@ -51,19 +53,9 @@ export async function GET(request: NextRequest) {
 
     const result = await findInactiveUsersWithPagination(page, limit);
 
-    // Convert BigInt IDs to strings for JSON serialization
-    const serializedResult = {
-      ...result,
-      users: result.users.map((user: any) => ({
-        ...user,
-        id: user.id.toString(),
-        role_id: user.role_id.toString(),
-      })),
-    };
-
     return NextResponse.json({
       success: true,
-      data: serializedResult,
+      data: result,
     });
   } catch (error) {
     console.error("Error fetching pending users:", error);

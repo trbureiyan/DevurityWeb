@@ -52,14 +52,14 @@ const menuItems: MenuItem[] = [
   },
   {
     label: "Proyectos",
-    href: "/admin/projects",
+    href: "/projects",
     icon: FolderIcon,
     isActive: (pathname) =>
       pathname.startsWith("/admin/projects") || pathname.startsWith("/admin/proyectos"),
   },
   {
     label: "Eventos y noticias",
-    href: "/admin/updates",
+    href: "/updates",
     icon: CalendarDaysIcon,
     isActive: (pathname) => pathname.startsWith("/admin/eventos"),
   },
