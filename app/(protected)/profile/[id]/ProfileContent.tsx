@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import QRDynamic from "@/components/qr-dynamic";
-import type { UserProfile } from "@/lib/data/users";
+
+export type UserProfile = {
+  id: string;
+  name: string;
+  lastName: string;
+  skills: string[];
+};
 
 const STATIC_PROFILE_DATA = {
   workingOn: [
