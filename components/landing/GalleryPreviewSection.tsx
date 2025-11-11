@@ -1,38 +1,51 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { GALLERY_IMAGES } from "@/lib/constants/gallery";
 
-export default function GalleryPreviewSection() {
+// Props de galeria
+type GalleryPreviewSectionProps = {
+	images: string[];
+};
+
+export default function GalleryPreviewSection({ images }: GalleryPreviewSectionProps) {
+	// Estado para el índice actual del carrusel
 	const [currentIndex, setCurrentIndex] = useState(0);
+	// Control de autoplay
 	const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
-	// Seleccionar un subconjunto de imágenes para el carrusel
-	const previewImages = GALLERY_IMAGES.slice(0, 8);
+	// Seleccion de imagenes
+	const previewImages = useMemo(() => images.slice(0, 8), [images]);
 
+	// Efecto para el autoplay del carrusel
 	useEffect(() => {
 		if (!isAutoPlaying) return;
 
+		// Cambio a 4s
 		const interval = setInterval(() => {
-			setCurrentIndex((prev) => (prev + 1) % previewImages.length);
+			setCurrentIndex((prev) => (prev + 1) % Math.max(previewImages.length, 1));
 		}, 4000);
 
+		// Cleanup del intervalo
 		return () => clearInterval(interval);
 	}, [isAutoPlaying, previewImages.length]);
 
+	// Redireccion de imagen
 	const goToSlide = (index: number) => {
-		setCurrentIndex(index);
+		setCurrentIndex(index % Math.max(previewImages.length, 1));
+		// Pausar autoplay cuando el usuario interactúa
 		setIsAutoPlaying(false);
 	};
 
+	// Avanzar
 	const nextSlide = () => {
-		setCurrentIndex((prev) => (prev + 1) % previewImages.length);
+		setCurrentIndex((prev) => (prev + 1) % Math.max(previewImages.length, 1));
 		setIsAutoPlaying(false);
 	};
 
+	// Retroceder
 	const prevSlide = () => {
-		setCurrentIndex((prev) => (prev - 1 + previewImages.length) % previewImages.length);
+		setCurrentIndex((prev) => (prev - 1 + Math.max(previewImages.length, 1)) % Math.max(previewImages.length, 1));
 		setIsAutoPlaying(false);
 	};
 

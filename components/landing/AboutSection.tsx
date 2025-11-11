@@ -19,7 +19,9 @@ export default function AboutSection() {
               className="object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent flex items-center justify-center">
-              <h4 className="font-orbitron text-7xl font-extrabold text-white tracking-[0.3em] uppercase">DEV</h4>
+              <h4 className="font-orbitron text-7xl font-extrabold text-white tracking-[0.3em] uppercase">
+                DEV
+                </h4>
             </div>
           </div>
           <div className="space-y-4 text-center text-white md:text-left">
@@ -43,7 +45,9 @@ export default function AboutSection() {
               className="object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent flex items-center justify-center">
-              <h4 className="font-orbitron text-7xl font-extrabold text-white tracking-[0.3em] uppercase">URITY</h4>
+              <h4 className="font-orbitron text-7xl font-extrabold text-white tracking-[0.3em] uppercase">
+                URITY
+                </h4>
             </div>
           </div>
           <div className="space-y-4 text-center text-white md:text-center">

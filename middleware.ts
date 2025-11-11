@@ -23,6 +23,39 @@ export async function middleware(
 ): Promise<NextResponse | Response> {
   const token = request.cookies.get("auth_token")?.value;
   const currentPath = request.nextUrl.pathname;
+  const normalisedPath =
+    currentPath.endsWith("/") && currentPath !== "/"
+      ? currentPath.slice(0, -1)
+      : currentPath;
+
+  const redirectTarget = redirectMap[normalisedPath];
+  if (redirectTarget) {
+    const url = request.nextUrl.clone();
+    url.pathname = redirectTarget;
+    url.search = "";
+    return NextResponse.redirect(url, 308);
+  }
+
+  const lowerPath = currentPath.toLowerCase();
+  const hasTraversal = lowerPath.includes("..") || lowerPath.includes("%2e%2e");
+  const touchesForbidden = forbiddenFragments.some((fragment) =>
+    lowerPath.includes(fragment),
+  );
+
+  if (hasTraversal || touchesForbidden) {
+    if (currentPath.startsWith("/api")) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (currentPath !== "/not-found") {
+      const notFoundUrl = request.nextUrl.clone();
+      notFoundUrl.pathname = "/not-found";
+      notFoundUrl.search = "";
+      return NextResponse.redirect(notFoundUrl, 308);
+    }
+
+    return NextResponse.rewrite(request.nextUrl);
+  }
 
   // Si no hay token y es ruta protegida, guardar intent URL
   if (!token && isProtectedPath(currentPath)) {
