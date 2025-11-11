@@ -186,6 +186,10 @@ export async function createUser(users: createUserInterface) {
     });
 
     if (skills.length > 0) {
+      if (skillsDB.length !== skills.length) {
+        throw new Error("INVALID_SKILLS_SELECTION");
+      }
+
       await tx.user_skills.createMany({
         data: skillsDB.map((skill) => ({
           user_id: nuevoUsuario.id,

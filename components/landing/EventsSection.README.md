@@ -19,16 +19,19 @@ Sección que muestra las últimas noticias y eventos del semillero Devurity con 
 
 ## 📦 Datos
 
-Los datos de las noticias se encuentran en `/lib/constants/landing.ts`:
+Los datos de las noticias se encuentran en `/lib/constants/updates.ts`:
 
 ```typescript
 interface NewsEvent {
   id: number;
+  slug: string;
   title: string;
   date: string;
+  publishedAt: string;
   description: string;
   tags: string[];
   borderColor: string; // Color del borde de la tarjeta
+  href: string; // Ruta interna (/updates/slug) o enlace externo completo
 }
 ```
 
@@ -52,14 +55,17 @@ Actualmente usa: `/images/landing/cyberpunkWoman.webp`
 
 ## 🎯 Cómo actualizar las noticias
 
-1. Edita el array `LATEST_NEWS` en `/lib/constants/landing.ts`
+1. Edita el array `LATEST_NEWS` en `/lib/constants/updates.ts`
 2. Cada noticia debe tener:
    - `id`: único
+  - `slug`: identificador URL para el detalle (si aplica)
    - `title`: título de la noticia
    - `date`: fecha del evento
+  - `publishedAt`: fecha ISO usada para ordenamiento
    - `description`: descripción breve
    - `tags`: array de strings (máximo 5 tags)
    - `borderColor`: color hexadecimal para el borde
+  - `href`: enlace destino (interno o externo)
 
 ### Ejemplo:
 ```typescript

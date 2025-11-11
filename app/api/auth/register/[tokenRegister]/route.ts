@@ -89,6 +89,42 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { name, email, lastname } = payload;
 
   const { semester, motivation, skills, password } = await req.json();
+  if (!Array.isArray(skills) || skills.length === 0) {
+    return new Response(
+      JSON.stringify(
+        errorRequest(
+          "habilidades",
+          "Selecciona al menos una habilidad válida.",
+        ),
+      ),
+      {
+        status: 422,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  const normalizedSkills = skills
+    .filter((skill): skill is string => typeof skill === "string")
+    .map((skill) => skill.trim())
+    .filter((skill) => skill.length > 0);
+
+  if (normalizedSkills.length !== skills.length) {
+    return new Response(
+      JSON.stringify(
+        errorRequest(
+          "habilidades",
+          "Se detectaron habilidades vacías o inválidas.",
+        ),
+      ),
+      {
+        status: 422,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  const uniqueSkills = Array.from(new Set(normalizedSkills));
   if (!semester && !motivation && skills == undefined && !password) {
     return new Response(
       JSON.stringify(errorRequest("", "Rellena los campos para el registro")),
@@ -185,13 +221,32 @@ export async function POST(req: NextRequest, { params }: Params) {
       lastname: lastname,
       password: bcryptAdapter.hash(password),
       semester,
-      skills,
+      skills: uniqueSkills,
       motivation,
     });
   } catch (e) {
+    if (e instanceof Error && e.message === "INVALID_SKILLS_SELECTION") {
+      return new Response(
+        JSON.stringify(
+          errorRequest(
+            "habilidades",
+            "Alguna habilidad seleccionada no existe en el sistema.",
+          ),
+        ),
+        {
+          status: 422,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    console.log(e);
     return new Response(
       JSON.stringify(
-        errorRequest("Usuario", "Ha ocurrido un error en la creacion del "),
+        errorRequest(
+          "registro",
+          "Ha ocurrido un error al crear el usuario. Intenta nuevamente.",
+        ),
       ),
       {
         status: 500,

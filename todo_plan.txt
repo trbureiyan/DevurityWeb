@@ -1,0 +1,6 @@
+1. [Hecho] Reconstruir home y landing sections como server components con data precargada y caché/ISR por sección (events semanal, gallery estática)
+2. [Hecho] Extender SSR/SSG a about/projects/updates/profile con consultas precalculadas y `generateMetadata`
+3. [Hecho] Documentar estrategia de caching/ISR para todas las rutas públicas pensando en SEO y escalabilidad
+4. Definir guard SSR en layout admin y marcar rutas protegidas dinámicas
+5. Preparar infraestructura neutral para markdown (contratos de datos, hook/loader) a la espera de decisión S3 vs DB
+6. Planear futura integración con repo Alex (reaplicar cambios)

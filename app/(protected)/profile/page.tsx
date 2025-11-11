@@ -69,6 +69,4 @@ export default function ProfileRedirectPage() {
       </div>
     );
   }
-
-  return null;
 }
