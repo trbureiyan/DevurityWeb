@@ -1,12 +1,17 @@
 import prisma from "../../lib/postgresDriver";
 import logger from "../../lib/logger";
-import type { CreateUserDTO, PaginatedUsersResponse } from "../../lib/types/user.types";
+import type {
+  CreateUserDTO,
+  PaginatedUsersResponse,
+} from "../../lib/types/user.types";
 
 function toBigInt(id: string | number): bigint {
   logger.debug("toBigInt: Converting ID:", { id, type: typeof id });
   try {
     const result = BigInt(id);
-    logger.debug("toBigInt: Conversion successful:", { result: result.toString() });
+    logger.debug("toBigInt: Conversion successful:", {
+      result: result.toString(),
+    });
     return result;
   } catch (error) {
     logger.error("toBigInt: Error converting ID:", { id, error });
@@ -194,17 +199,34 @@ export async function findById(id: string) {
     throw error;
   }
 }
+
 export async function createUser(users: CreateUserDTO) {
-  const { name, password, email, last_name, skills, motivation, semester, program } =
-    users;
-  
-  logger.info("[REPO] Creating user:", { name, email, last_name, semester, skillsCount: skills.length });
-  
+  const {
+    name,
+    password,
+    email,
+    last_name,
+    skills,
+    motivation,
+    semester,
+    program,
+  } = users;
+
+  logger.info("[REPO] Creating user:", {
+    name,
+    email,
+    last_name,
+    semester,
+    skillsCount: skills.length,
+  });
+
   try {
     return await prisma.$transaction(async (tx) => {
       // 0. Obtener todos los roles disponibles para debugging
       const allRoles = await tx.roles.findMany();
-      logger.debug("[REPO] Available roles in database:", { roles: allRoles.map(r => ({ id: r.id.toString(), name: r.name })) });
+      logger.debug("[REPO] Available roles in database:", {
+        roles: allRoles.map((r) => ({ id: r.id.toString(), name: r.name })),
+      });
 
       // 1. Buscar el rol "member" o similar
       const memberRole = await tx.roles.findFirst({
@@ -215,41 +237,55 @@ export async function createUser(users: CreateUserDTO) {
             { name: "member" },
             { name: "Member" },
             { name: "miembro" },
-            { name: "Miembro" }
-          ]
-        }
+            { name: "Miembro" },
+          ],
+        },
       });
 
       if (!memberRole) {
-        logger.error("[REPO] No member role found. Available roles:", { availableRoles: allRoles.map(r => r.name) });
-        throw new Error("No se encontró un rol válido para usuarios. Contacta al administrador.");
+        logger.error("[REPO] No member role found. Available roles:", {
+          availableRoles: allRoles.map((r) => r.name),
+        });
+        throw new Error(
+          "No se encontró un rol válido para usuarios. Contacta al administrador.",
+        );
       }
-      
-      logger.debug("[REPO] Using role:", { id: memberRole.id.toString(), name: memberRole.name });
+
+      logger.debug("[REPO] Using role:", {
+        id: memberRole.id.toString(),
+        name: memberRole.name,
+      });
 
       // 2. Crear el usuario con username generado automáticamente
       logger.debug("[REPO] Step 1: Creating user record");
-      
+
       // Generar username único basado en email
-      const baseUsername = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+      const baseUsername = email
+        .split("@")[0]
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
       let username = baseUsername;
       let counter = 1;
-      
+
       // Verificar si el username ya existe, si es así agregar un número
       while (await tx.users.findUnique({ where: { username } })) {
         username = `${baseUsername}${counter}`;
         counter++;
       }
-      
+
       logger.debug("[REPO] Generated username:", { username });
-      
+
       // Resolver programa académico
       let programId: bigint | null = null;
       if (program && program.trim().length > 0) {
-        const programRecord = await tx.programs.findUnique({ where: { name: program } });
+        const programRecord = await tx.programs.findUnique({
+          where: { name: program },
+        });
 
         if (!programRecord) {
-          throw new Error(`Programa "${program}" no existe en la base de datos`);
+          throw new Error(
+            `Programa "${program}" no existe en la base de datos`,
+          );
         }
 
         programId = programRecord.id;
@@ -269,28 +305,36 @@ export async function createUser(users: CreateUserDTO) {
           username_last_changed: new Date(), // Establecer fecha inicial
         },
       });
-      logger.info("[REPO] User created with ID:", { userId: nuevoUsuario.id.toString(), username });
+      logger.info("[REPO] User created with ID:", {
+        userId: nuevoUsuario.id.toString(),
+        username,
+      });
 
       // 3. Si hay skills, procesarlas
       if (skills && skills.length > 0) {
         logger.debug("[REPO] Step 2: Processing skills:", { skills });
-        
+
         const skillsDB = await tx.skills.findMany({
           where: {
             name: { in: skills },
           },
           select: { id: true, name: true },
         });
-        
-        logger.debug("[REPO] Found skills in DB:", { foundCount: skillsDB.length, totalRequested: skills.length });
-        
+
+        logger.debug("[REPO] Found skills in DB:", {
+          foundCount: skillsDB.length,
+          totalRequested: skills.length,
+        });
+
         if (skillsDB.length === 0) {
           logger.warn("[REPO] No matching skills found in database");
           // No lanzar error, continuar sin skills
         } else {
-          const foundSkillNames = skillsDB.map(s => s.name);
-          const missingSkills = skills.filter(s => !foundSkillNames.includes(s));
-          
+          const foundSkillNames = skillsDB.map((s) => s.name);
+          const missingSkills = skills.filter(
+            (s) => !foundSkillNames.includes(s),
+          );
+
           if (missingSkills.length > 0) {
             logger.warn("[REPO] Some skills not found:", { missingSkills });
           }
@@ -302,7 +346,9 @@ export async function createUser(users: CreateUserDTO) {
               skill_id: skill.id,
             })),
           });
-          logger.debug("[REPO] Created user_skills relations", { count: skillsDB.length });
+          logger.debug("[REPO] Created user_skills relations", {
+            count: skillsDB.length,
+          });
         }
       } else {
         logger.debug("[REPO] No skills to process");
@@ -317,9 +363,15 @@ export async function createUser(users: CreateUserDTO) {
       details: {
         message: error instanceof Error ? error.message : "Unknown error",
         name: error instanceof Error ? error.name : undefined,
-        code: typeof error === 'object' && error !== null && 'code' in error ? (error as { code: unknown }).code : undefined,
-        meta: typeof error === 'object' && error !== null && 'meta' in error ? (error as { meta: unknown }).meta : undefined,
-      }
+        code:
+          typeof error === "object" && error !== null && "code" in error
+            ? (error as { code: unknown }).code
+            : undefined,
+        meta:
+          typeof error === "object" && error !== null && "meta" in error
+            ? (error as { meta: unknown }).meta
+            : undefined,
+      },
     });
     throw error;
   }
@@ -346,7 +398,7 @@ export async function existUserByEmail(email: string) {
 export async function findActiveUsersForTeam() {
   try {
     logger.debug("findActiveUsersForTeam: Starting query");
-    
+
     const users = await prisma.users.findMany({
       where: {
         is_active: true,
@@ -370,7 +422,7 @@ export async function findActiveUsersForTeam() {
         },
       },
       orderBy: {
-        id: 'asc',
+        id: "asc",
       },
     });
 
@@ -378,33 +430,55 @@ export async function findActiveUsersForTeam() {
 
     // Convert BigInt IDs to strings and safely handle relations
     const result = users.map((user) => {
-      logger.debug("Processing user:", { 
-        id: user.id.toString(), 
+      logger.debug("Processing user:", {
+        id: user.id.toString(),
         username: user.username,
         hasRoles: !!user.roles,
-        skillsCount: user.user_skills?.length ?? 0
+        skillsCount: user.user_skills?.length ?? 0,
       });
-      
+
       return {
         ...user,
         id: user.id.toString(),
-        skills: user.user_skills?.map((us) => us.skills?.name ?? 'Unknown') ?? [],
-        role: user.roles?.name ?? 'Member',
-        platforms: user.user_platforms?.map((up) => ({
-          name: up.platforms?.name ?? 'Link',
-          link: up.link,
-        })) ?? [],
+        skills:
+          user.user_skills?.map((us) => us.skills?.name ?? "Unknown") ?? [],
+        role: user.roles?.name ?? "Member",
+        platforms:
+          user.user_platforms?.map((up) => ({
+            name: up.platforms?.name ?? "Link",
+            link: up.link,
+          })) ?? [],
       };
     });
 
     logger.debug("findActiveUsersForTeam: Completed successfully");
     return result;
   } catch (error) {
-    logger.error("findActiveUsersForTeam: Error occurred", { 
+    logger.error("findActiveUsersForTeam: Error occurred", {
       error,
-      message: error instanceof Error ? error.message : String(error)
+      message: error instanceof Error ? error.message : String(error),
     });
     throw error;
+  }
+}
+
+export async function updatePasswordByEmail(
+  email: string,
+  hashedPassword: string,
+) {
+  try {
+    const updated = await prisma.users.update({
+      where: { email },
+      data: { password: hashedPassword },
+    });
+    return !!updated;
+  } catch (error) {
+    console.error(
+      "updatePasswordByEmail: error updating password for",
+      email,
+      error,
+    );
+    return false;
   }
 }
 
@@ -543,7 +617,7 @@ function sanitizeUsername(username: string): string {
   return username
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9_-]/g, '') // Solo letras, números, guiones y guiones bajos
+    .replace(/[^a-z0-9_-]/g, "") // Solo letras, números, guiones y guiones bajos
     .slice(0, 30); // Máximo 30 caracteres
 }
 
@@ -564,7 +638,7 @@ function validateAndNormalizeUrl(url: string, label: string): string {
   }
 
   const trimmed = url.trim();
-  
+
   // If it already has a protocol, validate it
   if (/^https?:\/\//i.test(trimmed)) {
     try {
@@ -574,7 +648,7 @@ function validateAndNormalizeUrl(url: string, label: string): string {
       throw new Error(`URL inválida para ${label}: ${trimmed}`);
     }
   }
-  
+
   // If it starts with www. or looks like a domain, add https://
   if (/^(www\.|[a-z0-9-]+\.[a-z]{2,})/i.test(trimmed)) {
     const withProtocol = `https://${trimmed}`;
@@ -585,26 +659,30 @@ function validateAndNormalizeUrl(url: string, label: string): string {
       throw new Error(`URL inválida para ${label}: ${trimmed}`);
     }
   }
-  
+
   // For short strings without dots, they might be usernames or handles
   // Require proper URL format
-  if (trimmed.length >= 3 && !trimmed.includes('.')) {
-    throw new Error(`URL debe incluir un dominio válido para ${label}. Recibido: "${trimmed}". Ejemplo: midominio.com o https://midominio.com`);
+  if (trimmed.length >= 3 && !trimmed.includes(".")) {
+    throw new Error(
+      `URL debe incluir un dominio válido para ${label}. Recibido: "${trimmed}". Ejemplo: midominio.com o https://midominio.com`,
+    );
   }
-  
+
   // Last attempt: add https:// and validate
   const withProtocol = `https://${trimmed}`;
   try {
     new URL(withProtocol);
     return withProtocol;
   } catch {
-    throw new Error(`Formato de URL inválido para ${label}. Recibido: "${trimmed}". Debe ser una URL válida como https://ejemplo.com`);
+    throw new Error(
+      `Formato de URL inválido para ${label}. Recibido: "${trimmed}". Debe ser una URL válida como https://ejemplo.com`,
+    );
   }
 }
 
 export async function updateUserProfile(
   userId: string,
-  data: UpdateUserProfileData
+  data: UpdateUserProfileData,
 ): Promise<boolean> {
   try {
     const userIdBigInt = toBigInt(userId);
@@ -612,11 +690,11 @@ export async function updateUserProfile(
     await prisma.$transaction(async (tx) => {
       // 1. Update basic info (bio -> motivation, username, personal_email)
       const updateData: Record<string, unknown> = {};
-      
+
       if (data.bio !== undefined) {
         updateData.motivation = data.bio;
       }
-      
+
       if (data.personal_email !== undefined) {
         updateData.personal_email = data.personal_email;
       }
@@ -627,26 +705,32 @@ export async function updateUserProfile(
         if (!programName) {
           updateData.program_id = null;
         } else {
-          const programRecord = await tx.programs.findUnique({ where: { name: programName } });
+          const programRecord = await tx.programs.findUnique({
+            where: { name: programName },
+          });
 
           if (!programRecord) {
-            throw new Error(`Programa "${programName}" no existe en la base de datos`);
+            throw new Error(
+              `Programa "${programName}" no existe en la base de datos`,
+            );
           }
 
           updateData.program_id = programRecord.id;
         }
       }
-      
+
       // 2. Handle username change with validation and 1-week delay
       if (data.username !== undefined) {
         // Sanitize username
         const sanitizedUsername = sanitizeUsername(data.username);
-        
+
         // Validate username format
         if (!isValidUsername(sanitizedUsername)) {
-          throw new Error("Username must be 3-30 characters, start and end with letter/number, and contain only letters, numbers, hyphens, and underscores");
+          throw new Error(
+            "Username must be 3-30 characters, start and end with letter/number, and contain only letters, numbers, hyphens, and underscores",
+          );
         }
-        
+
         const currentUser = await tx.users.findUnique({
           where: { id: userIdBigInt },
           select: { username: true, username_last_changed: true },
@@ -655,14 +739,21 @@ export async function updateUserProfile(
         // Check if username is actually changing
         if (currentUser?.username === sanitizedUsername) {
           // Username hasn't changed, skip validation
-          logger.debug("Username unchanged, skipping validation", { username: sanitizedUsername });
+          logger.debug("Username unchanged, skipping validation", {
+            username: sanitizedUsername,
+          });
         } else {
           // Check if username can be changed (1 week = 604800000 ms)
           if (currentUser?.username_last_changed) {
             const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
             if (currentUser.username_last_changed > oneWeekAgo) {
-              const nextChangeDate = new Date(currentUser.username_last_changed.getTime() + 7 * 24 * 60 * 60 * 1000);
-              throw new Error(`Username can only be changed once per week. Next change available: ${nextChangeDate.toLocaleDateString()}`);
+              const nextChangeDate = new Date(
+                currentUser.username_last_changed.getTime() +
+                  7 * 24 * 60 * 60 * 1000,
+              );
+              throw new Error(
+                `Username can only be changed once per week. Next change available: ${nextChangeDate.toLocaleDateString()}`,
+              );
             }
           }
 
@@ -703,7 +794,9 @@ export async function updateUserProfile(
           });
 
           if (!skill) {
-            throw new Error(`Skill "${skillName}" does not exist in the database`);
+            throw new Error(
+              `Skill "${skillName}" does not exist in the database`,
+            );
           }
 
           await tx.user_skills.create({
@@ -727,12 +820,17 @@ export async function updateUserProfile(
           }
 
           // Validate project URL if provided
-          let projectLink = proj.link || '#';
-          if (projectLink !== '#' && projectLink.trim().length > 0) {
+          let projectLink = proj.link || "#";
+          if (projectLink !== "#" && projectLink.trim().length > 0) {
             try {
-              projectLink = validateAndNormalizeUrl(projectLink, `Proyecto "${proj.title}"`);
+              projectLink = validateAndNormalizeUrl(
+                projectLink,
+                `Proyecto "${proj.title}"`,
+              );
             } catch (error) {
-              throw new Error(`${error instanceof Error ? error.message : 'Error validando URL del proyecto'}`);
+              throw new Error(
+                `${error instanceof Error ? error.message : "Error validando URL del proyecto"}`,
+              );
             }
           }
 
@@ -744,7 +842,8 @@ export async function updateUserProfile(
             project = await tx.projects.create({
               data: {
                 title: proj.title,
-                description: projectLink !== '#' ? projectLink : "Created from profile",
+                description:
+                  projectLink !== "#" ? projectLink : "Created from profile",
               },
             });
           }
@@ -796,7 +895,11 @@ export async function updateUserProfile(
               l.icon?.toLowerCase() === "github",
           );
           if (!hasGithubInLinks) {
-            linksToSave.push({ label: "GitHub", url: data.github, icon: "github" });
+            linksToSave.push({
+              label: "GitHub",
+              url: data.github,
+              icon: "github",
+            });
           }
         }
 
@@ -818,14 +921,11 @@ export async function updateUserProfile(
           try {
             normalizedUrl = validateAndNormalizeUrl(link.url, platformName);
           } catch (err) {
-            logger.warn(
-              "Skipping invalid social link",
-              {
-                platform: platformName,
-                url: link.url,
-                reason: err instanceof Error ? err.message : "Invalid URL"
-              }
-            );
+            logger.warn("Skipping invalid social link", {
+              platform: platformName,
+              url: link.url,
+              reason: err instanceof Error ? err.message : "Invalid URL",
+            });
             continue;
           }
 

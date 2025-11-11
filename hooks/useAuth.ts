@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import logger from "@/lib/logger";
@@ -19,85 +20,140 @@ interface LoginResponse {
   user?: User;
 }
 
+type MeResult = { ok: true; data: { user: User } } | { ok: false };
+
 export function useAuth() {
   const router = useRouter();
+
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     isLoading: true,
     isAuthenticated: false,
   });
-  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Global promise to dedupe concurrent /api/auth/me calls (dev + prod safe)
+  const globalAny = global as any;
+  if (!globalAny.__mePromise) {
+    globalAny.__mePromise = null as Promise<MeResult> | null;
+  }
+
+  /* =========================
+   * Logout
+   * ========================= */
   const logout = useCallback(async (): Promise<void> => {
     try {
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-
+      const response = await fetch("/api/auth/logout", { method: "POST" });
       if (!response.ok) {
         throw new Error("Error al cerrar sesión");
       }
-
-      // Limpiar intervalo de refresh
+    } catch (error) {
+      logger.error("useAuth: error en logout", { error });
+    } finally {
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current);
         refreshIntervalRef.current = null;
       }
 
-      // Actualizar estado local
+      try {
+        localStorage.removeItem("has_session");
+      } catch {
+        /* ignore */
+      }
+
       setAuthState({
         user: null,
         isLoading: false,
         isAuthenticated: false,
       });
 
-      // Redirigir a login después de cerrar sesión
-      router.push("/auth/login");
-    } catch (error) {
-      logger.error("Error en logout:", { error });
-      setAuthState({
-        user: null,
-        isLoading: false,
-        isAuthenticated: false,
-      });
-      // Redirigir a login incluso en caso de error
       router.push("/auth/login");
     }
   }, [router]);
 
+  /* =========================
+   * Refresh token
+   * ========================= */
   const refreshToken = useCallback(async () => {
     try {
-      const response = await fetch("/api/auth/refresh", {
-        method: "POST",
-      });
+      const response = await fetch("/api/auth/refresh", { method: "POST" });
 
-      if (response.ok) {
-        const data = await response.json();
-        setAuthState({
-          user: data.user,
-          isLoading: false,
-          isAuthenticated: true,
-        });
-      } else {
-        // Si el refresh falla, forzar logout
+      if (!response.ok) {
         logout();
+        return;
       }
+
+      const data = await response.json();
+      setAuthState({
+        user: data.user,
+        isLoading: false,
+        isAuthenticated: true,
+      });
     } catch (error) {
-      logger.error("Error renovando token:", { error });
+      logger.error("useAuth: error renovando token", { error });
       logout();
     }
   }, [logout]);
 
+  /* =========================
+   * Check authentication
+   * ========================= */
   const checkAuth = useCallback(async () => {
     try {
-      const response = await fetch("/api/auth/me");
+      // Fast-path: si sabemos que no hay sesión, no llamar /me
+      let hasSession = true;
+      try {
+        hasSession = !!localStorage.getItem("has_session");
+      } catch {
+        hasSession = true;
+      }
 
-      if (response.ok) {
-        const data = await response.json();
-
+      if (!hasSession) {
         setAuthState({
-          user: data.user,
+          user: null,
+          isLoading: false,
+          isAuthenticated: false,
+        });
+        return;
+      }
+
+      // Deduplicar llamadas concurrentes
+      if (globalAny.__mePromise) {
+        const result = await globalAny.__mePromise;
+        if (result.ok) {
+          setAuthState({
+            user: result.data.user,
+            isLoading: false,
+            isAuthenticated: true,
+          });
+        } else {
+          setAuthState({
+            user: null,
+            isLoading: false,
+            isAuthenticated: false,
+          });
+        }
+        return;
+      }
+
+      globalAny.__mePromise = (async (): Promise<MeResult> => {
+        try {
+          const resp = await fetch("/api/auth/me");
+          if (!resp.ok) return { ok: false };
+          const data = await resp.json();
+          return { ok: true, data };
+        } catch {
+          return { ok: false };
+        }
+      })();
+
+      const result = await globalAny.__mePromise;
+
+      if (result.ok) {
+        setAuthState({
+          user: result.data.user,
           isLoading: false,
           isAuthenticated: true,
         });
@@ -109,17 +165,21 @@ export function useAuth() {
         });
       }
     } catch (error) {
-      logger.error("useAuth: Error verificando autenticación:", { error });
+      logger.error("useAuth: error verificando autenticación", { error });
       setAuthState({
         user: null,
         isLoading: false,
         isAuthenticated: false,
       });
     } finally {
+      globalAny.__mePromise = null;
       setHasCheckedAuth(true);
     }
   }, []);
 
+  /* =========================
+   * Login
+   * ========================= */
   const login = async (
     email: string,
     password: string,
@@ -136,7 +196,12 @@ export function useAuth() {
       throw new Error(data.error || "Error en login");
     }
 
-    // Actualizar estado con datos del usuario
+    try {
+      localStorage.setItem("has_session", "1");
+    } catch {
+      /* ignore */
+    }
+
     setAuthState({
       user: data.user,
       isLoading: false,
@@ -150,41 +215,46 @@ export function useAuth() {
     };
   };
 
-  // Configurar refresh automático cuando el usuario está autenticado
+  /* =========================
+   * Auto refresh
+   * ========================= */
   useEffect(() => {
-    // Limpiar intervalo existente
     if (refreshIntervalRef.current) {
       clearInterval(refreshIntervalRef.current);
       refreshIntervalRef.current = null;
     }
 
     if (authState.isAuthenticated && authState.user) {
-      // Renovar token cada 3.5 horas (antes de que expire a las 4 horas)
-      const interval = setInterval(refreshToken, 3.5 * 60 * 60 * 1000);
-      refreshIntervalRef.current = interval;
-
-      return () => {
-        if (refreshIntervalRef.current) {
-          clearInterval(refreshIntervalRef.current);
-          refreshIntervalRef.current = null;
-        }
-      };
+      refreshIntervalRef.current = setInterval(
+        refreshToken,
+        3.5 * 60 * 60 * 1000,
+      );
     }
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    };
   }, [authState.isAuthenticated, authState.user, refreshToken]);
 
-  // Verificar autenticación solo una vez al montar el componente
+  /* =========================
+   * Initial auth check
+   * ========================= */
   useEffect(() => {
     if (!hasCheckedAuth) {
       checkAuth();
     }
   }, [checkAuth, hasCheckedAuth]);
 
-  // Función para verificar si el usuario tiene un rol específico
+  /* =========================
+   * Helpers
+   * ========================= */
   const hasRole = (role: string): boolean => {
     return authState.user?.role?.toLowerCase() === role.toLowerCase();
   };
 
-  // Función para verificar si el usuario es admin
   const isAdmin = (): boolean => {
     return hasRole("admin") || hasRole("administrador");
   };

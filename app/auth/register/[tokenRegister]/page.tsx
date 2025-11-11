@@ -37,6 +37,7 @@ export default function ValidacionPage() {
   const [tokenValid, setTokenValid] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [acceptDisabled, setAcceptDisabled] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [submissionError, setSubmissionError] = useState("");
   const [originalFormData, setOriginalFormData] = useState({
@@ -298,6 +299,18 @@ export default function ValidacionPage() {
   const handleCloseSuccessModal = () => {
     setShowSuccessModal(false);
   };
+
+  // When success modal opens, disable the Accept button for 3s then redirect home
+  useEffect(() => {
+    if (!showSuccessModal) return;
+    setAcceptDisabled(true);
+    const t = setTimeout(() => {
+      // After 3 seconds, navigate to home
+      router.push("/");
+    }, 3000);
+
+    return () => clearTimeout(t);
+  }, [showSuccessModal, router]);
 
   const handleCloseErrorModal = () => {
     setShowErrorModal(false);
@@ -654,6 +667,7 @@ export default function ValidacionPage() {
             </p>
             <button
               onClick={() => {
+                if (acceptDisabled) return; // ignore clicks while disabled
                 setShowSuccessModal(false);
                 // Restablecer el formulario con los datos originales
                 setFormData({
@@ -665,9 +679,14 @@ export default function ValidacionPage() {
                   confirmPassword: originalFormData.confirmPassword,
                 });
               }}
-              className="bg-[#CA2B26] hover:bg-[#a82320] text-white px-8 py-3 rounded-lg font-medium transition-colors w-full"
+              disabled={acceptDisabled}
+              className={`${
+                acceptDisabled
+                  ? "bg-gray-500 cursor-not-allowed"
+                  : "bg-[#CA2B26] hover:bg-[#a82320]"
+              } text-white px-8 py-3 rounded-lg font-medium transition-colors w-full`}
             >
-              Aceptar
+              {acceptDisabled ? "Redirigiendo..." : "Aceptar"}
             </button>
           </div>
         </div>
