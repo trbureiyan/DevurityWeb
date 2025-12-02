@@ -9,6 +9,8 @@ import { useRouter } from "next/navigation";
 import { useCsrf } from "@/hooks/useCsrf";
 import { IMAGES } from "@/public/images";
 
+// Pagina de validacion
+
 export default function ValidacionPage() {
   const [formData, setFormData] = useState({
     semester: "",
@@ -299,6 +301,8 @@ export default function ValidacionPage() {
   const handleDropdownScroll = (e: React.WheelEvent<HTMLDivElement>) => {
     e.stopPropagation();
   };
+
+  // Frontend JSX
 
   return (
     <div className="min-h-screen bg-[#171212] flex items-center justify-center p-4">
