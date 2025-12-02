@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCsrf } from "@/hooks/useCsrf";
@@ -30,9 +30,11 @@ export default function UserDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
-  const { fetchWithCsrf, loading: csrfLoading } = useCsrf();
+  const { fetchWithCsrf } = useCsrf();
 
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
+    if (!params?.id) return;
+
     try {
       setLoading(true);
       const response = await fetch(`/api/auth/admin/users/${params.id}`);
@@ -49,13 +51,11 @@ export default function UserDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params?.id]);
 
   useEffect(() => {
-    if (params.id) {
-      fetchUser();
-    }
-  }, [params.id]);
+    fetchUser();
+  }, [fetchUser]);
 
   const handleApprove = async () => {
     if (!user) return;
