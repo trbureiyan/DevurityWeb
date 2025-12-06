@@ -6,6 +6,7 @@ import EventsSection from "@/components/landing/EventsSection";
 import ContactSection from "@/components/landing/ContactSection";
 import CTASection from "@/components/landing/CTASection";
 import GalleryPreviewSection from "@/components/landing/GalleryPreviewSection";
+import ReglamentoSection from "@/components/landing/ReglamentoSection";
 // Data fetching functions
 import {
   getLandingGalleryPreview,
@@ -35,6 +36,9 @@ export default async function Home() {
       <CTASection />
       <GalleryPreviewSection images={galleryImages} /> {/* Galeria organizada */}
       <ContactSection />
+      <ReglamentoSection /> {/* Seccion reglamentos */}
+      
+
     </main>
   );
 }
