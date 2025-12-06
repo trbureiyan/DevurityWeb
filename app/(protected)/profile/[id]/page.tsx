@@ -2,10 +2,22 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useEffect, useState, type ReactNode } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import QRDynamic from "@/components/qr-dynamic";
+
+type NullableDate = string | null | undefined;
+
+interface ProjectData {
+  title: string;
+  link: string;
+}
+
+interface SocialLinkData {
+  icon: string;
+  url: string;
+  label: string;
+}
 
 interface UserData {
   id: string;
@@ -16,7 +28,38 @@ interface UserData {
   role: string;
   motivation: string;
   semester: number;
+  username?: string;
+  created_at?: string;
+  createdAt?: string;
+  joined_at?: string;
+  joinedAt?: string;
+  website?: string;
+  github?: string;
+  bio?: string;
+  avatar?: string;
+  avatar_url?: string;
+  profile_image?: string;
+  profileImage?: string;
+  image?: string;
+  photo?: string;
+  working_on?: ProjectData[];
+  social_links?: SocialLinkData[];
 }
+
+// Datos de emergencia (solo si la API falla completamente)
+const emergencyData: UserData = {
+  id: "emergency",
+  name: "Usuario",
+  last_name: "Devurity",
+  email: "usuario@devurity.com",
+  skills: ["Cargando..."],
+  role: "Miembro",
+  motivation: "",
+  semester: 0,
+  bio: "Bienvenido a Devurity",
+  working_on: [],
+  social_links: []
+};
 
 export default function ProfilePage() {
   const params = useParams();
@@ -24,230 +67,534 @@ export default function ProfilePage() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  
+  // Estados para edición
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editableSkillsText, setEditableSkillsText] = useState('');
+  const [editableWorkingOnText, setEditableWorkingOnText] = useState('');
+  const [editableSocialLinksText, setEditableSocialLinksText] = useState('');
+  const [editableBio, setEditableBio] = useState('');
+  const [editableGithub, setEditableGithub] = useState('');
 
-  // Mock data - esto se mantiene quemado
-  const profileData = {
-    workingOn: [
-      { title: "Desarrollo de Aplicación Agrícola - MinAg", link: "#" },
-      { title: "Security Web", link: "#" },
-    ],
-    socialLinks: [
-      {
-        icon: "discord",
-        url: "https://discord.gg/",
-        label: "https://discord.gg/",
-      },
-      { icon: "twitter", url: "#", label: "@devurity" },
-      {
-        icon: "instagram",
-        url: "http://instagram.com/",
-        label: "http://instagram.com/",
-      },
-    ],
+  // --- UTILIDADES DE PARSEO ---
+
+  const skillsArrayToText = (skills: string[]) => skills.join(', ');
+  
+  const workingOnArrayToText = (projects: ProjectData[]) => 
+    projects.map(p => `${p.title} | ${p.link}`).join('\n');
+
+  const socialLinksArrayToText = (links: SocialLinkData[]) => 
+    links.map(l => `${l.label} | ${l.url}`).join('\n');
+
+  const skillsTextToArray = (text: string) => 
+    text.split(',').map(s => s.trim()).filter(s => s.length > 0);
+  
+  const workingOnTextToArray = (text: string): ProjectData[] => {
+    return text.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .map(line => {
+        const parts = line.split('|').map(p => p.trim());
+        return {
+          title: parts[0] || 'Nuevo Proyecto',
+          link: parts[1] || '#',
+        };
+      });
   };
 
+  const socialLinksTextToArray = (text: string): SocialLinkData[] => {
+    return text.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .map(line => {
+        const parts = line.split('|').map(p => p.trim());
+        const url = parts[1] || '#';
+        const icon = url.toLowerCase().includes('instagram') ? 'instagram' : 'link';
+        return {
+          label: parts[0] || url,
+          url: url,
+          icon: icon
+        };
+      });
+  };
+
+  // --- HANDLERS DE EDICIÓN ---
+
+  const handleEdit = () => {
+    // Inicializar los textareas con los datos actuales
+    setEditableSkillsText(skillsArrayToText(userData?.skills || []));
+    setEditableWorkingOnText(workingOnArrayToText(userData?.working_on || []));
+    setEditableSocialLinksText(socialLinksArrayToText(userData?.social_links || []));
+    setEditableBio(userData?.bio || '');
+    setEditableGithub(userData?.github || '');
+    
+    setIsEditing(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    try {
+      // Preparar datos para enviar
+      const updatedData = {
+        skills: skillsTextToArray(editableSkillsText),
+        working_on: workingOnTextToArray(editableWorkingOnText),
+        social_links: socialLinksTextToArray(editableSocialLinksText),
+        bio: editableBio,
+        github: editableGithub
+      };
+
+      console.log("Guardando datos para usuario:", id);
+
+      // Llamada a la API real para guardar
+      const response = await fetch(`/api/users/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `Error ${response.status}: ${response.statusText}`);
+      }
+
+      // Actualizar estado local con los datos confirmados
+      setUserData(prev => prev ? ({ 
+        ...prev, 
+        ...updatedData
+      }) : null);
+
+      setSaveSuccess(true);
+      setIsEditing(false);
+      
+      // Ocultar mensaje de éxito después de 3 segundos
+      setTimeout(() => setSaveSuccess(false), 3000);
+
+    } catch (err) {
+      console.error('Error al guardar:', err);
+      setSaveError(err instanceof Error ? err.message : 'Error desconocido al guardar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setSaveError(null);
+    setSaveSuccess(false);
+  };
+
+  // --- Lógica del componente ---
+
+  const renderSocialIcon = (icon: string): ReactNode => {
+    switch (icon) {
+      case "instagram":
+        return (
+          <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M12 2.163c3.204 0 3.584.012 4.85.07c3.252.148 4.771 1.691 4.919 4.919c.058 1.265.069 1.645.069 4.849c0 3.205-.012 3.584-.069 4.849c-.149 3.225-1.664 4.771-4.919 4.919c-1.266.058-1.644.07-4.85.07c-3.204 0-3.584-.012-4.849-.07c-3.26-.149-4.771-1.699-4.919-4.92c-.058-1.265-.07-1.644-.07-4.849c0-3.204.013-3.583.07-4.849c.149-3.227 1.664-4.771 4.919-4.919c1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072C2.695.272.273 2.69.073 7.052C.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948c.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072c4.354-.2 6.782-2.618 6.979-6.98c.059-1.28.073-1.689.073-4.948c0-3.259-.014-3.667-.072-4.947c-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324a6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8a4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881a1.44 1.44 0 0 0 0-2.881z" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+            <path d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        );
+    }
+  };
+
+  const normalizeExternalLink = (href?: string | null) => {
+    if (!href) return undefined;
+    const trimmed = href.trim();
+    if (!trimmed) return undefined;
+    if (trimmed.startsWith("#")) return trimmed;
+    if (/^(https?:|mailto:|tel:|data:|blob:)/i.test(trimmed)) return trimmed;
+    if (trimmed.startsWith("/")) return trimmed;
+    return `https://${trimmed.replace(/^\/+/, "")}`;
+  };
+
+  // Cargar datos del usuario desde API REAL
   useEffect(() => {
     async function fetchUserData() {
       try {
         setLoading(true);
         setError(null);
-
-        // Obtener todos los datos del usuario en una sola llamada
-        const response = await fetch(`/api/auth/users/${id}`);
+        
+        console.log("Cargando datos para ID:", id);
+        
+        // Llamada a la API real
+        const response = await fetch(`/api/users/${id}`);
 
         if (!response.ok) {
-          if (response.status === 401 || response.status === 403) {
-            throw new Error("No autorizado para ver este perfil");
-          }
-          throw new Error("Error al obtener datos del usuario");
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
-        setUserData(data.user);
+        console.log("Datos recibidos:", data);
+        
+        setUserData(data);
+
       } catch (err) {
         console.error("Error fetching user data:", err);
         setError(err instanceof Error ? err.message : "Error desconocido");
+        
+        // Solo usar datos de emergencia si realmente no hay datos
+        setUserData({...emergencyData, id: id});
       } finally {
         setLoading(false);
       }
     }
-
-    fetchUserData();
+    
+    if (id && id !== "emergency") {
+      fetchUserData();
+    }
   }, [id]);
 
-  const getInitial = (name: string) => {
-    return name.charAt(0).toUpperCase();
+  const getInitials = (name: string, lastName: string) => {
+    return `${name.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-variable-collection-fondo flex items-center justify-center">
-        <div className="text-white text-xl">Cargando perfil...</div>
+      <div className="min-h-screen bg-[#110e0e] flex items-center justify-center">
+        <div className="text-white text-xl">Cargando perfil de {id}...</div>
       </div>
     );
   }
 
   if (error && !userData) {
     return (
-      <div className="min-h-screen bg-variable-collection-fondo flex items-center justify-center">
-        <div className="text-white text-xl">{error}</div>
+      <div className="min-h-screen bg-[#110e0e] flex flex-col items-center justify-center p-4">
+        <div className="text-red-400 text-xl mb-4">Error al cargar perfil</div>
+        <div className="text-white/60 mb-4">{error}</div>
+        <div className="text-white/40 text-sm">ID: {id}</div>
       </div>
     );
   }
 
-  const fullName = userData
-    ? `${userData.name} ${userData.last_name}`
-    : "Usuario Devurity";
+  const fullName = userData ? `${userData.name} ${userData.last_name}` : "Usuario Devurity";
+  const userInitials = userData ? getInitials(userData.name, userData.last_name) : "UD";
+
+  const resolveDate = (...candidates: NullableDate[]): Date | null => {
+    for (const value of candidates) {
+      if (!value) continue;
+      const parsed = new Date(value);
+      if (!Number.isNaN(parsed.getTime())) return parsed;
+    }
+    return null;
+  };
+
+  const joinedDate = resolveDate(userData?.joined_at, userData?.joinedAt, userData?.created_at, userData?.createdAt);
+  const formattedJoinDate = joinedDate
+    ? joinedDate.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
+    : "Fecha no disponible";
+
+  const username = userData?.username || (userData?.email ? `@${userData.email.split("@")[0]}` : "@devurity");
+  const bio = userData?.bio || "Sin descripción disponible";
+
+  const websiteLink = normalizeExternalLink(userData?.website);
+  const githubLink = normalizeExternalLink(userData?.github);
+  const avatarSrc = userData?.avatar || userData?.avatar_url || userData?.profile_image || userData?.image;
+
+  // Items del header
+  const infoItems = [
+    {
+      icon: (
+        <svg aria-hidden className="size-4 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+      text: `Se unió el ${formattedJoinDate}`,
+    },
+    {
+      icon: (
+        <svg aria-hidden className="size-4 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <path d="M3 8l7.89 5.26a2 2 0 0 0 2.22 0L21 8M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+      text: userData?.email,
+      href: userData?.email ? `mailto:${userData.email}` : undefined,
+    },
+    ...(userData?.website ? [{
+      icon: (
+        <svg aria-hidden className="size-4 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+      text: userData.website.replace(/^https?:\/\//, ''),
+      href: websiteLink,
+    }] : []),
+    ...(userData?.github ? [{
+      icon: (
+        <svg aria-hidden className="size-4 text-white/50" fill="currentColor" viewBox="0 0 24 24">
+          <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+        </svg>
+      ),
+      text: "GitHub",
+      href: githubLink,
+    }] : []),
+  ].filter(item => item.text && item.href);
+
+  const skillsText = userData?.skills?.length ? userData.skills.join(", ") : "Sin habilidades registradas";
 
   return (
-    <div className="min-h-screen bg-variable-collection-fondo">
-      {/* Profile Card Container */}
-      <div className="max-w-5xl mx-auto px-4 py-8 md:py-12">
-        <div className="bg-[#2A2520] rounded-3xl overflow-hidden shadow-2xl border border-gray-700/50">
-          <div className="relative pt-12 pb-8 px-4 md:px-8 bg-gradient-to-b from-[#2A2520] to-[#1A1A1A]">
-            {/* Chat Button */}
-            <button
-              className="absolute top-4 right-4 md:top-6 md:right-6 w-10 h-10 md:w-12 md:h-12 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-              aria-label="Enviar mensaje"
-            >
-              <svg
-                className="w-5 h-5 md:w-6 md:h-6 text-white"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-              </svg>
-            </button>
+    <div className="min-h-screen bg-[#110e0e] text-white font-sans selection:bg-red-500/30">
+      
+      {/* Banner Superior */}
+      <div className="h-48 bg-[#ffefe0]" aria-hidden />
 
-            {/* Profile Photo */}
-            <div className="flex justify-center mb-6">
-              <Avatar className="w-28 h-28 md:w-32 md:h-32 border-4 border-white/90 shadow-2xl">
-                <AvatarFallback className="bg-variable-collection-botones text-white text-4xl md:text-5xl font-bold">
-                  {getInitial(fullName)}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-
-            {/* Name Only */}
-            <div className="text-center">
-              <h1 className="font-bold text-2xl md:text-3xl text-white mb-2">
-                {fullName}
-              </h1>
-              <p className="text-gray-400 text-sm">ID: {id}</p>
-            </div>
+      {/* Contenedor principal */}
+      <main className="relative z-10 mx-auto max-w-6xl px-4 pb-16">
+        
+        {/* Mensajes de estado */}
+        {saveSuccess && (
+          <div className="mb-4 rounded-lg bg-green-900/50 border border-green-700 p-4 text-green-200">
+            ✅ Perfil actualizado correctamente
           </div>
+        )}
+        
+        {saveError && (
+          <div className="mb-4 rounded-lg bg-red-900/50 border border-red-700 p-4 text-red-200">
+            ❌ Error: {saveError}
+          </div>
+        )}
 
-          <div className="bg-[#1A1A1A] px-4 md:px-8 py-6 md:py-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
-              {/* Left Column - Skills & Working On */}
-              <div className="space-y-8">
-                {/* Skills / Lenguajes */}
-                <div className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/50">
-                  <h2 className="font-bold text-white text-lg md:text-xl mb-4 flex items-center gap-2">
-                    <div className="w-2 h-2 bg-variable-collection-botones rounded-full"></div>
-                    Skills / Lenguajes
-                  </h2>
-                  <div className="flex flex-wrap gap-2">
-                    {userData?.skills.map((skill, index) => (
-                      <span
-                        key={index}
-                        className="bg-gray-700/50 text-gray-200 px-3 py-1.5 rounded-full text-sm font-medium hover:bg-gray-600/50 transition-colors duration-200"
-                      >
-                        {skill}
-                      </span>
+        {/* --- SECTION HEADER / PERFIL --- */}
+        <section className="relative -mt-20">
+          <div className="relative rounded-[24px] bg-[#221b1b] px-8 pb-10 pt-16 shadow-2xl md:px-12 md:pb-12 md:pt-20">
+            
+            {/* Botón de Edición */}
+            <div className="absolute right-8 top-8">
+              {isEditing ? (
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className={`rounded-full ${saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} px-4 py-2 text-sm font-semibold text-white transition-colors`}
+                  >
+                    {saving ? 'Guardando...' : 'Guardar'}
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    disabled={saving}
+                    className="rounded-full bg-gray-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600 disabled:bg-gray-700"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleEdit}
+                  className="rounded-full bg-[#da292e] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+                >
+                  Editar Perfil
+                </button>
+              )}
+            </div>
+
+            {/* Avatar Flotante */}
+            <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[60%]">
+              <div className="flex size-48 items-center justify-center rounded-full border-[8px] border-[#221b1b] bg-[#ffefe0]">
+                <Avatar className="size-full overflow-hidden rounded-full">
+                  {avatarSrc ? (
+                    <AvatarImage
+                      src={avatarSrc}
+                      alt={`Foto de ${fullName}`}
+                      className="size-full object-cover"
+                    />
+                  ) : null}
+                  <AvatarFallback className="bg-[#da292e] text-5xl font-bold uppercase text-white">
+                    {userInitials}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            </div>
+            
+            {/* Textos del Header */}
+            <div className="mt-16 text-center">
+              <h1 className="text-4xl font-bold tracking-wide text-white">{fullName}</h1>
+              <p className="mt-2 text-sm font-medium tracking-widest text-white/40 uppercase">{username}</p>
+              
+              <div className="mt-6 flex justify-center">
+                {isEditing ? (
+                  <div className="w-full max-w-2xl">
+                    <textarea
+                      value={editableBio}
+                      onChange={(e) => setEditableBio(e.target.value)}
+                      rows={4}
+                      className="w-full resize-none rounded-lg border border-white/20 bg-black/30 p-4 text-white/90 focus:border-[#da292e] focus:ring-1 focus:ring-[#da292e] text-center"
+                      placeholder="Escribe tu descripción de perfil aquí..."
+                    />
+                    <p className="mt-2 text-xs text-white/40 text-center">
+                      Esta es tu descripción pública que verán los demás usuarios
+                    </p>
+                  </div>
+                ) : (
+                  <p className="max-w-2xl text-center text-base leading-relaxed text-white/70">
+                    {bio}
+                  </p>
+                )}
+              </div>
+
+              {/* Fila de Iconos de Contacto */}
+              {infoItems.length > 0 && (
+                <div className="mt-8 border-t border-white/10 pt-6">
+                  <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-white/60">
+                    {infoItems.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-2 transition-colors hover:text-white">
+                        {item.icon}
+                        {item.href ? (
+                          idx === infoItems.findIndex(i => i.text === "GitHub") && isEditing ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={editableGithub}
+                                onChange={(e) => setEditableGithub(e.target.value)}
+                                className="w-48 rounded border border-white/20 bg-black/30 px-2 py-1 text-sm text-white/90 focus:border-[#da292e] focus:outline-none"
+                                placeholder="URL de GitHub"
+                              />
+                              <span className="text-xs text-white/40">(GitHub)</span>
+                            </div>
+                          ) : (
+                            <a href={item.href} target="_blank" rel="noopener noreferrer" className="hover:underline decoration-white/30 underline-offset-4">
+                              {item.text}
+                            </a>
+                          )
+                        ) : (
+                          <span>{item.text}</span>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
+              )}
+            </div>
+          </div>
+        </section>
 
-                {/* Trabajando en */}
-                <div className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/50">
-                  <h2 className="font-bold text-white text-lg md:text-xl mb-4 flex items-center gap-2">
-                    <div className="w-2 h-2 bg-variable-collection-botones rounded-full"></div>
-                    Trabajando en
-                  </h2>
-                  <ul className="space-y-3">
-                    {profileData.workingOn.map((project, index) => (
-                      <li key={index}>
-                        <Link
-                          href={project.link}
-                          className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-700/30 transition-all duration-200 group"
-                        >
-                          <div className="w-2 h-2 bg-variable-collection-link rounded-full mt-2 flex-shrink-0"></div>
-                          <div className="flex-1">
-                            <span className="text-variable-collection-link group-hover:text-white transition-colors duration-200 font-medium">
-                              {project.title}
-                            </span>
-                          </div>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
+        {/* --- GRID DE CONTENIDO (Skills, Proyectos, Social, QR) --- */}
+        <section className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+          
+          <div className="space-y-6">
+            
+            {/* Skills */}
+            <article className="rounded-[24px] bg-[#221b1b] p-8 shadow-xl">
+              <h2 className="text-lg font-bold text-white">Skills / Lenguajes</h2>
+              {isEditing ? (
+                <div>
+                    <textarea
+                      value={editableSkillsText}
+                      onChange={(e) => setEditableSkillsText(e.target.value)}
+                      rows={3}
+                      className="w-full resize-none rounded-lg border border-white/20 bg-black/30 p-3 text-white/90 focus:border-[#da292e] focus:ring-1 focus:ring-[#da292e]"
+                      placeholder="Separa las habilidades con comas (Ej: Java, React, Python)"
+                    />
                 </div>
-              </div>
+              ) : (
+                <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
+                  {skillsText}
+                </p>
+              )}
+            </article>
 
-              {/* Right Column - Social Links & QR Code */}
-              <div className="space-y-8">
-                {/* Social & Links */}
-                <div className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/50">
-                  <h2 className="font-bold text-white text-lg md:text-xl mb-4 flex items-center gap-2">
-                    <div className="w-2 h-2 bg-variable-collection-botones rounded-full"></div>
-                    Social & Links
-                  </h2>
-                  <div className="space-y-3">
-                    {profileData.socialLinks.map((social, index) => (
+            {/* Trabajando en */}
+            <article className="rounded-[24px] bg-[#221b1b] p-8 shadow-xl">
+              <h2 className="text-lg font-bold text-white">Trabajando en</h2>
+              {isEditing ? (
+                <div>
+                    <textarea
+                      value={editableWorkingOnText}
+                      onChange={(e) => setEditableWorkingOnText(e.target.value)}
+                      rows={5}
+                      className="w-full resize-none rounded-lg border border-white/20 bg-black/30 p-3 text-white/90 focus:border-[#da292e] focus:ring-1 focus:ring-[#da292e]"
+                      placeholder="Escribe un proyecto por línea. Usa ' | ' para separar el Título y el Link. (Ej: Proyecto X | #)"
+                    />
+                </div>
+              ) : (
+                <ul className="mt-5 space-y-3">
+                  {userData?.working_on?.map((project, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <span className="mt-2 size-1.5 rounded-full bg-[#da292e]" />
+                      <Link
+                        href={project.link}
+                        className="text-sm font-medium text-[#da292e] hover:text-red-400 transition-colors"
+                      >
+                        {project.title}
+                      </Link>
+                    </li>
+                  )) || (
+                    <li className="text-sm text-white/40">No hay proyectos registrados</li>
+                  )}
+                </ul>
+              )}
+            </article>
+          </div>
+
+          <div className="space-y-6">
+            {/* Social Links */}
+            <article className="rounded-[24px] bg-[#221b1b] p-8 shadow-xl">
+              <h2 className="text-lg font-bold text-white">Social & Links</h2>
+              {isEditing ? (
+                 <div>
+                    <textarea
+                      value={editableSocialLinksText}
+                      onChange={(e) => setEditableSocialLinksText(e.target.value)}
+                      rows={6}
+                      className="w-full resize-none rounded-lg border border-white/20 bg-black/30 p-3 text-white/90 focus:border-[#da292e] focus:ring-1 focus:ring-[#da292e]"
+                      placeholder="Escribe un link por línea. Usa ' | ' para separar el Label y la URL. (Ej: mi-bento | https://bento.me/user)"
+                    />
+                </div>
+              ) : (
+                <div className="mt-5 space-y-4">
+                  {userData?.social_links?.map((social, index) => {
+                    const socialHref = normalizeExternalLink(social.url) ?? social.url;
+                    return (
                       <a
                         key={index}
-                        href={social.url}
+                        href={socialHref}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-700/30 transition-all duration-200 group"
+                        className="group flex items-center gap-4 rounded-xl border border-transparent bg-white/5 px-4 py-3 transition-all hover:bg-white/10"
                       >
-                        <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center group-hover:bg-gray-600 transition-colors duration-200 flex-shrink-0">
-                          {social.icon === "discord" && (
-                            <svg
-                              className="w-5 h-5 text-white"
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
-                            >
-                              <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z" />
-                            </svg>
-                          )}
-                          {social.icon === "twitter" && (
-                            <svg
-                              className="w-5 h-5 text-white"
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
-                            >
-                              <path d="M18.244 2.25h3.308l-7.227 8.26l8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                            </svg>
-                          )}
-                          {social.icon === "instagram" && (
-                            <svg
-                              className="w-5 h-5 text-white"
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
-                            >
-                              <path d="M12 2.163c3.204 0 3.584.012 4.85.07c3.252.148 4.771 1.691 4.919 4.919c.058 1.265.069 1.645.069 4.849c0 3.205-.012 3.584-.069 4.849c-.149 3.225-1.664 4.771-4.919 4.919c-1.266.058-1.644.07-4.85.07c-3.204 0-3.584-.012-4.849-.07c-3.26-.149-4.771-1.699-4.919-4.92c-.058-1.265-.07-1.644-.07-4.849c0-3.204.013-3.583.07-4.849c.149-3.227 1.664-4.771 4.919-4.919c1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072C2.695.272.273 2.69.073 7.052C.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948c.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072c4.354-.2 6.782-2.618 6.979-6.98c.059-1.28.073-1.689.073-4.948c0-3.259-.014-3.667-.072-4.947c-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324a6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8a4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881a1.44 1.44 0 0 0 0-2.881z" />
-                            </svg>
-                          )}
-                        </div>
-                        <span className="text-gray-300 group-hover:text-white transition-colors duration-200 text-sm break-all flex-1">
-                          {social.label}
+                        <span className="flex size-10 items-center justify-center rounded-full bg-black/40 text-white/80 group-hover:text-white">
+                          {renderSocialIcon(social.icon)}
                         </span>
+                        <div className="flex flex-1 flex-col overflow-hidden">
+                          <span className="truncate border-b border-white/10 pb-1 text-sm text-white/60 group-hover:border-white/30 group-hover:text-white/90 transition-colors">
+                            {social.label}
+                          </span>
+                        </div>
                       </a>
-                    ))}
-                  </div>
+                    );
+                  }) || (
+                    <div className="text-sm text-white/40">No hay links sociales registrados</div>
+                  )}
                 </div>
+              )}
+            </article>
 
-                {/* Codigo QR Dinámico */}
-                <QRDynamic userId={id} />
-              </div>
-            </div>
+            {/* Código QR Dinámico */}
+            <article className="rounded-[24px] bg-[#221b1b] p-8 shadow-xl">
+                <h2 className="mb-6 text-lg font-bold text-white">Código QR</h2>
+                <QRDynamic
+                  userId={id}
+                  className="rounded-xl border border-white/5 bg-[#221b1b]"
+                />
+            </article>
           </div>
-        </div>
-      </div>
+
+        </section>
+      </main>
     </div>
   );
 }

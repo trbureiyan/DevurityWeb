@@ -5,6 +5,8 @@ import { csrfAdapter } from "./lib/csrf";
 
 const redirectMap: Record<string, string> = {
   "/auth": "/auth/login",
+  "/register": "/auth/register",
+  "/login": "/auth/login"
 };
 
 const forbiddenFragments = [

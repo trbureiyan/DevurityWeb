@@ -11,13 +11,14 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.17.1",
     "@types/nodemailer": "^7.0.2",
     "bcrypt": "^6.0.0",
     "html5-qrcode": "^2.3.8",
     "i": "^0.3.7",
     "jsonwebtoken": "^9.0.2",
-    "next": "15.5.4",
+    "next": "^16.0.7",
     "nodemailer": "^7.0.9",
     "qrcode": "^1.5.4",
     "react": "19.1.0",
