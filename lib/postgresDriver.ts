@@ -1,5 +1,6 @@
-import { PrismaClient } from "@prisma/client";
-// import { PrismaClient } from "../lib/generated/prisma"; -- local
+//TODO: Descomentar para main
+//import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../lib/generated/prisma";
 
 const prisma = new PrismaClient();
 
