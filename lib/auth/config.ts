@@ -4,7 +4,7 @@ export const authConfig = {
   protectedPages: ["/admin", "/projects", "/profile", "/attendance"],
 
   // Rutas de API que requieren autenticación
-  protectedApis: ["/api/admin", "/api/projects", "/api/attendance"],
+  protectedApis: ["/api/admin", "/api/projects", "/api/attendance", "/api/users"],
 
   // Rutas públicas que NO requieren autenticación
   publicPaths: [

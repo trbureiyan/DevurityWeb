@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     name: normalizedName,
     lastname: normalizedLastname,
   });
-  console.log(token);
+  // SEGURIDAD: Token removido de logs - nunca loguear tokens
   const htmlBody: string = registerEmailTemplate(String(token));
   const emailToSent: EmailOptions = {
     to: normalizedEmail,
