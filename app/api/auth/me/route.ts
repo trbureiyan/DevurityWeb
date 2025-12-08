@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateToken } from "@/lib/jwt";
 import { findByIdWithRole } from "@/repositories/users/users.repositories";
+import logger from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("API /me: Iniciando verificación de autenticación");
+    logger.debug("API /me: Iniciando verificación de autenticación");
 
     // Obtener token de las cookies
     const token = request.cookies.get("auth_token")?.value;
-    console.log("API /me: Token encontrado:", !!token);
+    logger.debug("API /me: Token presente:", !!token);
 
     if (!token) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
@@ -16,14 +17,14 @@ export async function GET(request: NextRequest) {
 
     // Validar token
     const decoded = (await validateToken(token)) as { sub: string };
-    console.log("API /me: Token válido, user ID:", decoded.sub);
+    logger.debug("API /me: Token validado correctamente");
 
     // Obtener usuario con rol
     const user = await findByIdWithRole(decoded.sub);
-    console.log("API /me: Usuario encontrado:", !!user);
+    logger.debug("API /me: Usuario encontrado:", !!user);
 
     if (!user) {
-      console.log("API /me: Usuario no encontrado en BD");
+      logger.debug("API /me: Usuario no encontrado en BD");
       return NextResponse.json(
         { error: "Usuario no encontrado" },
         { status: 404 },
@@ -31,24 +32,24 @@ export async function GET(request: NextRequest) {
     }
 
     if (!user.is_active) {
-      console.log("API /me: Usuario inactivo");
+      logger.debug("API /me: Usuario inactivo");
       return NextResponse.json({ error: "Cuenta inactiva" }, { status: 403 });
     }
 
     // Retornar información del usuario
-    console.log("API /me: Retornando datos del usuario:", user.email);
+    logger.debug("API /me: Retornando datos del usuario");
     return NextResponse.json({
       user: {
         id: user.id.toString(),
         email: user.email,
         name: user.name,
-        lastName: user.last_name,
+        last_name: user.last_name,
         role: user.roles.name,
-        isActive: user.is_active,
+        is_active: user.is_active,
       },
     });
   } catch (error) {
-    console.error("API /me: Error obteniendo datos del usuario:", error);
+    logger.error("API /me: Error obteniendo datos del usuario", error);
 
     if (error instanceof Error) {
       if (

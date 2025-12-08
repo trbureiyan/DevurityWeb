@@ -246,7 +246,8 @@ export default function AttendancesPage() {
     // Clear any previous scanner container content
     const readerElement = document.getElementById("reader");
     if (readerElement) {
-      readerElement.innerHTML = "";
+      // SEGURIDAD: Usar replaceChildren() en lugar de innerHTML para evitar riesgos XSS
+      readerElement.replaceChildren();
     }
 
     try {
@@ -401,7 +402,8 @@ export default function AttendancesPage() {
     // Clear the reader container
     const readerElement = document.getElementById("reader");
     if (readerElement) {
-      readerElement.innerHTML = "";
+      // SEGURIDAD: Usar replaceChildren() en lugar de innerHTML para evitar riesgos XSS
+      readerElement.replaceChildren();
     }
 
     // Small delay to ensure cleanup is complete and browser is ready
