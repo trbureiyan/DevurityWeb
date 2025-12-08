@@ -6,6 +6,7 @@ import {
   createApiErrorResponse,
   createLoginRedirect,
 } from "./utils";
+import logger from "../logger";
 
 export async function authMiddleware(
   request: NextRequest,
@@ -55,7 +56,7 @@ function handleInvalidToken(
   path: string,
   error: unknown,
 ): NextResponse | Response {
-  console.error("Error de autenticación:", error);
+  logger.error("Error de autenticación:", { error, path });
 
   if (isApiPath(path)) {
     return createApiErrorResponse("Token inválido o expirado");
