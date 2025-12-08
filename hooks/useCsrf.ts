@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import logger from "@/lib/logger";
 
 export function useCsrf() {
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export function useCsrf() {
       setCsrfToken(data.csrfToken);
       return data.csrfToken;
     } catch (err) {
-      console.error("Error fetching CSRF token:", err);
+      logger.error("Error fetching CSRF token:", { error: err });
       setError(err instanceof Error ? err.message : "Error desconocido");
       return null;
     } finally {

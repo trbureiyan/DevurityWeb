@@ -1,15 +1,11 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import logger from "@/lib/logger";
+import type { AuthUserDTO } from "@/lib/types/user.types";
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  lastName: string;
-  role: string;
-  isActive: boolean;
-}
+// Re-export AuthUserDTO as User for backward compatibility
+export type User = AuthUserDTO;
 
 interface AuthState {
   user: User | null;
@@ -59,7 +55,7 @@ export function useAuth() {
       // Redirigir a login después de cerrar sesión
       router.push("/auth/login");
     } catch (error) {
-      console.error("Error en logout:", error);
+      logger.error("Error en logout:", { error });
       setAuthState({
         user: null,
         isLoading: false,
@@ -88,7 +84,7 @@ export function useAuth() {
         logout();
       }
     } catch (error) {
-      console.error("Error renovando token:", error);
+      logger.error("Error renovando token:", { error });
       logout();
     }
   }, [logout]);
@@ -113,7 +109,7 @@ export function useAuth() {
         });
       }
     } catch (error) {
-      console.error("useAuth: Error verificando autenticación:", error);
+      logger.error("useAuth: Error verificando autenticación:", { error });
       setAuthState({
         user: null,
         isLoading: false,
@@ -185,12 +181,12 @@ export function useAuth() {
 
   // Función para verificar si el usuario tiene un rol específico
   const hasRole = (role: string): boolean => {
-    return authState.user?.role === role;
+    return authState.user?.role?.toLowerCase() === role.toLowerCase();
   };
 
   // Función para verificar si el usuario es admin
   const isAdmin = (): boolean => {
-    return hasRole("admin");
+    return hasRole("admin") || hasRole("administrador");
   };
 
   return {
