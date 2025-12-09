@@ -1,9 +1,42 @@
 import { errorRequest } from "@/lib/error";
 import { EmailOptions, sendEmail } from "@/lib/email";
+import {
+  checkRateLimit,
+  getClientIp,
+  formatResetTime,
+} from "@/lib/rateLimit";
 
 // api/contact
 export async function POST(request: Request) {
   try {
+    // Verificar rate limit por IP
+    const clientIp = getClientIp(request);
+    const rateLimitCheck = checkRateLimit(clientIp);
+
+    if (rateLimitCheck.isLimited) {
+      const timeRemaining = formatResetTime(rateLimitCheck.resetTime);
+      return new Response(
+        JSON.stringify(
+          errorRequest(
+            "límite",
+            `Has excedido el límite de solicitudes. Por favor, intenta de nuevo en ${timeRemaining}.`
+          )
+        ),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "X-RateLimit-Limit": "3",
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": rateLimitCheck.resetTime.toString(),
+            "Retry-After": Math.ceil(
+              (rateLimitCheck.resetTime - Date.now()) / 1000
+            ).toString(),
+          },
+        }
+      );
+    }
+
     const { name, email, message } = await request.json();
 
     // Validaciones
@@ -96,7 +129,12 @@ export async function POST(request: Request) {
       }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-RateLimit-Limit": "3",
+          "X-RateLimit-Remaining": rateLimitCheck.remaining.toString(),
+          "X-RateLimit-Reset": rateLimitCheck.resetTime.toString(),
+        },
       }
     );
   } catch (error) {
