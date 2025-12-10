@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { IMAGES } from "@/public/images";
 
 interface Slide {
@@ -26,7 +26,7 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
-  const { login, isLoading } = useAuth();
+  const { login, isLoading } = useAuthContext();
 
   const router = useRouter();
   const searchParams = useSearchParams();
