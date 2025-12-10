@@ -57,9 +57,9 @@ export async function POST(request: NextRequest) {
           id: user.id.toString(),
           email: user.email,
           name: user.name,
-          lastName: user.last_name,
+          last_name: user.last_name,
           role: user.roles.name,
-          isActive: user.is_active,
+          is_active: user.is_active,
         },
       },
       {
