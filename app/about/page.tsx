@@ -1,91 +1,55 @@
+"use client";
+
 import Image from "next/image";
-import type { StaticImageData } from "next/image";
 import { IMAGES } from "@/public/images";
+import { useEffect, useState } from "react";
+import logger from "@/lib/logger";
+import TeamMemberCard from "@/components/about/TeamMemberCard";
 
-export const dynamic = "force-static";
-
-type TeamMember = {
-  name: string;
-  role: string;
-  tagline?: string;
-  description?: string;
-  imageSrc: string | StaticImageData;
-  imageAlt: string;
-  linkLabel?: string;
-  linkHref?: string;
-  imageBgClass?: string;
+type SocialLink = {
+  icon: string;
+  url: string;
+  label: string;
 };
 
-// Static placeholder data while profile management is implemented via the CMS.
-const coreTeamMembers: TeamMember[] = [
-  {
-    name: "Brayan Toro Bustos",
-    role: "Estudiante Ingeniería de Software",
-    tagline: "| Frontend WebDev & DevOps |",
-    description: "Líder y participante en el desarrollo de proyectos web.",
-    imageSrc: IMAGES.team.brayan,
-    imageAlt: "Brayan Toro",
-    linkLabel: "LinkedIn",
-    linkHref: "https://www.linkedin.com/in/trbureiyan/",
-  },
-  {
-    name: "Alexander Lozada Caviedes",
-    role: "Estudiante Ingeniería de Software",
-    tagline: "| Backend WebDev & DB Engineer |",
-    description: "Tutor de lenguajes y frameworks, usuario de Linux.",
-    imageSrc: IMAGES.team.alex,
-    imageAlt: "Alexander Lozada",
-    linkLabel: "GitHub",
-    linkHref: "https://github.com/Arekkazu",
-  },
-  {
-    name: "Juan Camilo Mora Castañeda",
-    role: "Estudiante Ingeniería de Software",
-    tagline: "| T-Stack WebDev |",
-    description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-    imageSrc: IMAGES.team.mora,
-    imageAlt: "Juan Camilo",
-    linkLabel: "GitHub",
-    linkHref: "https://github.com/JucaMora7",
-  },
-  {
-    name: "Pablo Trujillo Artunduaga",
-    role: "Estudiante Ingeniería de Software",
-    tagline: "| Python Data Scientist |",
-    description: "Científico de datos con Python.",
-    imageSrc: "/api/placeholder/160/160",
-    imageAlt: "Pablo Trujillo",
-    linkLabel: "GitHub",
-    linkHref: "https://github.com/PabloTrujilloArtunduaga",
-    imageBgClass: "bg-yellow-100",
-  },
-];
+type TeamMember = {
+  id: string;
+  name: string;
+  username?: string;
+  role: string;
+  tagline?: string;
+  bio?: string;
+  avatar?: string;
+  socialLinks?: SocialLink[];
+};
 
-const supportingTeamMembers: TeamMember[] = [
-  {
-    name: "María López .",
-    role: "Estudiante tecnología en desarrollo de software",
-    tagline: "| Hacker Ética |",
-    imageSrc: "/api/placeholder/160/160",
-    imageAlt: "María López",
-  },
-  {
-    name: "Carlos Gómez G",
-    role: "Estudiante Ingeniería de Software",
-    tagline: "| Cloud & Backend |",
-    imageSrc: "/api/placeholder/160/160",
-    imageAlt: "Carlos Gómez",
-  },
-  {
-    name: "Andrés Castillo Polanco",
-    role: "Estudiante Ingeniería de Software",
-    tagline: "| Frontend & UX |",
-    imageSrc: "/api/placeholder/160/160",
-    imageAlt: "Andrés Castillo",
-  },
-];
-
+// Página "Sobre nosotros": presenta misión, visión y grid dinámico de integrantes desde /api/team.
 export default function AboutPage() {
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Carga miembros del equipo desde API pública; registra errores en logger.
+    async function loadTeamMembers() {
+      try {
+        const response = await fetch("/api/team");
+        const data = await response.json();
+        
+        if (data.success && data.members) {
+          setTeamMembers(data.members);
+        } else {
+          logger.error("Error loading team members:", data.error);
+        }
+      } catch (error) {
+        logger.error("Error fetching team members:", { error });
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadTeamMembers();
+  }, []);
+
   return (
     <main className="min-h-screen bg-black text-white overflow-hidden">
 
@@ -337,78 +301,41 @@ export default function AboutPage() {
           </div>
 
           {/* Team Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-            {coreTeamMembers.map((member) => (
-              <div
-                key={member.name}
-                className="bg-zinc-900/50 rounded-3xl p-6 text-center hover:bg-zinc-800/50 transition-all"
-              >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
+            {loading ? (
+              // Loading skeleton
+              Array.from({ length: 8 }).map((_, i) => (
                 <div
-                  className={`w-40 h-40 mx-auto mb-4 rounded-3xl overflow-hidden relative ${member.imageBgClass ?? ""}`}
+                  key={i}
+                  className="bg-zinc-900/50 rounded-2xl overflow-hidden animate-pulse"
                 >
-                  <Image
-                    src={member.imageSrc}
-                    alt={member.imageAlt}
-                    fill
-                    className="object-cover"
-                    sizes="160px"
-                  />
+                  <div className="aspect-square bg-zinc-800"></div>
+                  <div className="p-6 space-y-3">
+                    <div className="h-6 bg-zinc-800 rounded"></div>
+                    <div className="h-4 bg-zinc-800 rounded w-3/4"></div>
+                    <div className="h-3 bg-zinc-800 rounded"></div>
+                  </div>
                 </div>
-                <h3 className="text-xl font-bold mb-2">{member.name}</h3>
-                <p className="text-sm font-semibold text-gray-400 mb-2">{member.role}</p>
-                {member.tagline ? (
-                  <p className="text-xs text-gray-500 mb-3">{member.tagline}</p>
-                ) : null}
-                {member.description ? (
-                  <p className="text-sm text-gray-400 mb-4">{member.description}</p>
-                ) : null}
-                {member.linkHref && member.linkLabel ? (
-                  <a
-                    href={member.linkHref}
-                    className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-                  >
-                    <span className="text-xs">{member.linkLabel}</span>
-                  </a>
-                ) : null}
+              ))
+            ) : teamMembers.length > 0 ? (
+              teamMembers.map((member) => (
+                <TeamMemberCard
+                  key={member.id}
+                  id={member.id}
+                  name={member.name}
+                  username={member.username}
+                  role={member.role}
+                  bio={member.bio || "Miembro del equipo Devurity"}
+                  avatar={member.avatar}
+                  socialLinks={member.socialLinks}
+                  tagline={member.tagline}
+                />
+              ))
+            ) : (
+              <div className="col-span-full text-center text-gray-400 py-12">
+                <p className="text-lg">No hay miembros del equipo disponibles en este momento</p>
               </div>
-            ))}
-          </div>
-
-          {/* Second Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {supportingTeamMembers.map((member) => (
-              <div
-                key={member.name}
-                className="bg-zinc-900/50 rounded-3xl p-6 text-center hover:bg-zinc-800/50 transition-all"
-              >
-                <div className="w-40 h-40 mx-auto mb-4 rounded-3xl overflow-hidden relative">
-                  <Image
-                    src={member.imageSrc}
-                    alt={member.imageAlt}
-                    fill
-                    className="object-cover"
-                    sizes="160px"
-                  />
-                </div>
-                <h3 className="text-xl font-bold mb-2">{member.name}</h3>
-                <p className="text-sm font-semibold text-gray-400 mb-2">{member.role}</p>
-                {member.tagline ? (
-                  <p className="text-xs text-gray-500 mb-3">{member.tagline}</p>
-                ) : null}
-              </div>
-            ))}
-
-            {/* Team Member 8 */}
-            <div className="bg-zinc-900/50 rounded-3xl p-6 text-center hover:bg-zinc-800/50 transition-all">
-              <div className="w-40 h-40 mx-auto mb-4 rounded-3xl bg-gray-300 overflow-hidden flex items-center justify-center">
-                <svg className="w-20 h-20 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold mb-2">Camila Duarte</h3>
-              <p className="text-sm font-semibold text-gray-400 mb-2">Estudiante Ingeniería de Software</p>
-              <p className="text-xs text-gray-500 mb-3">| Fullstack Developer |</p>
-            </div>
+            )}
           </div>
         </div>
       </section>
