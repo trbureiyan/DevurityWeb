@@ -139,6 +139,32 @@ export default function Footer() {
 
         {/* Divider */}
         <div className="border-t border-white/5 my-6"></div>
+
+        {/* Credits Section */}
+        <div className="mb-8 text-center">
+          <p className="font-ubuntu text-[#6b7280] text-xs mb-4">
+            Hecho con ❤️ por el equipo de desarrollo
+          </p>
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-3">
+            {[
+              { name: "Brayan Toro Bustos" },
+              { name: "Alexander Lozada Caviedes" },
+              { name: "Manuel Felipe Rojas Yasno" },
+              { name: "Juan Camilo Mora Castañeda" },
+              { name: "Pablo Trujillo Artunduaga" },
+            ].map((author, index) => (
+              <div key={index} className="flex flex-col">
+                <span className="font-ubuntu text-[#9ca3af] text-xs font-medium hover:text-white transition-colors duration-200">
+                  {author.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-white/5 my-6"></div>
+
         <Image
           src="/images/logo/facultad de ingenieria horizontal.png"
           alt="Devurity Logo"
