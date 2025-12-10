@@ -1,9 +1,9 @@
-"use client";
+"use client"; // SSG Component: ContactSection
 
 import { useState, FormEvent, useEffect } from "react";
 import { useCsrf } from "@/hooks/useCsrf";
 
-// Iconos SVG para redes sociales
+// Componentes de iconos SVG para redes sociales
 function LinkedInIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -64,32 +64,44 @@ function EmailIcon({ className }: { className?: string }) {
 // Segmento form de contacto
 
 export default function ContactSection() {
+  // Estado para almacenar los datos del formulario
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     message: "",
   });
+  
+  // Estado para controlar si se está enviando el formulario
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Estado para manejar mensajes de éxito o error
   const [submitStatus, setSubmitStatus] = useState<{
     type: "success" | "error" | null;
     message: string;
   }>({ type: null, message: "" });
+
+  // Hook personalizado para manejar tokens CSRF
   const { fetchWithCsrf, refetch, hasToken, error: csrfError } = useCsrf();
 
+  // Efecto para obtener el token CSRF si no existe
   useEffect(() => {
     if (!hasToken) {
       void refetch();
     }
   }, [hasToken, refetch]);
 
+  // Manejador del envío del formulario
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevenir recarga de página
+
+    // Limpiar espacios en blanco de los datos
     const trimmedPayload = {
       name: formData.name.trim(),
       email: formData.email.trim(),
       message: formData.message.trim(),
     };
 
+    // Validar que todos los campos tengan contenido
     if (!trimmedPayload.name || !trimmedPayload.email || !trimmedPayload.message) {
       setSubmitStatus({
         type: "error",
@@ -98,6 +110,7 @@ export default function ContactSection() {
       return;
     }
 
+    // Validar formato de correo electrónico
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(trimmedPayload.email)) {
       setSubmitStatus({
@@ -107,10 +120,12 @@ export default function ContactSection() {
       return;
     }
 
+    // Iniciar estado de carga
     setIsSubmitting(true);
     setSubmitStatus({ type: null, message: "" });
 
     try {
+      // Enviar datos a la API usando fetch seguro con CSRF
       const response = await fetchWithCsrf("/api/contact", {
         method: "POST",
         headers: {
@@ -119,14 +134,17 @@ export default function ContactSection() {
         body: JSON.stringify(trimmedPayload),
       });
 
+      // Parsear respuesta JSON
       const data = await response
         .json()
         .catch(() => ({ message: "Error desconocido al procesar la respuesta." }));
 
+      // Si el token expiró (403), intentar refrescarlo
       if (response.status === 403) {
         await refetch();
       }
 
+      // Manejar respuesta exitosa
       if (response.ok) {
         setSubmitStatus({
           type: "success",
@@ -139,6 +157,7 @@ export default function ContactSection() {
           message: "",
         });
       } else {
+        // Manejar errores del servidor
         const errorMessage =
           data?.message ||
           data?.error ||
@@ -150,16 +169,19 @@ export default function ContactSection() {
         });
       }
     } catch (error) {
+      // Manejar errores de red o conexión
       console.error("Error al enviar el formulario:", error);
       setSubmitStatus({
         type: "error",
         message: "Error de conexión. Por favor, verifica tu conexión a internet.",
       });
     } finally {
+      // Finalizar estado de carga
       setIsSubmitting(false);
     }
   };
 
+  // Manejador para actualizar el estado cuando el usuario escribe
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
