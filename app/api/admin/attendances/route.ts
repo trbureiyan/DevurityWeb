@@ -10,7 +10,10 @@ interface _QRData {
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("[Attendances API] POST /api/admin/attendances start");
     const { qrData } = await req.json();
+
+    console.log("[Attendances API] Body received", { hasQrData: !!qrData });
 
     if (!qrData) {
       return NextResponse.json(
@@ -88,6 +91,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingAttendance) {
+      console.log("[Attendances API] Duplicate attendance detected", {
+        userId: qrData.userId,
+        existingDate: existingAttendance.attendance_date,
+      });
       return NextResponse.json(
         {
           error: "Asistencia ya registrada hoy",
@@ -98,12 +105,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Crear nueva asistencia
+    // Crear nueva asistencia (solo fecha, sin hora)
+    const attendanceDate = new Date();
+    attendanceDate.setHours(0, 0, 0, 0);
+    
     const attendance = await prisma.attendances.create({
       data: {
-        attendance_date: new Date(),
+        attendance_date: attendanceDate,
         user_id: userId,
       },
+    });
+
+    console.log("[Attendances API] Attendance created", {
+      attendanceId: attendance.id,
+      userId: qrData.userId,
     });
 
     return NextResponse.json({
