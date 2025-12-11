@@ -1,7 +1,25 @@
-// Datos estáticos para el módulo de noticias y actualizaciones
-// Hardcodeado temporalmente hasta integrar en DB y/o CMS
+/**
+ * @deprecated Archivo deprecado.
+ * 
+ * Los datos de noticias/eventos ahora se consultan desde la db.
+ * Usar las funciones del repositorio: @/repositories/updates/updates.repositories
+ * 
+ * - Para obtener updates: getPublishedUpdates()
+ * - Para el landing: getLatestUpdates(count)
+ * - Para feed completo: @/lib/data/updates → getUpdatesFeed()
+ * 
+ * Este archivo se mantiene temporalmente para referencia de la estructura de datos
+ * y será eliminado en una versión futura.
+ * 
+ */
 
-export interface NewsEvent {
+// Re-exportar types desde la nueva ubicación para compatibilidad hacia el back
+export type { NewsEvent } from "@/lib/types/update.types";
+
+/* 
+* @deprecated Usar getPublishedUpdates() desde @/repositories/updates/updates.repositories
+*/
+export interface NewsEventLegacy {
   id: number;
   slug: string;
   title: string;
@@ -13,7 +31,10 @@ export interface NewsEvent {
   href: string;
 }
 
-export const LATEST_NEWS: NewsEvent[] = [
+/**
+ * @deprecated Este array ya no se usa. Los datos están en la tabla 'updates' de la DB.
+ */
+export const LATEST_NEWS: NewsEventLegacy[] = [
   {
     id: 1,
     slug: "indigo-tech-vacantes-cloud-backend",
