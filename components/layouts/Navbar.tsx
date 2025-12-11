@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import LoginButton from "@/components/ui/LoginButton";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 // Importar el menú móvil sin SSR para evitar errores de hidratación
 const MobileMenu = dynamic(() => import("./MobileMenu"), {
@@ -16,13 +16,13 @@ const NAVIGATION_ITEMS = [
   { label: "Nosotros", href: "/about" },
   { label: "Proyectos", href: "/projects" },
   { label: "Eventos", href: "/updates" },
-  { label: "Asistencia", href: "/attendance" },
+  { label: "Asistencia", href: "admin/attendances" },
 ];
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const { user, isAuthenticated, isLoading, logout, isAdmin } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, isAdmin } = useAuthContext();
 
   const navigationItems = [
     { label: "Nosotros", href: "/about" },
@@ -66,8 +66,9 @@ export default function Navbar() {
     };
   }, []);
 
-  const getInitials = (name: string, lastName: string) => {
-    return `${name.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  const getInitials = (name: string, last_name?: string) => {
+    if (!last_name) return name.charAt(0).toUpperCase();
+    return `${name.charAt(0)}${last_name.charAt(0)}`.toUpperCase();
   };
 
   return (
@@ -129,7 +130,7 @@ export default function Navbar() {
                 aria-label="Menú de perfil"
                 aria-expanded={isProfileDropdownOpen}
               >
-                {getInitials(user.name, user.lastName)}
+                {getInitials(user.name, user.last_name)}
               </button>
 
               {/* Profile Dropdown */}
@@ -138,7 +139,7 @@ export default function Navbar() {
                   {/* User Info */}
                   <div className="px-4 py-3 border-b border-[#2E2E2E]">
                     <p className="text-white font-medium text-sm">
-                      {user.name} {user.lastName}
+                      {user.name} {user.last_name}
                     </p>
                     <p className="text-gray-400 text-xs">{user.email}</p>
                   </div>
@@ -200,7 +201,7 @@ export default function Navbar() {
                 aria-label="Menú de perfil"
                 aria-expanded={isProfileDropdownOpen}
               >
-                {getInitials(user.name, user.lastName)}
+                {getInitials(user.name, user.last_name)}
               </button>
 
               {/* Mobile Profile Dropdown */}
@@ -209,7 +210,7 @@ export default function Navbar() {
                   {/* User Info */}
                   <div className="px-4 py-3 border-b border-[#2E2E2E]">
                     <p className="text-white font-medium text-sm">
-                      {user.name} {user.lastName}
+                      {user.name} {user.last_name}
                     </p>
                     <p className="text-gray-400 text-xs">{user.email}</p>
                   </div>
