@@ -1,15 +1,16 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
-
 import {
   FEATURED_PROJECTS,
   QUICK_NAV_ITEMS,
   type ProjectPreview,
 } from "@/lib/constants/landing";
-import { LATEST_NEWS, type NewsEvent } from "@/lib/constants/updates";
+import { getLatestUpdates } from "@/repositories/updates/updates.repositories";
 import { GALLERY_IMAGES } from "@/lib/constants/gallery";
 import type { QuickNavItem } from "@/lib/types/landing";
+import type { NewsEvent } from "@/lib/types/update.types";
 
+// Funciones internas cacheadas para datos del landing
 const getQuickNavItemsInternal = cache(async (): Promise<QuickNavItem[]> => {
   return QUICK_NAV_ITEMS;
 });
@@ -23,15 +24,8 @@ const getGalleryPreviewImagesInternal = cache(async (): Promise<string[]> => {
 });
 
 const getLatestNewsInternal = async (): Promise<NewsEvent[]> => {
-  return [...LATEST_NEWS].sort((a, b) => {
-    const dateDiff = new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
-
-    if (dateDiff !== 0) {
-      return dateDiff;
-    }
-
-    return b.id - a.id;
-  });
+  // Obtener las últimas 3 noticias desde la base de datos
+  return getLatestUpdates(3);
 };
 
 export const getLandingQuickNav = () => getQuickNavItemsInternal();
@@ -41,5 +35,5 @@ export const getLandingProjects = () => getFeaturedProjectsInternal();
 export const getLandingGalleryPreview = () => getGalleryPreviewImagesInternal();
 
 export const getLandingNews = unstable_cache(getLatestNewsInternal, ["landing-news"], {
-  revalidate: 60 * 60 * 24 * 7,
+  revalidate: 21600, // Revalidar cada 6 horas | 60 * 60 * 6
 });

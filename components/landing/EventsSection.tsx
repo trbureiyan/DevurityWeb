@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import type { NewsEvent } from "@/lib/constants/updates";
+import type { NewsEvent } from "@/lib/types/update.types";
 
 // props para items de noticias
 type EventsSectionProps = {
