@@ -2,7 +2,7 @@
 
 import React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 
 export default function AdminLayout({
@@ -10,10 +10,11 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Contexto de navegación y auth para proteger y controlar la vista admin.
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading, logout } = useAuthContext();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -23,17 +24,19 @@ export default function AdminLayout({
     setIsMobileMenuOpen(false);
   };
 
+  // Cierra sesión y redirige a landing.
   const handleLogout = async () => {
     await logout();
     router.push("/");
   };
 
-  const getInitials = (name: string, lastName: string) => {
-    return `${name.charAt(0).toUpperCase()}${lastName?.charAt(0)?.toUpperCase() || ""}`;
+  // Deriva iniciales para avatar fallback.
+  const getInitials = (name: string, last_name: string) => {
+    return `${name.charAt(0).toUpperCase()}${last_name?.charAt(0)?.toUpperCase() || ""}`;
   };
 
   const initials = user
-    ? getInitials(user.name, user.lastName ?? "")
+    ? getInitials(user.name, user.last_name ?? "")
     : getInitials("Usuario", "Devurity");
 
   return (
