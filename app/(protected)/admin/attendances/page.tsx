@@ -350,11 +350,7 @@ export default function AttendancesPage() {
     setCameraError("");
 
     // Clear any previous scanner container content
-    const readerElement = document.getElementById("reader");
-    if (readerElement) {
-      // SEGURIDAD: Usar replaceChildren() en lugar de innerHTML para evitar riesgos XSS
-      readerElement.replaceChildren();
-    }
+    readerElement.replaceChildren();
 
     try {
       const scanner = new Html5Qrcode("reader", {
