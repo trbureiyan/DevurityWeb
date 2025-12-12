@@ -39,6 +39,13 @@ model roles {
   users users[]
 }
 
+/// Programas academicos de la Universidad Surcolombiana
+model programs { 
+  id    BigInt @id @default(autoincrement())
+  name  String @unique
+  users users[]
+}
+
 model skills {
   id          BigInt        @id @default(autoincrement())
   name        String        @unique
@@ -72,20 +79,44 @@ model user_skills {
   users    users?  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_skills_fk_users")
 }
 
+/// Datos y detalles para usuarios y perfil
 model users {
-  id             BigInt           @id @default(autoincrement())
-  email          String           @unique
-  password       String
-  name           String
-  last_name      String
-  personal_email String?
-  is_active      Boolean          @default(false)
-  role_id        BigInt
-  motivation     String
-  semester       Int
-  attendances    attendances[]
-  user_platforms user_platforms[]
-  user_projects  user_projects[]
-  user_skills    user_skills[]
-  roles          roles            @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "users_roles_fk")
+  id                    BigInt           @id @default(autoincrement())
+  email                 String           @unique
+  password              String
+  name                  String
+  last_name             String
+  username              String?          @unique
+  username_last_changed DateTime?
+  personal_email        String?
+  program_id            BigInt?
+  is_active             Boolean          @default(false)
+  role_id               BigInt
+  motivation            String
+  semester              Int
+  joined_at             DateTime?        @default(now())
+  attendances           attendances[]
+  user_platforms        user_platforms[]
+  user_projects         user_projects[]
+  user_skills           user_skills[]
+  roles                 roles            @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "users_roles_fk")
+  programs              programs?        @relation(fields: [program_id], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "users_programs_fk")
+}
+
+/// Modelo para noticias, eventos y actualizaciones del semillero
+/// Actualiza datos hardcodeados en lib/constants/updates.ts
+model updates {
+  id            BigInt    @id @default(autoincrement())
+  slug          String    @unique
+  title         String
+  description   String
+  display_date  String    // Fecha amigable para UI (ej: "13 de agosto 2025")
+  published_at  DateTime  @default(now())
+  tags          String[]  // Array de tags como strings
+  border_color  String    @default("#454f5e")
+  href          String?   // URL externa o null para páginas internas
+  is_featured   Boolean   @default(false)
+  status        String    @default("published") // draft, published, archived
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
 }

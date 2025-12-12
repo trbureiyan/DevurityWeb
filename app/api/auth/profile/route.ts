@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       JSON.stringify({
         user: {
           name: user.name,
-          lastName: user.last_name,
+          last_name: user.last_name,
         },
       }),
       {
