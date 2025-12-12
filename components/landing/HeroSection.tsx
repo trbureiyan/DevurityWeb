@@ -38,6 +38,7 @@ export default function HeroSection({ quickNavItems }: HeroSectionProps) {
               fill
               className="object-contain drop-shadow-2xl animate-fade-in"
               priority
+              sizes="(max-width: 768px) 192px, 256px"
             />
           </div>
         </div>

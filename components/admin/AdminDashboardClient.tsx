@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import {
@@ -10,15 +12,7 @@ import {
   UsersIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-
-// Resumen numérico que devuelve el endpoint de dashboard
-type DashboardStats = {
-  totalUsers: number;
-  activeUsers: number;
-  attendanceToday: number;
-  eventsCount: number;
-  projectsCount: number;
-};
+import type { DashboardStats } from "@/lib/data/admin";
 
 // Configuración necesaria para cada tarjeta de estadísticas
 type StatCard = {
@@ -34,10 +28,15 @@ type StatCard = {
 // Normaliza cantidades para la región
 const numberFormatter = new Intl.NumberFormat("es-CO");
 
-export default function AdminDashboard() {
+interface AdminDashboardClientProps {
+  initialStats: DashboardStats;
+}
+
+// Panel admin (cliente): muestra métricas agregadas, accesos rápidos y colas de aprobación usando datos iniciales + refrescos periódicos contra /api/admin/dashboard/summary.
+export default function AdminDashboardClient({ initialStats }: AdminDashboardClientProps) {
   // Estados principales del panel
-  const [stats, setStats] = React.useState<DashboardStats | null>(null);
-  const [loadingStats, setLoadingStats] = React.useState(true);
+  const [stats, setStats] = React.useState<DashboardStats | null>(initialStats);
+  const [loadingStats, setLoadingStats] = React.useState(false);
   const [statsError, setStatsError] = React.useState<string | null>(null);
   const [showAttendanceCard, setShowAttendanceCard] = React.useState(true);
   const [showSkillsCard, setShowSkillsCard] = React.useState(true);
@@ -81,13 +80,17 @@ export default function AdminDashboard() {
   }, []);
 
   React.useEffect(() => {
-    // Carga inicial de estadísticas
-    refreshStats().catch((error) => {
-      console.error("Error inicial al cargar estadísticas", error);
-    });
+    isMountedRef.current = true;
+    // Auto-refresh cada 30 segundos mientras el componente esté montado
+    const intervalId = setInterval(() => {
+      refreshStats().catch((error) => {
+        console.error("Error in auto-refresh", error);
+      });
+    }, 30000); // 30 segundos
 
     return () => {
       isMountedRef.current = false;
+      clearInterval(intervalId);
     };
   }, [refreshStats]);
 
@@ -438,37 +441,122 @@ export default function AdminDashboard() {
               </Link>
             </div>
 
-            <div className="flex flex-col items-center justify-center gap-6 px-6 py-16 text-center">
-              <div className="relative flex h-32 w-32 items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-2 border-dashed border-[rgba(255,255,255,0.1)]" />
-                <div className="absolute inset-3 rounded-full border border-[rgba(202,43,38,0.3)]" />
-                <span className="relative text-[15px] font-semibold text-[rgba(255,255,255,0.7)]">
-                  Sin solicitudes en revisión
-                </span>
+            {loadingStats ? (
+              <div className="flex flex-col items-center justify-center gap-6 px-6 py-16 text-center">
+                <div className="animate-pulse space-y-4 w-full max-w-md">
+                  <div className="h-32 w-32 mx-auto bg-white/10 rounded-full" />
+                  <div className="h-6 bg-white/10 rounded w-3/4 mx-auto" />
+                  <div className="h-4 bg-white/5 rounded w-full" />
+                </div>
               </div>
-              <div className="space-y-3">
-                <p className="text-[22px] font-semibold text-white">
-                  No se registraron nuevas solicitudes en los últimos 90 días
-                </p>
-                <p className="text-[14px] text-[rgba(255,255,255,0.65)]">
-                  Mantén habilitadas notificaciones para recibir alertas inmediatas cuando llegue un nuevo registro.
-                </p>
+            ) : stats && stats.pendingUsers > 0 ? (
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(202,43,38,0.15)]">
+                      <span className="text-[20px] font-bold text-[#fca5a5]">
+                        {stats.pendingUsers}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-[18px] font-semibold text-white">
+                        {stats.pendingUsers} {stats.pendingUsers === 1 ? 'solicitud pendiente' : 'solicitudes pendientes'}
+                      </p>
+                      <p className="text-[13px] text-[rgba(255,255,255,0.6)]">
+                        Usuarios esperando aprobación
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/admin/users/confirm"
+                    className="inline-flex items-center gap-2 rounded-full bg-[#ca2b26] px-5 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-[#b52521]"
+                  >
+                    Revisar ahora
+                  </Link>
+                </div>
+                
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {stats.recentUsers
+                    .filter(user => !user.is_active)
+                    .slice(0, 3)
+                    .map((user) => {
+                      const joinedDate = new Date(user.joined_at);
+                      const timeAgo = (() => {
+                        const now = new Date();
+                        const diffMs = now.getTime() - joinedDate.getTime();
+                        const diffMins = Math.floor(diffMs / 60000);
+                        const diffHours = Math.floor(diffMs / 3600000);
+                        const diffDays = Math.floor(diffMs / 86400000);
+                        
+                        if (diffMins < 60) return `Hace ${diffMins} min`;
+                        if (diffHours < 24) return `Hace ${diffHours} h`;
+                        if (diffDays < 7) return `Hace ${diffDays} día${diffDays !== 1 ? 's' : ''}`;
+                        return joinedDate.toLocaleDateString('es-CO', { month: 'short', day: 'numeric' });
+                      })();
+
+                      return (
+                        <Link
+                          key={user.id}
+                          href={`/admin/users/confirm/${user.id}`}
+                          className="group relative overflow-hidden rounded-xl border border-[rgba(202,43,38,0.2)] bg-[rgba(202,43,38,0.05)] p-4 transition-all hover:bg-[rgba(202,43,38,0.1)] hover:border-[rgba(202,43,38,0.3)]"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(202,43,38,0.2)] text-[#fca5a5] font-semibold">
+                              {user.name.charAt(0)}{user.last_name.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[14px] font-semibold text-white truncate group-hover:text-[#fca5a5] transition-colors">
+                                {user.name} {user.last_name}
+                              </p>
+                              <p className="text-[12px] text-[rgba(255,255,255,0.6)] truncate">
+                                {user.email}
+                              </p>
+                              <span className="text-[11px] text-[rgba(255,255,255,0.5)]">
+                                {timeAgo}
+                              </span>
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                </div>
+
+                {stats.pendingUsers > 3 && (
+                  <div className="mt-4 text-center">
+                    <Link
+                      href="/admin/users/confirm"
+                      className="text-[14px] font-semibold text-[#fca5a5] hover:text-[#f87171] transition-colors"
+                    >
+                      Ver todas las {stats.pendingUsers} solicitudes pendientes →
+                    </Link>
+                  </div>
+                )}
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <Link
-                  href="/admin/users/confirm"
-                  className="inline-flex items-center gap-2 rounded-full border border-[#ca2b26] px-6 py-2 text-[15px] font-semibold text-[#fca5a5] transition-colors hover:bg-[rgba(202,43,38,0.15)]"
-                >
-                  Abrir gestor de solicitudes
-                </Link>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-6 px-6 py-16 text-center">
+                <div className="relative flex h-32 w-32 items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border-2 border-dashed border-[rgba(255,255,255,0.1)]" />
+                  <div className="absolute inset-3 rounded-full border border-[rgba(34,197,94,0.3)]" />
+                  <span className="relative text-[15px] font-semibold text-[rgba(52,211,153,0.9)]">
+                    ✓ Todo al día
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  <p className="text-[22px] font-semibold text-white">
+                    No hay solicitudes pendientes
+                  </p>
+                  <p className="text-[14px] text-[rgba(255,255,255,0.65)]">
+                    Todos los registros han sido revisados y procesados.
+                  </p>
+                </div>
                 <Link
                   href="/admin/users/confirm"
                   className="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
                 >
-                  Ajustar filtros
+                  Ver historial completo
                 </Link>
               </div>
-            </div>
+            )}
           </div>
         </section>
 
@@ -476,37 +564,82 @@ export default function AdminDashboard() {
           {/* Lista de actividad reciente */}
           <div className="rounded-2xl border border-[rgba(140,140,140,0.2)] bg-[#221b1b] p-5 shadow-[0px_0px_0px_1px_rgba(140,140,140,0.2)]">
             <div className="flex items-center justify-between">
-              <h3 className="text-[18px] font-semibold text-white">Actividad reciente</h3>
-              <span className="text-[12px] font-medium text-[rgba(255,255,255,0.6)]">Actualizado ahora</span>
+              <h3 className="text-[18px] font-semibold text-white">Últimos perfiles registrados</h3>
+              <span className="text-[12px] font-medium text-[rgba(255,255,255,0.6)]">
+                {loadingStats ? "Actualizando..." : "Actualizado ahora"}
+              </span>
             </div>
-            <ul className="mt-5 space-y-5">
-              {[
-                {
-                  title: "Nueva cuenta verificada",
-                  description: "Julián Pérez completó el formulario de registro.",
-                  time: "Hace 2 h",
-                },
-                {
-                  title: "Actualización de proyecto",
-                  description: "Se añadió documentación al proyecto Devurity Campus.",
-                  time: "Hace 5 h",
-                },
-                {
-                  title: "Evento próximo",
-                  description: "Recordatorio para confirmar logística del meetup semestral.",
-                  time: "Mañana",
-                },
-              ].map((item) => (
-                <li key={item.title} className="relative pl-6 text-left">
-                  <span className="absolute left-0 top-2 h-2 w-2 rounded-full bg-[#0a66c2]" />
-                  <p className="text-[15px] font-semibold text-[rgba(255,255,255,0.9)]">
-                    {item.title}
-                  </p>
-                  <p className="text-[13px] text-[rgba(255,255,255,0.65)]">{item.description}</p>
-                  <span className="text-[12px] text-[rgba(255,255,255,0.5)]">{item.time}</span>
-                </li>
-              ))}
-            </ul>
+            {loadingStats ? (
+              <div className="mt-5 space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="h-4 bg-white/10 rounded w-3/4 mb-2" />
+                    <div className="h-3 bg-white/5 rounded w-full" />
+                  </div>
+                ))}
+              </div>
+            ) : stats?.recentUsers && stats.recentUsers.length > 0 ? (
+              <ul className="mt-5 space-y-5">
+                {stats.recentUsers.map((user) => {
+                  const joinedDate = new Date(user.joined_at);
+                  const now = new Date();
+                  const diffMs = now.getTime() - joinedDate.getTime();
+                  const diffMins = Math.floor(diffMs / 60000);
+                  const diffHours = Math.floor(diffMs / 3600000);
+                  const diffDays = Math.floor(diffMs / 86400000);
+                  
+                  let timeAgo = "Hace un momento";
+                  if (diffMins < 60) {
+                    timeAgo = `Hace ${diffMins} min`;
+                  } else if (diffHours < 24) {
+                    timeAgo = `Hace ${diffHours} h`;
+                  } else if (diffDays < 7) {
+                    timeAgo = `Hace ${diffDays} día${diffDays !== 1 ? 's' : ''}`;
+                  } else {
+                    timeAgo = joinedDate.toLocaleDateString('es-CO', { 
+                      month: 'short', 
+                      day: 'numeric' 
+                    });
+                  }
+
+                  return (
+                    <li key={user.id} className="relative pl-6 text-left">
+                      <span 
+                        className={`absolute left-0 top-2 h-2 w-2 rounded-full ${
+                          user.is_active ? 'bg-[#34d399]' : 'bg-[#fbbf24]'
+                        }`} 
+                      />
+                      <p className="text-[15px] font-semibold text-[rgba(255,255,255,0.9)]">
+                        {user.name} {user.last_name}
+                      </p>
+                      <p className="text-[13px] text-[rgba(255,255,255,0.65)]">
+                        {user.email}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[12px] text-[rgba(255,255,255,0.5)]">
+                          {timeAgo}
+                        </span>
+                        {user.is_active ? (
+                          <span className="text-[11px] bg-[rgba(52,211,153,0.15)] text-[#34d399] px-2 py-0.5 rounded-full">
+                            Activo
+                          </span>
+                        ) : (
+                          <span className="text-[11px] bg-[rgba(251,191,36,0.15)] text-[#fbbf24] px-2 py-0.5 rounded-full">
+                            Pendiente
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <div className="mt-5 text-center py-8">
+                <p className="text-[14px] text-[rgba(255,255,255,0.5)]">
+                  No hay registros recientes
+                </p>
+              </div>
+            )}
           </div>
         </aside>
       </div>

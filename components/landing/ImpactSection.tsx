@@ -60,7 +60,6 @@ export default function ImpactSection() {
                 alt="Tecnología e Innovación"
                 fill
                 className="object-contain object-right"
-                priority
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 50vw"
               />
             </div>

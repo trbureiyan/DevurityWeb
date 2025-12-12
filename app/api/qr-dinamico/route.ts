@@ -16,9 +16,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verificar si userId es un número o un username
+    const isNumericId = /^\d+$/.test(userId);
+    let userIdBigInt: bigint;
+    
+    if (isNumericId) {
+      userIdBigInt = BigInt(userId);
+    } else {
+      // Si no es numérico, buscar por username primero
+      const userByUsername = await prisma.users.findUnique({
+        where: { username: userId },
+        select: { id: true },
+      });
+      
+      if (!userByUsername) {
+        return NextResponse.json(
+          { error: "Usuario no encontrado" },
+          { status: 404 },
+        );
+      }
+      
+      userIdBigInt = userByUsername.id;
+    }
+
     // Verificar que el usuario existe
     const usuario = await prisma.users.findUnique({
-      where: { id: BigInt(userId) },
+      where: { id: userIdBigInt },
       select: {
         id: true,
         name: true,
