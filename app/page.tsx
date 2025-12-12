@@ -6,6 +6,7 @@ import EventsSection from "@/components/landing/EventsSection";
 import ContactSection from "@/components/landing/ContactSection";
 import CTASection from "@/components/landing/CTASection";
 import GalleryPreviewSection from "@/components/landing/GalleryPreviewSection";
+import ReglamentoSection from "@/components/landing/ReglamentoSection";
 // Data fetching functions
 import {
   getLandingGalleryPreview,
@@ -13,6 +14,16 @@ import {
   getLandingProjects,
   getLandingQuickNav,
 } from "@/lib/data/landing";
+import type { Metadata } from "next";
+import { siteIcons } from "@/lib/constants/metadata";
+
+export const metadata: Metadata = {
+  // Título: máximo 60 caracteres recomendados para SEO (Google muestra ~50-60)
+  title: "Devurity | Semillero de Investigación en Ciberseguridad",
+  // Descripción: máximo 160 caracteres recomendados para SEO (Google muestra ~150-160) 
+  description: "Somos un semillero y comunidad académica ubicada en la Universidad Surcolombiana enfocada en investigación, desarrollo de software seguro y ciberseguridad. Únete a nuestros proyectos y eventos.",
+  icons: siteIcons,
+};
 
 // Forzar render estatico general landing
 export const dynamic = "force-static";
@@ -35,6 +46,7 @@ export default async function Home() {
       <CTASection />
       <GalleryPreviewSection images={galleryImages} /> {/* Galeria organizada */}
       <ContactSection />
-    </main>
+      <ReglamentoSection /> {/* Seccion reglamentos */}
+      </main>
   );
 }

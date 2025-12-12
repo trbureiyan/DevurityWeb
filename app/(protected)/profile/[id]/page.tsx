@@ -5,6 +5,38 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import QRDynamic from "@/components/qr-dynamic";
+import SkillSelector from "@/components/ui/SkillSelector";
+import SocialLinksEditor from "@/components/ui/SocialLinksEditor";
+import { UsernameEditor } from "@/components/ui/UsernameEditor";
+import { Tooltip } from "@/components/ui/Tooltip";
+import ProgramSelector from "@/components/ui/ProgramSelector";
+import { useCsrf } from "@/hooks/useCsrf";
+import logger from "@/lib/logger";
+
+// Configurar fuente Orbitron
+const orbitron = Orbitron({ 
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  variable: "--font-orbitron"
+});
+
+type NullableDate = string | null | undefined;
+
+interface ProjectData {
+  title: string;
+  link: string;
+}
+
+interface SocialLinkData {
+  icon: string;
+  url: string;
+  label: string;
+}
+
+// Define un tipo para fechas que pueden ser nulas o indefinidas
+type NullableDate = string | null | undefined;
+
+// Define la estructura de los datos del usuario obtenidos de la API
 
 type NullableDate = string | null | undefined;
 
@@ -64,7 +96,10 @@ const emergencyData: UserData = {
 export default function ProfilePage() {
   const params = useParams();
   const id = params.id as string;
+  const { fetchWithCsrf } = useCsrf();
+  
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null); // ID del usuario autenticado
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -225,6 +260,8 @@ export default function ProfilePage() {
 
   // Cargar datos del usuario desde API REAL
   useEffect(() => {
+    const abortController = new AbortController();
+    
     async function fetchUserData() {
       try {
         setLoading(true);
@@ -251,7 +288,9 @@ export default function ProfilePage() {
         // Solo usar datos de emergencia si realmente no hay datos
         setUserData({...emergencyData, id: id});
       } finally {
-        setLoading(false);
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
     }
     
@@ -272,7 +311,7 @@ export default function ProfilePage() {
     );
   }
 
-  if (error && !userData) {
+  if (error || !userData) {
     return (
       <div className="min-h-screen bg-[#110e0e] flex flex-col items-center justify-center p-4">
         <div className="text-red-400 text-xl mb-4">Error al cargar perfil</div>

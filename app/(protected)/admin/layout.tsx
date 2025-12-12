@@ -10,6 +10,7 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Contexto de navegación y auth para proteger y controlar la vista admin.
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);

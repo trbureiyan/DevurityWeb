@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Footer() {
@@ -74,7 +75,7 @@ export default function Footer() {
     <footer className="relative bg-variable-collection-fondo border-t border-white/5 mt-auto overflow-hidden">
       {/* Degradado rojizo de fondo desde abajo */}
       <div className="absolute inset-0 bg-gradient-to-t from-[#ff000008] via-transparent to-transparent pointer-events-none"></div>
-      
+
       <div className="relative max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 lg:px-10 py-8 md:py-12">
         {/* Main Footer Content */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
@@ -84,7 +85,8 @@ export default function Footer() {
               DEVURITY
             </h3>
             <p className="font-ubuntu text-[#9ca3af] text-sm leading-relaxed max-w-xs mx-auto md:mx-0">
-              Semillero de investigación en desarrollo y seguridad de la Universidad Surcolombiana
+              Semillero de investigación en desarrollo y seguridad de la
+              Universidad Surcolombiana
             </p>
           </div>
 
@@ -93,7 +95,10 @@ export default function Footer() {
             <h4 className="font-ubuntu font-semibold text-white text-sm mb-3 uppercase tracking-wider">
               Enlaces Rápidos
             </h4>
-            <nav className="flex flex-col space-y-2" aria-label="Footer navigation">
+            <nav
+              className="flex flex-col space-y-2"
+              aria-label="Footer navigation"
+            >
               {footerLinks.map((link, index) => (
                 <Link
                   key={index}
@@ -135,6 +140,38 @@ export default function Footer() {
         {/* Divider */}
         <div className="border-t border-white/5 my-6"></div>
 
+        {/* Credits Section */}
+        <div className="mb-8 text-center">
+          <p className="font-ubuntu text-[#6b7280] text-xs mb-4">
+            Hecho con ❤️ por el equipo de desarrollo
+          </p>
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-3">
+            {[
+              { name: "Brayan Toro Bustos" },
+              { name: "Alexander Lozada Caviedes" },
+              { name: "Manuel Felipe Rojas Yasno" },
+              { name: "Juan Camilo Mora Castañeda" },
+              { name: "Pablo Trujillo Artunduaga" },
+            ].map((author, index) => (
+              <div key={index} className="flex flex-col">
+                <span className="font-ubuntu text-[#9ca3af] text-xs font-medium hover:text-white transition-colors duration-200">
+                  {author.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-white/5 my-6"></div>
+
+        <Image
+          src="/images/logo/facultad de ingenieria horizontal.png"
+          alt="Devurity Logo"
+          width={150}
+          height={150}
+          priority
+        />
         {/* Bottom Footer */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="font-ubuntu text-[#6b7280] text-xs text-center sm:text-left order-2 sm:order-1">
