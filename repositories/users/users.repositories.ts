@@ -230,15 +230,45 @@ export async function createUser(users: CreateUserDTO) {
       // 2. Crear el usuario con username generado automáticamente
       logger.debug("[REPO] Step 1: Creating user record");
       
-      // Generar username único basado en email
+      // Generar username único basado en email con sufijo aleatorio
       const baseUsername = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
       let username = baseUsername;
-      let counter = 1;
       
-      // Verificar si el username ya existe, si es así agregar un número
-      while (await tx.users.findUnique({ where: { username } })) {
-        username = `${baseUsername}${counter}`;
-        counter++;
+      // Try base username first
+      const existingBase = await tx.users.findUnique({ where: { username: baseUsername } });
+      
+      if (existingBase) {
+        // If base username exists, generate batch of candidates with random suffixes
+        const batchSize = 5;
+        let found = false;
+        
+        // Limit attempts to prevent infinite loops
+        for (let attempt = 0; attempt < 3 && !found; attempt++) {
+          // Generate multiple username candidates with random suffixes
+          const candidates = Array.from({ length: batchSize }, () => {
+            const randomSuffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            return `${baseUsername}${randomSuffix}`;
+          });
+          
+          // Batch check all candidates in a single query
+          const existing = await tx.users.findMany({
+            where: { username: { in: candidates } },
+            select: { username: true }
+          });
+          
+          const existingUsernames = new Set(existing.map(u => u.username));
+          const available = candidates.find(c => !existingUsernames.has(c));
+          
+          if (available) {
+            username = available;
+            found = true;
+          }
+        }
+        
+        // Fallback: if still not found (extremely rare), use timestamp
+        if (!found) {
+          username = `${baseUsername}${Date.now().toString().slice(-6)}`;
+        }
       }
       
       logger.debug("[REPO] Generated username:", { username });
