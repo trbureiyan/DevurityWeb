@@ -249,9 +249,13 @@ export async function createUser(users: CreateUserDTO) {
         for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS && !found; attempt++) {
           // Generate multiple unique username candidates with random suffixes
           const candidatesSet = new Set<string>();
-          while (candidatesSet.size < USERNAME_BATCH_SIZE) {
+          let iterations = 0;
+          const MAX_CANDIDATE_ITERATIONS = USERNAME_BATCH_SIZE * 10; // Safety limit
+          
+          while (candidatesSet.size < USERNAME_BATCH_SIZE && iterations < MAX_CANDIDATE_ITERATIONS) {
             const randomSuffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
             candidatesSet.add(`${baseUsername}${randomSuffix}`);
+            iterations++;
           }
           const candidates = Array.from(candidatesSet);
           
@@ -270,11 +274,28 @@ export async function createUser(users: CreateUserDTO) {
           }
         }
         
-        // Fallback: if still not found (extremely rare), use timestamp + random
+        // Fallback: if still not found (extremely rare), use timestamp + random + unique check
         if (!found) {
-          const timestampSuffix = Date.now().toString().slice(-6);
-          const randomSuffix = Math.floor(Math.random() * 100).toString().padStart(2, '0');
-          username = `${baseUsername}${timestampSuffix}${randomSuffix}`;
+          let fallbackFound = false;
+          for (let i = 0; i < 10 && !fallbackFound; i++) {
+            const timestampSuffix = Date.now().toString().slice(-6);
+            const randomSuffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            const fallbackUsername = `${baseUsername}${timestampSuffix}${randomSuffix}`;
+            
+            const existingFallback = await tx.users.findUnique({ 
+              where: { username: fallbackUsername } 
+            });
+            
+            if (!existingFallback) {
+              username = fallbackUsername;
+              fallbackFound = true;
+            }
+          }
+          
+          // Ultimate fallback if even timestamp+random fails (virtually impossible)
+          if (!fallbackFound) {
+            username = `${baseUsername}${Date.now()}${Math.floor(Math.random() * 1000000)}`;
+          }
         }
       }
       
