@@ -234,21 +234,26 @@ export async function createUser(users: CreateUserDTO) {
       const baseUsername = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
       let username = baseUsername;
       
+      // Configuration constants for username generation
+      const USERNAME_BATCH_SIZE = 5;
+      const MAX_GENERATION_ATTEMPTS = 3;
+      
       // Try base username first
       const existingBase = await tx.users.findUnique({ where: { username: baseUsername } });
       
       if (existingBase) {
         // If base username exists, generate batch of candidates with random suffixes
-        const batchSize = 5;
         let found = false;
         
         // Limit attempts to prevent infinite loops
-        for (let attempt = 0; attempt < 3 && !found; attempt++) {
-          // Generate multiple username candidates with random suffixes
-          const candidates = Array.from({ length: batchSize }, () => {
+        for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS && !found; attempt++) {
+          // Generate multiple unique username candidates with random suffixes
+          const candidatesSet = new Set<string>();
+          while (candidatesSet.size < USERNAME_BATCH_SIZE) {
             const randomSuffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-            return `${baseUsername}${randomSuffix}`;
-          });
+            candidatesSet.add(`${baseUsername}${randomSuffix}`);
+          }
+          const candidates = Array.from(candidatesSet);
           
           // Batch check all candidates in a single query
           const existing = await tx.users.findMany({
@@ -265,9 +270,11 @@ export async function createUser(users: CreateUserDTO) {
           }
         }
         
-        // Fallback: if still not found (extremely rare), use timestamp
+        // Fallback: if still not found (extremely rare), use timestamp + random
         if (!found) {
-          username = `${baseUsername}${Date.now().toString().slice(-6)}`;
+          const timestampSuffix = Date.now().toString().slice(-6);
+          const randomSuffix = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+          username = `${baseUsername}${timestampSuffix}${randomSuffix}`;
         }
       }
       
