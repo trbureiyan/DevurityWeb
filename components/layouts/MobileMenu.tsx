@@ -3,11 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 interface User {
   name: string;
-  lastName?: string;
+  last_name?: string;
   email: string;
   role?: string;
 }
@@ -30,7 +30,7 @@ export default function MobileMenu({
   onLogout,
 }: MobileMenuProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { isAdmin } = useAuth();
+  const { isAdmin } = useAuthContext();
 
   const handleLogout = async () => {
     if (onLogout) {
@@ -42,9 +42,9 @@ export default function MobileMenu({
     }
   };
 
-  const getInitials = (name: string, lastName?: string) => {
-    if (!lastName) return name.charAt(0).toUpperCase();
-    return `${name.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  const getInitials = (name: string, last_name?: string) => {
+    if (!last_name) return name.charAt(0).toUpperCase();
+    return `${name.charAt(0)}${last_name.charAt(0)}`.toUpperCase();
   };
   return (
     <>
@@ -102,11 +102,11 @@ export default function MobileMenu({
             <div className="mb-6 p-4 bg-[#1A1515] rounded-lg border border-[#2E2E2E]">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-variable-collection-botones rounded-full flex items-center justify-center text-white font-semibold">
-                  {getInitials(user.name, user.lastName)}
+                  {getInitials(user.name, user.last_name)}
                 </div>
                 <div className="flex-1">
                   <p className="text-white font-medium text-sm">
-                    {user.name} {user.lastName}
+                    {user.name} {user.last_name}
                   </p>
                   <p className="text-gray-400 text-xs">{user.email}</p>
                 </div>

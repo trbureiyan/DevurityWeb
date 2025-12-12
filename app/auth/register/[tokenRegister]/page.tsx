@@ -8,6 +8,9 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCsrf } from "@/hooks/useCsrf";
 import { IMAGES } from "@/public/images";
+import ProgramSelector from "@/components/ui/ProgramSelector";
+
+// Pagina de validacion
 
 // Pagina de validacion
 
@@ -15,6 +18,7 @@ export default function ValidacionPage() {
   const [formData, setFormData] = useState({
     semester: "",
     motivation: "",
+    program: "",
     skills: [] as string[],
     password: "",
     confirmPassword: "",
@@ -36,6 +40,7 @@ export default function ValidacionPage() {
   const [originalFormData, setOriginalFormData] = useState({
     semester: "",
     motivation: "",
+    program: "",
     skills: [] as string[],
     password: "",
     confirmPassword: "",
@@ -159,10 +164,18 @@ export default function ValidacionPage() {
     setOriginalFormData({
       semester: formData.semester,
       motivation: formData.motivation,
+      program: formData.program,
       skills: [...formData.skills],
       password: formData.password,
       confirmPassword: formData.confirmPassword,
     });
+    // Validaciones frontend
+    if (!formData.program || formData.program.trim().length === 0) {
+      setSubmissionError("Selecciona tu programa académico");
+      setShowErrorModal(true);
+      setIsSubmitting(false);
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setSubmissionError("Las contraseñas no coinciden");
@@ -182,6 +195,7 @@ export default function ValidacionPage() {
           semester: parseInt(formData.semester),
           motivation: formData.motivation,
           skills: formData.skills,
+          program: formData.program,
           password: formData.password,
         }),
       });
@@ -199,6 +213,9 @@ export default function ValidacionPage() {
             if (data.Error.includes("semestre")) {
               errorMessage =
                 "Semestre no válido. Por favor ingresa un semestre entre 1 y 10.";
+            } else if (data.Error.toLowerCase().includes("programa")) {
+              errorMessage =
+                "Debes seleccionar un programa válido de la lista.";
             } else if (data.Error.includes("Motivacion")) {
               errorMessage =
                 "La motivación es requerida. Por favor explica tu motivación para ingresar al semillero.";
@@ -376,6 +393,21 @@ export default function ValidacionPage() {
                   min="1"
                   max="20"
                   className="w-full bg-[#2e2e2e] border-none text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#CA2B26] rounded-lg px-4 py-3"
+                />
+              </div>
+
+              {/* Programa académico */}
+              <div className="space-y-2">
+                <label htmlFor="program" className="block text-sm text-white">
+                  Programa que cursas<span className="text-[#CA2B26]">*</span>
+                </label>
+                <ProgramSelector
+                  value={formData.program || null}
+                  onChange={(programName) =>
+                    setFormData({ ...formData, program: programName || "" })
+                  }
+                  placeholder="Escribe para buscar tu programa"
+                  helperText="Solo se aceptan programas de la lista oficial."
                 />
               </div>
 
@@ -625,6 +657,7 @@ export default function ValidacionPage() {
                 setFormData({
                   semester: originalFormData.semester,
                   motivation: originalFormData.motivation,
+                  program: originalFormData.program,
                   skills: [...originalFormData.skills],
                   password: originalFormData.password,
                   confirmPassword: originalFormData.confirmPassword,

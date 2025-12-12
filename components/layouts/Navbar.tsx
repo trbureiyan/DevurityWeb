@@ -98,6 +98,17 @@ export default function Navbar() {
             </h1>
           </div>
         </Link>
+        <Link href="/" className="flex items-center gap-4 w-48 ml-8">
+          <div className="inline-flex flex-col items-start relative">
+            <Image
+              src="/images/logo/facultad de ingenieria horizontal.png"
+              alt="Devurity Logo"
+              width={150}
+              height={150}
+              priority
+            />
+          </div>
+        </Link>
 
         {/* Desktop Navigation Section */}
         <nav
@@ -106,7 +117,10 @@ export default function Navbar() {
         >
           <ul className="flex items-center gap-9">
             {NAVIGATION_ITEMS.map((item, index) => (
-              <li key={index} className="flex flex-col items-center justify-center">
+              <li
+                key={index}
+                className="flex flex-col items-center justify-center"
+              >
                 <Link
                   href={item.href}
                   className="font-ubuntu font-medium text-white text-sm text-center tracking-[0] leading-[21px] whitespace-nowrap hover:text-variable-collection-link transition-colors duration-200"

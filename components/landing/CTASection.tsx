@@ -1,3 +1,5 @@
+// SGG Componment: CTASection
+
 import type { ComponentType, SVGProps } from "react";
 import Image from "next/image";
 import Link from "next/link";

@@ -11,7 +11,7 @@ interface QRData {
   expiresAt: number;
 }
 
-interface AttendanceResponse {
+interface _AttendanceResponse {
   id: string;
   usuario?: {
     nombre: string;
@@ -46,20 +46,87 @@ export default function AttendancesPage() {
   const [availableCameras, setAvailableCameras] = useState<string[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [showCameraSelector, setShowCameraSelector] = useState(false);
+  const [csrfToken, setCsrfToken] = useState<string>("");
+  const [lastScanTime, setLastScanTime] = useState<number>(0);
+  const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const isStoppingRef = useRef(false);
+  const cooldownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const SCAN_COOLDOWN = 3000; // 3 seconds between scans
+
+  // Detiene el scanner evitando race conditions y fugas de recursos.
+  const safeStopAndClear = useCallback(async (clearInstance: boolean = true) => {
+    if (!scannerRef.current || isStoppingRef.current) return;
+    isStoppingRef.current = true;
+    try {
+      try {
+        await scannerRef.current.stop();
+      } catch (err) {
+        console.log("Scanner stop warning:", err);
+      }
+
+      if (clearInstance) {
+        try {
+          await scannerRef.current.clear();
+        } catch (err) {
+          console.log("Scanner clear warning:", err);
+        }
+      }
+    } finally {
+      setScanning(false);
+      setCameraActive(false);
+      if (clearInstance) {
+        scannerRef.current = null;
+      }
+      isStoppingRef.current = false;
+    }
+  }, []);
 
   const handleScan = useCallback(
     async (decodedText: string) => {
+      const now = Date.now();
+      
+      // Check cooldown period
+      if (now - lastScanTime < SCAN_COOLDOWN) {
+        console.log("Scan cooldown active, skipping...");
+        return;
+      }
+      
       // Prevent multiple simultaneous scans
       if (scanning) {
         console.log("Scan already in progress, skipping...");
         return;
       }
 
+      setLastScanTime(now);
       setScanning(true);
       setError("");
       setSuccess("");
       setDuplicateInfo(null);
+      
+      // Start cooldown timer
+      setCooldownRemaining(SCAN_COOLDOWN);
+      if (cooldownIntervalRef.current) {
+        clearInterval(cooldownIntervalRef.current);
+      }
+      cooldownIntervalRef.current = setInterval(() => {
+        const elapsed = Date.now() - now;
+        const remaining = Math.max(0, SCAN_COOLDOWN - elapsed);
+        setCooldownRemaining(remaining);
+        if (remaining <= 0 && cooldownIntervalRef.current) {
+          clearInterval(cooldownIntervalRef.current);
+          cooldownIntervalRef.current = null;
+        }
+      }, 100);
+      
+      // Pause scanner during processing
+      if (scannerRef.current && cameraActive) {
+        try {
+          await scannerRef.current.pause(true);
+        } catch (err) {
+          console.log("Could not pause scanner:", err);
+        }
+      }
 
       try {
         // Parsear datos del QR dinámico
@@ -97,12 +164,22 @@ export default function AttendancesPage() {
 
         try {
           try {
-            // Registrar asistencia
+            // Verificar que tengamos token CSRF
+            if (!csrfToken) {
+              setError("Token CSRF no disponible. Recargando...");
+              setTimeout(() => window.location.reload(), 2000);
+              setScanning(false);
+              return;
+            }
+            
+            // Registrar asistencia (requiere token CSRF y cookie de sesión)
             const res = await fetch("/api/admin/attendances", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
+                "X-CSRF-Token": csrfToken,
               },
+              credentials: "include",
               body: JSON.stringify({
                 qrData: qrData,
               }),
@@ -124,6 +201,17 @@ export default function AttendancesPage() {
                   minute: "2-digit",
                 }),
               });
+              
+              // Resume scanner after delay
+              setTimeout(() => {
+                if (scannerRef.current && cameraActive) {
+                  try {
+                    scannerRef.current.resume();
+                  } catch (err) {
+                    console.log("Could not resume scanner:", err);
+                  }
+                }
+              }, 2000);
             } else {
               if (res.status === 409) {
                 // Conflicto - asistencia duplicada
@@ -135,10 +223,32 @@ export default function AttendancesPage() {
               } else {
                 setError(data.error || "Error al registrar asistencia");
               }
+              
+              // Resume scanner after error with delay
+              setTimeout(() => {
+                if (scannerRef.current && cameraActive) {
+                  try {
+                    scannerRef.current.resume();
+                  } catch (err) {
+                    console.log("Could not resume scanner:", err);
+                  }
+                }
+              }, 2000);
             }
           } catch (err) {
             console.error("Error during fetch:", err);
             setError("Error de conexión al registrar asistencia");
+            
+            // Resume scanner after error
+            setTimeout(() => {
+              if (scannerRef.current && cameraActive) {
+                try {
+                  scannerRef.current.resume();
+                } catch (err) {
+                  console.log("Could not resume scanner:", err);
+                }
+              }
+            }, 2000);
           } finally {
             setScanning(false);
           }
@@ -153,24 +263,14 @@ export default function AttendancesPage() {
         setScanning(false);
       }
     },
-    [scanning],
+    [scanning, lastScanTime, SCAN_COOLDOWN, csrfToken, cameraActive],
   );
 
   const stopScanner = useCallback(() => {
-    if (scannerRef.current) {
-      try {
-        scannerRef.current.stop().catch((err) => {
-          console.log("Error stopping scanner:", err);
-        });
-      } catch {
-        console.log("Scanner already stopped");
-      }
-      scannerRef.current = null;
-    }
-    setScanning(false);
-    setCameraActive(false);
-  }, []);
+    void safeStopAndClear();
+  }, [safeStopAndClear]);
 
+  // Consulta cámaras disponibles y maneja errores de permisos.
   const getAvailableCameras = useCallback(async () => {
     try {
       // Get available cameras - this may trigger permission dialog in some browsers
@@ -205,10 +305,16 @@ export default function AttendancesPage() {
     }
   }, [selectedCameraId]);
 
+  // Inicializa html5-qrcode y configura constraints, incluyendo manejo de permiso.
   const startScanner = useCallback(async () => {
-    if (scannerRef.current) {
-      scannerRef.current.clear();
-      scannerRef.current = null;
+    // Ensure any previous instance is fully stopped before re-initializing
+    await safeStopAndClear();
+
+    const readerElement = document.getElementById("reader");
+    if (!readerElement) {
+      console.error("Scanner element #reader not found; aborting start.");
+      setCameraError("No se pudo inicializar la cámara. Intenta recargar la página.");
+      return;
     }
 
     setCameraError("");
@@ -244,10 +350,7 @@ export default function AttendancesPage() {
     setCameraError("");
 
     // Clear any previous scanner container content
-    const readerElement = document.getElementById("reader");
-    if (readerElement) {
-      readerElement.innerHTML = "";
-    }
+    readerElement.replaceChildren();
 
     try {
       const scanner = new Html5Qrcode("reader", {
@@ -378,8 +481,10 @@ export default function AttendancesPage() {
         }, 500);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleScan, selectedCameraId, getAvailableCameras]);
 
+  // Reinicia el flujo completo del escáner tras fallos o cambios.
   const handleRetry = useCallback(async () => {
     setError("");
     setSuccess("");
@@ -389,376 +494,367 @@ export default function AttendancesPage() {
     setWaitingForPermission(false);
 
     // Clear any existing scanner first
-    if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop();
-      } catch (err) {
-        console.log("Error stopping existing scanner:", err);
-      }
-      scannerRef.current = null;
-    }
+    await safeStopAndClear();
 
     // Clear the reader container
     const readerElement = document.getElementById("reader");
     if (readerElement) {
-      readerElement.innerHTML = "";
+      // SEGURIDAD: Usar replaceChildren() en lugar de innerHTML para evitar riesgos XSS
+      readerElement.replaceChildren();
     }
 
     // Small delay to ensure cleanup is complete and browser is ready
     setTimeout(() => {
       startScanner();
     }, 800);
-  }, [startScanner]);
+  }, [startScanner, safeStopAndClear]);
 
   const toggleCameraSelector = useCallback(() => {
     setShowCameraSelector(!showCameraSelector);
   }, [showCameraSelector]);
 
   const handleCameraChange = useCallback(
-    (cameraId: string) => {
-      setSelectedCameraId(cameraId);
+    async (cameraId: string) => {
       setShowCameraSelector(false);
-      if (cameraActive) {
-        // Reiniciar escáner con la nueva cámara seleccionada
-        setTimeout(() => {
-          startScanner();
-        }, 100);
+      
+      if (!cameraActive) {
+        setSelectedCameraId(cameraId);
+        return;
       }
+      
+      // Stop and clear current scanner safely
+      await safeStopAndClear();
+      
+      setCameraActive(false);
+      setSelectedCameraId(cameraId);
+      
+      // Wait a bit then restart with new camera
+      setTimeout(() => {
+        startScanner();
+      }, 300);
     },
-    [cameraActive, startScanner],
+    [cameraActive, startScanner, safeStopAndClear],
   );
+
+  // Fetch CSRF token on mount
+  useEffect(() => {
+    const fetchCsrf = async () => {
+      try {
+        const response = await fetch("/api/auth/csrf-token", {
+          method: "GET",
+          credentials: "include",
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setCsrfToken(data.csrfToken);
+          console.log("CSRF token fetched successfully");
+        } else {
+          console.error("Failed to fetch CSRF token");
+        }
+      } catch (err) {
+        console.error("Error fetching CSRF token:", err);
+      }
+    };
+    
+    fetchCsrf();
+  }, []);
 
   useEffect(() => {
     // No iniciar automáticamente - esperar que el usuario haga clic
+    // Cleanup: detener escáner y timers al desmontar
     return () => {
-      stopScanner();
+      void safeStopAndClear();
+      if (cooldownIntervalRef.current) {
+        clearInterval(cooldownIntervalRef.current);
+      }
     };
-  }, [stopScanner]);
+  }, [safeStopAndClear]);
 
   return (
-    <div className="min-h-screen bg-variable-collection-fondo p-4 lg:p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-variable-collection-fondo p-2 sm:p-4 lg:p-8 font-sans">
+      <style jsx global>{`
+        @keyframes scan {
+          0% { top: 10%; opacity: 0; }
+          10% { opacity: 1; }
+          50% { top: 90%; }
+          90% { opacity: 1; }
+          100% { top: 10%; opacity: 0; }
+        }
+        .animate-scan {
+          animation: scan 3s ease-in-out infinite;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 640px) {
+          #reader {
+            min-height: 250px !important;
+            max-height: 60vh !important;
+          }
+          
+          #reader video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+          }
+        }
+        
+        /* Safe area support for iOS */
+        @supports (padding: max(0px)) {
+          .safe-bottom {
+            padding-bottom: max(1rem, env(safe-area-inset-bottom));
+          }
+        }
+      `}</style>
+      
+      <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl lg:text-3xl font-bold text-white mb-2">
-            Registro de Asistencias
-          </h1>
-          <p className="text-gray-400">
-            Escanea los códigos QR de los usuarios para registrar su asistencia
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 pb-2 border-b border-[#2E2E2E]">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-1">
+              Registro de Asistencias
+            </h1>
+            <p className="text-gray-400 text-xs sm:text-sm">
+              Panel de control para escaneo de códigos QR
+            </p>
+          </div>
+          
+          {/* Camera Status Badge */}
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors self-start sm:self-auto ${
+            cameraActive 
+              ? "bg-green-500/10 border-green-500/20 text-green-400" 
+              : "bg-red-500/10 border-red-500/20 text-red-400"
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${cameraActive ? "bg-green-500 animate-pulse" : "bg-red-500"}`}></span>
+            {cameraActive ? "Cámara Activa" : "Cámara Inactiva"}
+          </div>
         </div>
 
-        {/* Scanner Section */}
-        <div className="bg-[#1A1515] border border-[#2E2E2E] rounded-lg p-4 sm:p-6 mb-6">
-          <div className="flex flex-col gap-4 mb-6">
-            <div className="text-center sm:text-left">
-              <h2 className="text-lg sm:text-2xl font-semibold text-white mb-1">
-                Escanear QR
-              </h2>
-              <p className="text-gray-400 text-sm">
-                Escanea los códigos QR para registrar asistencia
-              </p>
-            </div>
+        {/* Main Scanner Card */}
+        <div className="relative bg-[#1A1515] border border-[#2E2E2E] rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/5">
+          
+          {/* Camera Viewport */}
+          <div className="relative aspect-[3/4] sm:aspect-[4/3] md:aspect-[16/9] bg-black overflow-hidden group">
+            <div
+              id="reader"
+              className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover"
+            ></div>
 
-            {/* Botones principales - Grid responsivo */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <button
-                onClick={startScanner}
-                disabled={waitingForPermission}
-                className="bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white px-3 py-3 sm:px-4 sm:py-2 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:cursor-not-allowed"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-                {waitingForPermission
-                  ? "Esperando permiso..."
-                  : "Iniciar Cámara"}
-              </button>
-              <div className="relative">
-                <button
-                  onClick={toggleCameraSelector}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-3 sm:px-4 sm:py-2 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 w-full"
-                >
-                  <svg
-                    className="w-4 h-4 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
-                    />
-                  </svg>
-                  <span className="hidden xs:inline">Seleccionar Cámara</span>
-                </button>
+            {/* Active State Overlays */}
+            {cameraActive && (
+              <div className="absolute inset-0 pointer-events-none">
+                {/* Darkened edges to focus on center */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_30%,rgba(0,0,0,0.7)_100%)]"></div>
+                
+                {/* Scanning Frame */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="relative w-48 h-48 sm:w-64 sm:h-64 md:w-72 md:h-72 border border-white/20 rounded-xl backdrop-blur-[1px]">
+                    {/* Corner Accents */}
+                    <div className="absolute -top-0.5 -left-0.5 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-l-4 border-variable-collection-botones rounded-tl-xl"></div>
+                    <div className="absolute -top-0.5 -right-0.5 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-r-4 border-variable-collection-botones rounded-tr-xl"></div>
+                    <div className="absolute -bottom-0.5 -left-0.5 w-6 h-6 sm:w-8 sm:h-8 border-b-4 border-l-4 border-variable-collection-botones rounded-bl-xl"></div>
+                    <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 sm:w-8 sm:h-8 border-b-4 border-r-4 border-variable-collection-botones rounded-br-xl"></div>
+                    
+                    {/* Scanning Laser Effect */}
+                    {scanning && (
+                      <div className="absolute left-2 right-2 h-0.5 bg-variable-collection-botones shadow-[0_0_20px_rgba(202,43,38,0.8)] animate-scan rounded-full"></div>
+                    )}
+                    
+                    {/* Processing Indicator */}
+                    {scanning && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="bg-black/80 backdrop-blur-md px-6 py-3 rounded-xl border border-variable-collection-botones/30 shadow-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="relative w-5 h-5">
+                              <div className="absolute inset-0 border-2 border-variable-collection-botones/30 rounded-full"></div>
+                              <div className="absolute inset-0 border-2 border-variable-collection-botones border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                            <span className="text-sm font-medium text-white">Procesando...</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Cooldown Indicator */}
+                    {!scanning && cooldownRemaining > 0 && (
+                      <div className="absolute -bottom-12 sm:-bottom-14 left-0 right-0 flex justify-center">
+                        <div className="bg-amber-500/90 backdrop-blur-md px-4 py-2 rounded-full border border-amber-400/50 shadow-lg">
+                          <div className="flex items-center gap-2 text-xs font-medium text-white">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Espera {Math.ceil(cooldownRemaining / 1000)}s</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Helper Text */}
+                    <div className="absolute -bottom-8 sm:-bottom-10 left-0 right-0 text-center hidden sm:block">
+                      {!scanning && cooldownRemaining === 0 && (
+                        <span className="text-xs font-medium text-white/90 bg-black/60 px-4 py-1.5 rounded-full backdrop-blur-md border border-white/10">
+                          Alinea el código QR dentro del marco
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
-                {showCameraSelector && availableCameras.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-[#1A1515] border border-[#2E2E2E] rounded-lg shadow-lg z-10 max-h-32 overflow-y-auto">
-                    {availableCameras.map((cameraId, index) => (
-                      <button
-                        key={cameraId}
-                        onClick={() => handleCameraChange(cameraId)}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-600 transition-colors ${
-                          selectedCameraId === cameraId
-                            ? "bg-blue-700 text-white"
-                            : "text-gray-300"
-                        }`}
-                      >
-                        Cámara {index + 1}
-                      </button>
-                    ))}
+            {/* Inactive State Overlay */}
+            {!cameraActive && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#121212] text-center p-4 sm:p-6 z-10">
+                {waitingForPermission ? (
+                  <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-500">
+                    <div className="relative mx-auto w-12 h-12 sm:w-16 sm:h-16">
+                      <div className="absolute inset-0 border-4 border-gray-800 rounded-full"></div>
+                      <div className="absolute inset-0 border-4 border-variable-collection-botones border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                    <div>
+                      <p className="text-base sm:text-lg font-medium text-white mb-1">Solicitando acceso...</p>
+                      <p className="text-xs sm:text-sm text-gray-400 max-w-xs mx-auto">
+                        Por favor, permite el uso de la cámara en tu navegador para continuar.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4 sm:space-y-5 max-w-md animate-in fade-in zoom-in duration-300">
+                    <div className="w-16 h-16 sm:w-24 sm:h-24 bg-[#1A1515] rounded-full flex items-center justify-center mx-auto border border-[#2E2E2E] shadow-lg group-hover:border-variable-collection-botones/50 transition-colors duration-300">
+                      <svg className="w-8 h-8 sm:w-10 sm:h-10 text-gray-500 group-hover:text-variable-collection-botones transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">Cámara en espera</h3>
+                      <p className="text-gray-400 text-xs sm:text-sm leading-relaxed px-2">
+                        Para registrar asistencias, inicia la cámara y escanea el código QR del usuario.
+                      </p>
+                    </div>
+                    <button
+                      onClick={startScanner}
+                      disabled={waitingForPermission}
+                      className="inline-flex items-center gap-2 bg-variable-collection-botones hover:bg-red-700 disabled:bg-red-900 disabled:opacity-50 text-white px-5 py-2 sm:px-6 sm:py-2.5 rounded-lg text-sm sm:text-base font-medium transition-all hover:scale-105 active:scale-95 shadow-lg shadow-red-900/20 disabled:cursor-not-allowed"
+                    >
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Iniciar Escáner
+                    </button>
                   </div>
                 )}
               </div>
-              <button
-                onClick={stopScanner}
-                className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-3 sm:px-4 sm:py-2 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
-              >
-                <svg
-                  className="w-4 h-4 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"
-                  />
-                </svg>
-                <span className="hidden xs:inline">Detener</span>
-              </button>
-              <button
-                onClick={handleRetry}
-                className="bg-variable-collection-botones text-white px-3 py-3 sm:px-4 sm:py-2 rounded-lg hover:bg-variable-collection-botones/90 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-              >
-                <svg
-                  className="w-4 h-4 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-                <span className="hidden xs:inline">Reiniciar</span>
-              </button>
-            </div>
-
-            {/* Indicador de cámara activa */}
-            {cameraActive && (
-              <div className="text-center">
-                <p className="text-green-400 text-sm font-medium">
-                  📸 Cámara{" "}
-                  {selectedCameraId
-                    ? `#${availableCameras.indexOf(selectedCameraId) + 1}`
-                    : "1"}{" "}
-                  activa
-                </p>
-                {availableCameras.length > 1 && (
-                  <p className="text-gray-400 text-xs mt-1">
-                    {availableCameras.length} cámaras disponibles
-                  </p>
-                )}
-              </div>
             )}
-          </div>
 
-          {cameraError && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-4">
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                  <svg
-                    className="w-5 h-5 text-red-400 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-                    />
-                  </svg>
-                  <p className="text-red-400 text-sm">{cameraError}</p>
-                </div>
-                <div className="flex gap-2">
+            {/* Controls Toolbar - Only visible when camera is active */}
+            {cameraActive && (
+              <div className="absolute bottom-0 inset-x-0 p-3 sm:p-4 md:p-6 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-12 sm:pt-16 flex items-center justify-center gap-3 sm:gap-4 z-20 safe-bottom">
+                
+                {/* Camera Selector */}
+                <div className="relative">
                   <button
-                    onClick={handleRetry}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors"
+                    onClick={toggleCameraSelector}
+                    disabled={availableCameras.length <= 1}
+                    className="p-2.5 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed text-white backdrop-blur-md border border-white/10 transition-all hover:scale-105 active:scale-95"
+                    title="Cambiar cámara"
+                    aria-label="Cambiar cámara"
                   >
-                    Reintentar
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
                   </button>
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors"
-                  >
-                    Recargar Página
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* QR Scanner Container */}
-          <div className="relative bg-black rounded-lg overflow-hidden">
-            <div
-              id="reader"
-              className="w-full max-w-md mx-auto min-h-[200px] sm:min-h-[300px] bg-black [&_video]:!block [&_video]:!w-full [&_video]:!h-auto [&_video]:!object-cover [&_video]:!max-w-full"
-            ></div>
-
-            {/* Camera Status Overlay */}
-            {!cameraActive && (
-              <div className="absolute inset-0 bg-black/80 flex items-center justify-center rounded-lg">
-                <div className="text-white text-center p-6">
-                  {waitingForPermission ? (
-                    <>
-                      <div className="w-12 h-12 mx-auto mb-3 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-                      <p className="text-lg font-medium mb-2">
-                        Esperando permiso...
-                      </p>
-                      <p className="text-gray-300 text-sm mb-4">
-                        Por favor, permite el acceso a la cámara en el diálogo
-                        del navegador.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        className="w-12 h-12 mx-auto mb-3 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="1.5"
-                          d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="1.5"
-                          d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
-                      <p className="text-lg font-medium mb-2">
-                        Cámara Inactiva
-                      </p>
-                      <p className="text-gray-300 text-sm mb-4">
-                        Haz clic en &quot;Iniciar Cámara&quot; para comenzar a
-                        escanear. El navegador te pedirá permiso para acceder a
-                        tu cámara. Por favor, selecciona &quot;Permitir&quot; o
-                        &quot;Allow&quot; para continuar. Si no ves el diálogo,
-                        verifica la barra de direcciones de tu navegador.
-                      </p>
-                    </>
+                  
+                  {showCameraSelector && availableCameras.length > 0 && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 sm:mb-3 w-40 sm:w-48 bg-[#1A1515] border border-[#2E2E2E] rounded-xl shadow-xl overflow-hidden py-1 z-30">
+                      {availableCameras.map((cameraId, index) => (
+                        <button
+                          key={cameraId}
+                          onClick={() => handleCameraChange(cameraId)}
+                          className={`w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm transition-colors flex items-center gap-2 ${
+                            selectedCameraId === cameraId
+                              ? "bg-variable-collection-botones/10 text-variable-collection-botones"
+                              : "text-gray-300 hover:bg-white/5"
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${selectedCameraId === cameraId ? "bg-variable-collection-botones" : "bg-transparent"}`}></span>
+                          Cámara {index + 1}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
+
+                {/* Stop Button */}
+                <button
+                  onClick={stopScanner}
+                  className="p-3 sm:p-4 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-500 backdrop-blur-md border border-red-500/30 transition-all hover:scale-105 active:scale-95 ring-4 ring-transparent hover:ring-red-500/10"
+                  title="Detener cámara"
+                  aria-label="Detener cámara"
+                >
+                  <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+
+                {/* Restart Button */}
+                <button
+                  onClick={handleRetry}
+                  className="p-2.5 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/10 transition-all hover:scale-105 active:scale-95"
+                  title="Reiniciar escáner"
+                  aria-label="Reiniciar escáner"
+                >
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
               </div>
             )}
-
-            {/* Scanning Indicator - Positioned to not block camera */}
-            {scanning && cameraActive && (
-              <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-black/80 text-white px-2 py-1 sm:px-3 sm:py-2 rounded-lg flex items-center gap-2 text-xs sm:text-sm">
-                <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-white"></div>
-                <span className="font-medium">Procesando...</span>
-              </div>
-            )}
-
-            {/* Camera Frame Overlay */}
-            {cameraActive && (
-              <div className="absolute inset-0 pointer-events-none border-2 border-white/30 rounded-lg m-4">
-                <div className="absolute -top-1 -left-1 w-6 h-6 border-t-2 border-l-2 border-white"></div>
-                <div className="absolute -top-1 -right-1 w-6 h-6 border-t-2 border-r-2 border-white"></div>
-                <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-2 border-l-2 border-white"></div>
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-2 border-r-2 border-white"></div>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-4 text-center">
-            <p className="text-blue-400 font-medium text-sm">
-              📱 Coloca el código QR dentro del marco
-            </p>
-            <p className="text-gray-400 text-xs mt-1">
-              Usa los botones para controlar la cámara
-            </p>
           </div>
         </div>
 
-        {/* Status Messages */}
-        <div className="space-y-4">
+        {/* Error Display */}
+        {cameraError && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 sm:p-4 flex items-start gap-2 sm:gap-3 animate-in slide-in-from-top-2">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-red-400 text-xs sm:text-sm font-medium break-words">{cameraError}</p>
+              <div className="mt-2 flex flex-wrap gap-2 sm:gap-3">
+                <button onClick={handleRetry} className="text-xs text-red-300 hover:text-white underline">Reintentar</button>
+                <button onClick={() => window.location.reload()} className="text-xs text-red-300 hover:text-white underline">Recargar página</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status Messages Area */}
+        <div className="grid gap-3 sm:gap-4">
           {/* Success Message */}
           {success && (
-            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 animate-pulse">
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg
-                    className="w-4 h-4 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M5 13l4 4L19 7"
-                    />
+            <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 sm:p-5 animate-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <div className="flex-1">
-                  <p className="text-green-400 font-medium text-lg">
-                    {success}
-                  </p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-green-400 font-semibold text-base sm:text-lg mb-1">¡Asistencia Registrada!</h4>
+                  <p className="text-green-400/80 text-xs sm:text-sm mb-2 sm:mb-3">{success}</p>
+                  
                   {lastScanned && (
-                    <div className="mt-3 p-3 bg-green-500/5 rounded-lg border border-green-500/10">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-green-300 text-sm">
-                        <div>
-                          <span className="font-semibold">👤 Usuario:</span>{" "}
-                          {lastScanned.usuario}
-                        </div>
-                        <div>
-                          <span className="font-semibold">📧 Correo:</span>{" "}
-                          {lastScanned.correo}
-                        </div>
-                        <div className="sm:col-span-2">
-                          <span className="font-semibold">🕒 Hora:</span>{" "}
-                          {lastScanned.fecha}
-                        </div>
+                    <div className="bg-[#1A1515] rounded-lg p-3 sm:p-4 border border-green-500/10 grid grid-cols-1 gap-3 sm:gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Usuario</p>
+                        <p className="text-white font-medium text-sm sm:text-base truncate">{lastScanned.usuario}</p>
+                        <p className="text-gray-400 text-xs sm:text-sm truncate">{lastScanned.correo}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Día y hora de Registro</p>
+                        <p className="text-white font-medium text-sm sm:text-base">{lastScanned.fecha}</p>
                       </div>
                     </div>
                   )}
@@ -769,38 +865,28 @@ export default function AttendancesPage() {
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg
-                    className="w-4 h-4 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 sm:p-5 animate-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </div>
-                <div className="flex-1">
-                  <p className="text-red-400 font-medium text-lg">{error}</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-red-400 font-semibold text-base sm:text-lg mb-1">Error al registrar</h4>
+                  <p className="text-red-400/80 text-xs sm:text-sm mb-2 sm:mb-3 break-words">{error}</p>
+                  
                   {duplicateInfo && (
-                    <div className="mt-3 p-3 bg-red-500/5 rounded-lg border border-red-500/10">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-red-300 text-sm">
-                        <div>
-                          <span className="font-semibold">👤 Usuario:</span>{" "}
-                          {duplicateInfo.usuario}
-                        </div>
-                        <div>
-                          <span className="font-semibold">
-                            📅 Fecha registrada:
-                          </span>{" "}
-                          {duplicateInfo.fecha}
-                        </div>
+                    <div className="bg-[#1A1515] rounded-lg p-3 sm:p-4 border border-red-500/10">
+                      <div className="flex items-center gap-2 text-red-300 text-xs sm:text-sm mb-2">
+                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-medium">Detalles del registro previo:</span>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2 text-xs sm:text-sm text-gray-300">
+                        <p className="truncate"><span className="text-gray-500">Usuario:</span> {duplicateInfo.usuario}</p>
+                        <p className="truncate"><span className="text-gray-500">Fecha:</span> {duplicateInfo.fecha}</p>
                       </div>
                     </div>
                   )}
@@ -810,48 +896,19 @@ export default function AttendancesPage() {
           )}
         </div>
 
-        {/* Instructions */}
-        <div className="bg-[#1A1515] border border-[#2E2E2E] rounded-lg p-6 mt-6">
-          <h3 className="text-white font-semibold mb-4 text-lg">
-            📋 Instrucciones de Uso
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-white text-xs font-bold">1</span>
-                </div>
-                <p className="text-gray-400 text-sm">
-                  Asegúrate de tener buena iluminación
-                </p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-white text-xs font-bold">2</span>
-                </div>
-                <p className="text-gray-400 text-sm">
-                  Mantén el código QR estable frente a la cámara
-                </p>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-white text-xs font-bold">3</span>
-                </div>
-                <p className="text-gray-400 text-sm">
-                  Los códigos QR expiran después de 2 minutos
-                </p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-white text-xs font-bold">4</span>
-                </div>
-                <p className="text-gray-400 text-sm">
-                  Cada código solo puede ser usado una vez por día
-                </p>
-              </div>
-            </div>
+        {/* Instructions Footer */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-3 sm:pt-4 border-t border-[#2E2E2E]">
+          <div className="flex items-center gap-2 sm:gap-3 text-gray-400">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#2E2E2E] flex items-center justify-center text-xs sm:text-sm font-bold text-white flex-shrink-0">1</div>
+            <p className="text-xs sm:text-sm">Asegura buena iluminación</p>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3 text-gray-400">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#2E2E2E] flex items-center justify-center text-xs sm:text-sm font-bold text-white flex-shrink-0">2</div>
+            <p className="text-xs sm:text-sm">Mantén el código estable</p>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3 text-gray-400">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#2E2E2E] flex items-center justify-center text-xs sm:text-sm font-bold text-white flex-shrink-0">3</div>
+            <p className="text-xs sm:text-sm">QR válido por 2 minutos</p>
           </div>
         </div>
       </div>

@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --no-lint",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -18,7 +19,7 @@
     "html5-qrcode": "^2.3.8",
     "i": "^0.3.7",
     "jsonwebtoken": "^9.0.2",
-    "next": "15.5.4",
+    "next": "^16.0.7",
     "nodemailer": "^7.0.9",
     "qrcode": "^1.5.4",
     "react": "19.1.0",
@@ -37,6 +38,7 @@
     "eslint-config-next": "15.5.4",
     "prisma": "^6.17.1",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
