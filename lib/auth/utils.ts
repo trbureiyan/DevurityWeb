@@ -9,8 +9,8 @@ export function extractTokenFromCookies(request: NextRequest): string | null {
 //Validar token y extraer datos
 export async function validateAuthToken(
   token: string,
-): Promise<{ sub: string }> {
-  const decoded = (await validateToken(token)) as { sub: string };
+): Promise<{ sub: string; username?: string }> {
+  const decoded = (await validateToken(token)) as { sub: string; username?: string };
 
   if (!decoded.sub) {
     throw new Error("Token inválido: falta subject");

@@ -63,20 +63,9 @@ export async function middleware(
     try {
       const decoded = await validateAuthToken(token);
       
-      // Obtener el usuario para usar su username en lugar del ID
-      const response = await fetch(`${request.nextUrl.origin}/api/auth/me`, {
-        headers: { cookie: request.headers.get("cookie") || "" }
-      });
-      
-      if (response.ok) {
-        const userData = await response.json();
-        const profileSlug = userData.username || decoded.sub;
-        const profileUrl = new URL(`/profile/${profileSlug}`, request.url);
-        return NextResponse.redirect(profileUrl);
-      }
-      
-      // Fallback al ID si falla la obtención del username
-      const profileUrl = new URL(`/profile/${decoded.sub}`, request.url);
+      // Usar username del token JWT (optimizado, sin llamada API)
+      const profileSlug = decoded.username || decoded.sub;
+      const profileUrl = new URL(`/profile/${profileSlug}`, request.url);
       return NextResponse.redirect(profileUrl);
     } catch {
       // Token inválido, dejar pasar para que se autentique de nuevo

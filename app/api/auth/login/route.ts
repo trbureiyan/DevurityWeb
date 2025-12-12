@@ -108,6 +108,7 @@ export async function POST(request: Request) {
 
     const tokenPayload = {
       sub: user.id.toString(),
+      username: user.username || user.id.toString(),
     };
 
     const token = await generateToken(tokenPayload, 14400);
