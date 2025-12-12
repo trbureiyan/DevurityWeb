@@ -296,6 +296,9 @@ export default function ProfilePage() {
     
     if (id && id !== "emergency") {
       fetchUserData();
+    } else if (id === "emergency") {
+      setUserData({ ...emergencyData, id: id });
+      setLoading(false);
     }
   }, [id]);
 
