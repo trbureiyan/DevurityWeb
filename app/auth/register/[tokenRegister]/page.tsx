@@ -12,6 +12,8 @@ import ProgramSelector from "@/components/ui/ProgramSelector";
 
 // Pagina de validacion
 
+// Pagina de validacion
+
 export default function ValidacionPage() {
   const [formData, setFormData] = useState({
     semester: "",
