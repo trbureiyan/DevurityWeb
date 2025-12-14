@@ -26,8 +26,13 @@ export default function SkillSelector({
         const response = await fetch("/api/auth/skills");
         const data = await response.json();
         if (response.ok) {
-          setAvailableSkills(data.skills || []);
-          setFilteredSkills(data.skills || []);
+          // Normalizar skills: el API puede devolver strings o { id, name } objetos
+          const normalizedSkills: string[] = (data.skills || []).map(
+            (skill: string | { id: number; name: string }) =>
+              typeof skill === "string" ? skill : skill.name
+          );
+          setAvailableSkills(normalizedSkills);
+          setFilteredSkills(normalizedSkills);
         }
       } catch (error) {
         console.error("Error fetching skills:", error);

@@ -275,9 +275,12 @@ export async function createUser(users: CreateUserDTO) {
       if (skills && skills.length > 0) {
         logger.debug("[REPO] Step 2: Processing skills:", { skills });
         
+        // Convertir IDs numéricos a BigInt para Prisma
+        const skillIdsBigInt = skills.map(id => BigInt(id));
+        
         const skillsDB = await tx.skills.findMany({
           where: {
-            name: { in: skills },
+            id: { in: skillIdsBigInt },
           },
           select: { id: true, name: true },
         });
@@ -288,8 +291,8 @@ export async function createUser(users: CreateUserDTO) {
           logger.warn("[REPO] No matching skills found in database");
           // No lanzar error, continuar sin skills
         } else {
-          const foundSkillNames = skillsDB.map(s => s.name);
-          const missingSkills = skills.filter(s => !foundSkillNames.includes(s));
+          const foundSkillIds = skillsDB.map(s => Number(s.id));
+          const missingSkills = skills.filter(id => !foundSkillIds.includes(id));
           
           if (missingSkills.length > 0) {
             logger.warn("[REPO] Some skills not found:", { missingSkills });

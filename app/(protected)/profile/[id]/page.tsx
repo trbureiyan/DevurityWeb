@@ -34,24 +34,7 @@ interface SocialLinkData {
   label: string;
 }
 
-// Define un tipo para fechas que pueden ser nulas o indefinidas
-type NullableDate = string | null | undefined;
-
 // Define la estructura de los datos del usuario obtenidos de la API
-
-type NullableDate = string | null | undefined;
-
-interface ProjectData {
-  title: string;
-  link: string;
-}
-
-interface SocialLinkData {
-  icon: string;
-  url: string;
-  label: string;
-}
-
 interface UserData {
   id: string;
   name: string;
@@ -501,9 +484,6 @@ export default function ProfilePage() {
     
     if (id) {
       fetchUserData();
-    } else if (id === "emergency") {
-      setUserData({ ...emergencyData, id: id });
-      setLoading(false);
     }
     
     // Cleanup: cancelar fetch si el componente se desmonta o id cambia
@@ -512,6 +492,7 @@ export default function ProfilePage() {
     };
   }, [id]);
 
+  // Genera las iniciales del usuario a partir de su nombre y apellido
   const getInitials = (name: string, lastName: string) => {
     return `${name.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`;
   };
