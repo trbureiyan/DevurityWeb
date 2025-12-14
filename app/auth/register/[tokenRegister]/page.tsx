@@ -21,7 +21,7 @@ export default function ValidacionPage() {
     semester: "",
     motivation: "",
     program: "",
-    skills: [] as Skill[],
+    skills: [] as string[],
     password: "",
     confirmPassword: "",
   });
@@ -43,7 +43,7 @@ export default function ValidacionPage() {
     semester: "",
     motivation: "",
     program: "",
-    skills: [] as Skill[],
+    skills: [] as string[],
     password: "",
     confirmPassword: "",
   });
@@ -203,7 +203,7 @@ export default function ValidacionPage() {
         body: JSON.stringify({
           semester: parseInt(formData.semester),
           motivation: formData.motivation,
-          skills: formData.skills.map((skill) => skill.id),
+          skills: formData.skills,
           program: formData.program,
           password: formData.password,
         }),
