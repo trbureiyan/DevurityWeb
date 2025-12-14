@@ -1,13 +1,13 @@
-import { getSkills } from "@/repositories/skills/skills.repositories";
+import { getAllSkills } from "@/repositories/skills/skills.repositories";
 import { errorRequest } from "@/lib/error";
 
 export async function GET() {
   try {
-    const skills = await getSkills();
+    const skills = await getAllSkills();
 
     return new Response(
       JSON.stringify({
-        skills: skills.map((skill) => skill.name),
+        skills: skills.map((skill) => ({ id: skill.id, name: skill.name })),
       }),
       {
         status: 200,
