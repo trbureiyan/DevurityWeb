@@ -49,7 +49,7 @@ export interface CreateUserDTO {
   password: string;
   last_name: string;
   motivation: string;
-  skills: string[];
+  skills: number[];
   semester: number;
   roleId?: number;
   personal_email?: string | null;
