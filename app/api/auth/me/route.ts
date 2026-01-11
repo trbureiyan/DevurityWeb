@@ -3,6 +3,13 @@ import { validateToken } from "@/lib/jwt";
 import { findByIdWithRole } from "@/repositories/users/users.repositories";
 import logger from "@/lib/logger";
 
+// Simple in-memory cache for /api/auth/me
+// This cache is process-local and intended as a short-lived optimization (dev/staging or single-instance)
+type CacheEntry = { value: any; expiresAt: number };
+const ME_CACHE = (global as any).__meCache || new Map<string, CacheEntry>();
+(global as any).__meCache = ME_CACHE;
+const ME_CACHE_TTL = 30 * 1000; // 30 seconds
+
 export async function GET(request: NextRequest) {
   try {
     logger.debug("API /me: Iniciando verificación de autenticación");
@@ -47,7 +54,13 @@ export async function GET(request: NextRequest) {
         role: user.roles.name,
         is_active: user.is_active,
       },
-    });
+      {
+        headers: {
+          // Private because the response is user-specific and tied to cookies
+          "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+        },
+      },
+    );
   } catch (error) {
     logger.error("API /me: Error obteniendo datos del usuario", error);
 

@@ -28,6 +28,10 @@ export function useAuth() {
   });
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  // Module-level dedupe for concurrent /api/auth/me calls
+  // Use (global as any) to keep across HMR in dev
+  const globalAny = global as any;
+  if (!globalAny.__mePromise) globalAny.__mePromise = null;
 
   const logout = useCallback(async (): Promise<void> => {
     try {
@@ -51,6 +55,12 @@ export function useAuth() {
         isLoading: false,
         isAuthenticated: false,
       });
+      // Remove session flag
+      try {
+        localStorage.removeItem("has_session");
+      } catch (e) {
+        /* ignore */
+      }
 
       // Redirigir a login después de cerrar sesión
       router.push("/auth/login");
@@ -91,22 +101,64 @@ export function useAuth() {
 
   const checkAuth = useCallback(async () => {
     try {
-      const response = await fetch("/api/auth/me");
+      // Quick check: if we know there's no session flag locally, skip the /me call
+      let hasSession = true;
+      try {
+        hasSession = !!localStorage.getItem("has_session");
+      } catch (e) {
+        // If localStorage isn't available, fall back to calling /me
+        hasSession = true;
+      }
 
-      if (response.ok) {
-        const data = await response.json();
+      if (!hasSession) {
+        setAuthState({ user: null, isLoading: false, isAuthenticated: false });
+        setHasCheckedAuth(true);
+        return;
+      }
 
-        setAuthState({
-          user: data.user,
-          isLoading: false,
-          isAuthenticated: true,
-        });
-      } else {
-        setAuthState({
-          user: null,
-          isLoading: false,
-          isAuthenticated: false,
-        });
+      // Deduplicate concurrent calls using a global promise
+      if (globalAny.__mePromise) {
+        // __mePromise resolves to an object { ok: boolean, data?: any }
+        const result = await globalAny.__mePromise;
+        if (result.ok) {
+          setAuthState({ user: result.data.user, isLoading: false, isAuthenticated: true });
+        } else {
+          setAuthState({ user: null, isLoading: false, isAuthenticated: false });
+        }
+        setHasCheckedAuth(true);
+        return;
+      }
+
+      // Store a promise that resolves to parsed JSON (or error) so body is consumed only once
+      globalAny.__mePromise = (async () => {
+        try {
+          const resp = await fetch("/api/auth/me");
+          if (resp.ok) {
+            const data = await resp.json();
+            return { ok: true, data };
+          }
+          // Try to parse error body if any
+          let errData = null;
+          try {
+            errData = await resp.json();
+          } catch (_) {
+            /* ignore parse error */
+          }
+          return { ok: false, data: errData };
+        } catch (e) {
+          return { ok: false, data: null };
+        }
+      })();
+
+      try {
+        const result = await globalAny.__mePromise;
+        if (result.ok) {
+          setAuthState({ user: result.data.user, isLoading: false, isAuthenticated: true });
+        } else {
+          setAuthState({ user: null, isLoading: false, isAuthenticated: false });
+        }
+      } finally {
+        globalAny.__mePromise = null;
       }
     } catch (error) {
       logger.error("useAuth: Error verificando autenticación:", { error });
@@ -142,6 +194,13 @@ export function useAuth() {
       isLoading: false,
       isAuthenticated: true,
     });
+
+    // Set session flag so client knows we have a session
+    try {
+      localStorage.setItem("has_session", "1");
+    } catch (e) {
+      /* ignore */
+    }
 
     return {
       success: true,

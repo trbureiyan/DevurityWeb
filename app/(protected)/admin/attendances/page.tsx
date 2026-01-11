@@ -97,6 +97,12 @@ export default function AttendancesPage() {
         console.log("Scan already in progress, skipping...");
         return;
       }
+      if (now - lastScanAt < COOLDOWN_MS) {
+        console.log("Scan ignored due to cooldown", now - lastScanAt);
+        return;
+      }
+      // register this attempt time to enforce cooldown
+      setLastScanAt(now);
 
       setLastScanTime(now);
       setScanning(true);
@@ -128,7 +134,7 @@ export default function AttendancesPage() {
         }
       }
 
-      try {
+  try {
         // Parsear datos del QR dinámico
         let qrData: QRData;
         try {
@@ -363,14 +369,23 @@ export default function AttendancesPage() {
       });
       scannerRef.current = scanner;
 
+      
+      const getQrBoxSize = () => {
+        const w = Math.min(window.innerWidth, 800);
+        // Keep box about 70% of available width but not too small
+        const size = Math.max(200, Math.floor(w * 0.7));
+        return { width: size, height: size };
+      };
+
       const config = {
         fps: 10,
-        qrbox: { width: 250, height: 250 },
+        qrbox: getQrBoxSize(),
         aspectRatio: 1.0,
         videoConstraints: {
           deviceId: selectedCameraId ? { exact: selectedCameraId } : undefined,
-          width: { ideal: 1280, min: 640 },
-          height: { ideal: 720, min: 480 },
+          // On mobile use lower ideal resolution to reduce camera handoffs
+          width: { ideal: window.innerWidth > 720 ? 1280 : 640, min: 480 },
+          height: { ideal: window.innerWidth > 720 ? 720 : 480, min: 320 },
           facingMode: "environment",
           frameRate: { ideal: 30, min: 15 },
         },
@@ -395,6 +410,26 @@ export default function AttendancesPage() {
       console.log("Scanner started successfully");
       setCameraActive(true);
       setWaitingForPermission(false);
+
+      // Ensure video element has attributes that avoid iOS going fullscreen
+      setTimeout(() => {
+        try {
+          const videoEl = document.querySelector<HTMLVideoElement>("#reader video");
+          if (videoEl) {
+            // Many browsers require playsInline to avoid fullscreen on iOS Safari
+            videoEl.playsInline = true;
+            videoEl.setAttribute("playsinline", "true");
+            videoEl.muted = true; // allow autoplay without user gesture
+            videoEl.setAttribute("muted", "true");
+            videoEl.setAttribute("autoplay", "true");
+            videoEl.style.objectFit = "cover";
+            // Prevent accidental focus from buttons causing layout shift
+            videoEl.setAttribute("tabindex", "-1");
+          }
+        } catch (e) {
+          console.warn("Could not set video attributes:", e);
+        }
+      }, 300);
 
       // Check camera status after permission is granted
       setTimeout(async () => {
@@ -574,6 +609,17 @@ export default function AttendancesPage() {
       }
     };
   }, [safeStopAndClear]);
+
+  // Stop scanner when page is hidden to prevent camera issues on mobile (iOS)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stopScanner();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [stopScanner]);
 
   return (
     <div className="min-h-screen bg-variable-collection-fondo p-2 sm:p-4 lg:p-8 font-sans">

@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
     // Normalización de datos
     const normalizedEmail = email?.trim().toLowerCase() || "";
-    const normalizedPassword = password?.trim() || "";
+    const normalizedPassword = password || "";
 
     if (!normalizedEmail || !normalizedPassword) {
       return new Response(
