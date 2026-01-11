@@ -1,5 +1,6 @@
 import prisma from "../../lib/postgresDriver";
 import logger from "../../lib/logger";
+import { Prisma } from "@/lib/generated/prisma";
 import type {
   CreateUserDTO,
   PaginatedUsersResponse,
@@ -465,20 +466,33 @@ export async function findActiveUsersForTeam() {
 export async function updatePasswordByEmail(
   email: string,
   hashedPassword: string,
-) {
+): Promise<{ success: boolean; error?: string }> {
   try {
     const updated = await prisma.users.update({
       where: { email },
       data: { password: hashedPassword },
     });
-    return !!updated;
+    return { success: !!updated };
   } catch (error) {
+    // Handle specific Prisma errors
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2025") {
+        // Record not found - user with this email doesn't exist
+        logger.error("updatePasswordByEmail: user not found", {
+          email,
+          errorCode: error.code,
+        });
+        return { success: false, error: "USER_NOT_FOUND" };
+      }
+    }
+    
+    // Handle other errors
     logger.error("updatePasswordByEmail: error updating password", {
       email,
       error,
       message: error instanceof Error ? error.message : String(error),
     });
-    return false;
+    return { success: false, error: "UPDATE_FAILED" };
   }
 }
 

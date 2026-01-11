@@ -29,8 +29,11 @@ export async function POST(req: Request) {
 
     // Hash password and update
     const hashed = bcryptAdapter.hash(password);
-    const updated = await updatePasswordByEmail(email, hashed);
-    if (!updated) {
+    const result = await updatePasswordByEmail(email, hashed);
+    if (!result.success) {
+      if (result.error === "USER_NOT_FOUND") {
+        return NextResponse.json({ ok: false, message: "Usuario no encontrado" }, { status: 404 });
+      }
       return NextResponse.json({ ok: false, message: "No se pudo actualizar la contraseña" }, { status: 500 });
     }
 
