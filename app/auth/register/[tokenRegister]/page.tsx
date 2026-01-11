@@ -10,9 +10,11 @@ import { useCsrf } from "@/hooks/useCsrf";
 import { IMAGES } from "@/public/images";
 import ProgramSelector from "@/components/ui/ProgramSelector";
 
-// Pagina de validacion
-
-// Pagina de validacion
+// Types para las habilidades con id y nombre
+interface Skill {
+  id: number;
+  name: string;
+}
 
 // Pagina de validacion
 
@@ -25,9 +27,9 @@ export default function ValidacionPage() {
     password: "",
     confirmPassword: "",
   });
-  const [availableSkills, setAvailableSkills] = useState<string[]>([]);
+  const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
   const [skillInput, setSkillInput] = useState("");
-  const [filteredSkills, setFilteredSkills] = useState<string[]>([]);
+  const [filteredSkills, setFilteredSkills] = useState<Skill[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(
     null,
@@ -119,8 +121,15 @@ export default function ValidacionPage() {
         const response = await fetch("/api/auth/skills");
         const data = await response.json();
         if (response.ok) {
-          setAvailableSkills(data.skills || []);
-          setFilteredSkills(data.skills || []);
+          // Normalizar los datos de skills a objetos { id, name }
+          const normalizedSkills: Skill[] = (data.skills || []).map(
+            (skill: { id: number; name: string }) => ({
+              id: skill.id,
+              name: skill.name,
+            })
+          );
+          setAvailableSkills(normalizedSkills);
+          setFilteredSkills(normalizedSkills);
         }
       } catch (error) {
         // Error fetching skills - no mostrar modal para este error
@@ -142,7 +151,7 @@ export default function ValidacionPage() {
     } else {
       const timeout = setTimeout(() => {
         const filtered = availableSkills.filter((skill) =>
-          skill.toLowerCase().includes(skillInput.toLowerCase()),
+          skill.name.toLowerCase().includes(skillInput.toLowerCase()),
         );
         setFilteredSkills(filtered);
         setShowSuggestions(true);
@@ -277,8 +286,8 @@ export default function ValidacionPage() {
     setSkillInput(e.target.value);
   };
 
-  const handleSkillSelect = (skill: string) => {
-    if (!formData.skills.includes(skill)) {
+  const handleSkillSelect = (skill: Skill) => {
+    if (!formData.skills.some((s) => s.id === skill.id)) {
       setFormData({
         ...formData,
         skills: [...formData.skills, skill],
@@ -288,10 +297,10 @@ export default function ValidacionPage() {
     // No ocultar las sugerencias al seleccionar una habilidad
   };
 
-  const handleRemoveSkill = (skillToRemove: string) => {
+  const handleRemoveSkill = (skillToRemove: Skill) => {
     setFormData({
       ...formData,
-      skills: formData.skills.filter((skill) => skill !== skillToRemove),
+      skills: formData.skills.filter((skill) => skill.id !== skillToRemove.id),
     });
   };
 
@@ -445,10 +454,10 @@ export default function ValidacionPage() {
                   {/* Tags existentes */}
                   {formData.skills.map((skill) => (
                     <div
-                      key={skill}
+                      key={skill.id}
                       className="bg-[#CA2B26] text-white px-3 py-1 rounded-full text-sm flex items-center gap-2"
                     >
-                      {skill}
+                      {skill.name}
                       <button
                         type="button"
                         onClick={() => handleRemoveSkill(skill)}
@@ -488,13 +497,13 @@ export default function ValidacionPage() {
                   >
                     {filteredSkills.map((skill) => (
                       <div
-                        key={skill}
+                        key={skill.id}
                         onClick={() => handleSkillSelect(skill)}
                         onMouseDown={(e) => e.preventDefault()} // Prevenir blur inmediato
                         onTouchStart={(e) => e.stopPropagation()} // Prevenir scroll en móviles
                         className="px-4 py-2 text-white hover:bg-[#3a3a3a] cursor-pointer border-b border-gray-600 last:border-b-0"
                       >
-                        {skill}
+                        {skill.name}
                       </div>
                     ))}
                   </div>

@@ -115,9 +115,8 @@ export async function GET(
       created_at: null,
     };
 
-    return NextResponse.json({
-      user: userData,
-    });
+    // Retornar datos directamente (sin envolver en "user") para compatibilidad con el frontend
+    return NextResponse.json(userData);
   } catch (error) {
     console.error("Error obteniendo datos del usuario:", error);
 
