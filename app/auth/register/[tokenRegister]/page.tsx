@@ -16,8 +16,6 @@ interface Skill {
   name: string;
 }
 
-// Pagina de validacion
-
 export default function ValidacionPage() {
   const [formData, setFormData] = useState({
     semester: "",
