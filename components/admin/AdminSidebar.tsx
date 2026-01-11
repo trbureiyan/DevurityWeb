@@ -23,7 +23,7 @@ interface AdminSidebarProps {
   isMobileMenuOpen: boolean;
   onClose: () => void;
   onLogout: () => Promise<void> | void;
-  user: { name: string; last_name?: string | null } | null;
+  user: { name: string; lastName?: string | null } | null;
   isLoading: boolean;
   initials: string;
 }
@@ -37,7 +37,6 @@ type MenuItem = {
   isActive: (pathname: string) => boolean;
 };
 
-// Sidebar del panel admin: muestra navegación principal, opciones de perfil y logout; controla apertura móvil y resalta la ruta activa.
 const menuItems: MenuItem[] = [
   {
     label: "Panel de control",
@@ -104,12 +103,10 @@ export default function AdminSidebar({
   isLoading,
   initials,
 }: AdminSidebarProps) {
-  // Cierra el menú lateral cuando se navega a otra ruta (especialmente en móvil)
   const handleNavigation = () => {
     onClose();
   };
 
-  // Ejecuta logout y oculta el panel para evitar parpadeos del menú abierto
   const handleLogoutClick = async () => {
     onClose();
     await onLogout();
@@ -141,7 +138,7 @@ export default function AdminSidebar({
 
       <div className="mt-12 px-4 mb-6">
         <h2 className="text-[rgba(255,255,255,0.9)] font-semibold text-[24px] leading-[30px]">
-          {isLoading ? "Cargando..." : user ? `${user.name} ${user.last_name ?? ""}`.trim() : "Usuario"}
+          {isLoading ? "Cargando..." : user ? `${user.name} ${user.lastName ?? ""}`.trim() : "Usuario"}
         </h2>
       </div>
 
@@ -153,7 +150,6 @@ export default function AdminSidebar({
               key={item.href}
               href={item.href}
               onClick={handleNavigation}
-              // Resalta la ruta activa y cierra el menú en móvil
               className={`flex items-center gap-3 px-4 py-3 text-white font-semibold text-[16px] leading-[20px] relative transition-colors ${
                 active
                   ? "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[2px] before:bg-[#01754f] text-white"
@@ -173,7 +169,6 @@ export default function AdminSidebar({
         key={item.href}
         href={item.href}
         onClick={handleNavigation}
-        // Enlaces secundarios: perfil y edición de páginas
         className="flex items-center gap-2 px-4 py-3 text-white font-semibold text-[16px] leading-[20px] hover:bg-[rgba(255,255,255,0.05)] border-b border-[rgba(140,140,140,0.2)]"
           >
         <item.icon className="w-5 h-5" aria-hidden="true" />
