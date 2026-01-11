@@ -25,6 +25,7 @@
     "jsonwebtoken": "^9.0.2",
     "next": "^16.0.7",
     "nodemailer": "^7.0.9",
+    "orbitron": "^0.1.0",
     "qrcode": "^1.5.4",
     "react": "19.1.2",
     "react-dom": "19.1.2"

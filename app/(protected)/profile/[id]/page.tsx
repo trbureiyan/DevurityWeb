@@ -33,24 +33,7 @@ interface SocialLinkData {
   label: string;
 }
 
-// Define un tipo para fechas que pueden ser nulas o indefinidas
-type NullableDate = string | null | undefined;
-
 // Define la estructura de los datos del usuario obtenidos de la API
-
-type NullableDate = string | null | undefined;
-
-interface ProjectData {
-  title: string;
-  link: string;
-}
-
-interface SocialLinkData {
-  icon: string;
-  url: string;
-  label: string;
-}
-
 interface UserData {
   id: string;
   name: string;
