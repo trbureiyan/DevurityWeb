@@ -473,11 +473,11 @@ export async function updatePasswordByEmail(
     });
     return !!updated;
   } catch (error) {
-    console.error(
-      "updatePasswordByEmail: error updating password for",
+    logger.error("updatePasswordByEmail: error updating password", {
       email,
       error,
-    );
+      message: error instanceof Error ? error.message : String(error),
+    });
     return false;
   }
 }
