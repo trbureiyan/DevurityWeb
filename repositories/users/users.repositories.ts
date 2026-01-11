@@ -472,7 +472,7 @@ export async function updatePasswordByEmail(
       where: { email },
       data: { password: hashedPassword },
     });
-    return { success: !!updated };
+    return { success: true };
   } catch (error) {
     // Handle specific Prisma errors
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
