@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { existUserByEmail } from "@/repositories/users/users.repositories";
 import { generateToken } from "@/lib/jwt";
 import { sendEmail } from "@/lib/email";
+import logger from "@/lib/logger";
 
 export async function POST(req: Request) {
   try {
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, message: "Si el correo existe, recibirás un email con instrucciones." });
   } catch (error) {
-    console.error("forgot-password error:", error);
+    logger.error("forgot-password error:", error);
     return NextResponse.json({ ok: false, message: "Error interno" }, { status: 500 });
   }
 }
