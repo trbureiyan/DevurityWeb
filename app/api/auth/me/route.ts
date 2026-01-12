@@ -45,14 +45,16 @@ export async function GET(request: NextRequest) {
 
     // Retornar información del usuario
     logger.debug("API /me: Retornando datos del usuario");
-    return NextResponse.json({
-      user: {
-        id: user.id.toString(),
-        email: user.email,
-        name: user.name,
-        last_name: user.last_name,
-        role: user.roles.name,
-        is_active: user.is_active,
+    return NextResponse.json(
+      {
+        user: {
+          id: user.id.toString(),
+          email: user.email,
+          name: user.name,
+          last_name: user.last_name,
+          role: user.roles.name,
+          is_active: user.is_active,
+        },
       },
       {
         headers: {

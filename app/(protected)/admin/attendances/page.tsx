@@ -97,12 +97,6 @@ export default function AttendancesPage() {
         console.log("Scan already in progress, skipping...");
         return;
       }
-      if (now - lastScanAt < COOLDOWN_MS) {
-        console.log("Scan ignored due to cooldown", now - lastScanAt);
-        return;
-      }
-      // register this attempt time to enforce cooldown
-      setLastScanAt(now);
 
       setLastScanTime(now);
       setScanning(true);
@@ -134,7 +128,7 @@ export default function AttendancesPage() {
         }
       }
 
-  try {
+      try {
         // Parsear datos del QR dinámico
         let qrData: QRData;
         try {
