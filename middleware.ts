@@ -29,6 +29,16 @@ export async function middleware(
       ? currentPath.slice(0, -1)
       : currentPath;
 
+  // If there is an active session (token cookie present) and the user
+  // is trying to access the login page, redirect them to profile to
+  // avoid showing the login UI to already-authenticated users.
+  if (token && (normalisedPath === "/auth/login" || normalisedPath === "/login" || normalisedPath === "/auth")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/profile";
+    url.search = "";
+    return NextResponse.redirect(url, 308);
+  }
+
   const redirectTarget = redirectMap[normalisedPath];
   if (redirectTarget) {
     const url = request.nextUrl.clone();
@@ -181,6 +191,8 @@ async function verifyCsrf(request: NextRequest): Promise<NextResponse | null> {
     "/api/auth/logout",
     "/api/auth/refresh",
     "/api/auth/is-admin",
+    "/api/auth/forgot-password",
+    "/api/auth/reset-password",
     "/api/qr-dinamico",
     "/api/asistencia",
     "/api/admin/attendances", // Excluir escaneo QR de CSRF

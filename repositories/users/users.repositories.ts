@@ -411,6 +411,19 @@ export async function findActiveUsersForTeam() {
   }
 }
 
+export async function updatePasswordByEmail(email: string, hashedPassword: string) {
+  try {
+    const updated = await prisma.users.update({
+      where: { email },
+      data: { password: hashedPassword },
+    });
+    return !!updated;
+  } catch (error) {
+    console.error("updatePasswordByEmail: error updating password for", email, error);
+    return false;
+  }
+}
+
 export async function findInactiveUsersWithPagination(
   page: number = 1,
   limit: number = 10,

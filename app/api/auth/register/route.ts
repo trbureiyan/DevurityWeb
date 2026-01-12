@@ -3,11 +3,11 @@ import { EmailOptions, sendEmail } from "@/lib/email";
 import { generateToken } from "@/lib/jwt";
 import { emailUniversity } from "@/lib/regex";
 import { existUserByEmail } from "@/repositories/users/users.repositories";
-// api/auth/register
+
 export async function POST(request: Request) {
   const { name, lastname, email } = await request.json();
 
-  // Normalización de datos
+  
   const normalizedName = name?.trim() || "";
   const normalizedLastname = lastname?.trim() || "";
   const normalizedEmail = email?.trim().toLowerCase() || "";
