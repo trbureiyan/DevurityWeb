@@ -1,3 +1,4 @@
+import { requireAuth } from "@/lib/auth/require-auth";
 import prisma from "@/lib/postgresDriver";
 import { supabaseAdmin } from "@/lib/supabase/supabase";
 import { normalizeSpace } from "@/lib/utils/normalize.space";
@@ -9,25 +10,37 @@ interface Params {
   projectid: string;
 }
 export async function POST(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<Params> },
 ) {
+  const user = await requireAuth(request);
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { projectid } = await params;
   const project = await prisma.projects.findUnique({
-    where: { id: projectid },
+    where: {
+      id: projectid,
+      user_projects: {
+        some: {
+          user_id: user.userId,
+        },
+      },
+    },
   });
-
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const formData = await req.formData();
+  const formData = await request.formData();
   const file = formData.get("file") as File;
 
   if (!file) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
-  console.log(file.size);
+
   if (file.size > MAX_SIZE_MD) {
     return NextResponse.json({ error: "File too large" }, { status: 400 });
   }
@@ -60,12 +73,22 @@ export async function POST(
   const resultado = await supabase.storage
     .from("devurity")
     .upload(
-      `projects/${normalizeSpace(project.title.toLocaleLowerCase())}/${normalizeSpace(project.title.toLocaleLowerCase())}`,
+      `projects/${normalizeSpace(project.title.toLocaleLowerCase())}/${normalizeSpace(project.title.toLocaleLowerCase())}.md`,
       text,
       {
         upsert: true,
       },
     );
+
+  //update project
+  await prisma.projects.update({
+    where: {
+      id: project.id,
+    },
+    data: {
+      updated_at: new Date(),
+    },
+  });
 
   return NextResponse.json(
     { message: "File uploaded successfully" },
