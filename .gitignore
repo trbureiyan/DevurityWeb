@@ -110,6 +110,11 @@ tmp/
 temp/
 *.tmp
 
+# ─── Agent / Skills ──────────────────────────────────────────────────────────
+skills-lock.json
+.agent
+.agents/
+
 # ─── Prisma Generated Files ──────────────────────────────────────────────────
 lib/generated/
 lib/generated/prisma/
