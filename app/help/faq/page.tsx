@@ -1,6 +1,4 @@
-
 "use client";
-export const dynamic = "force-static";
 
 import React, { useState, useEffect, useRef } from "react";
 
@@ -44,7 +42,7 @@ export default function FAQPage() {
   const [activeFAQ, setActiveFAQ] = useState<{ q: string; a: string } | null>(null);
 
   // array de refs que acepta HTMLDivElement o null (importante para TS y desmontado)
-  const articleRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const articleRefs = useRef<(HTMLElement | null)[]>([]);
 
   // Cerrar modal con ESC
   useEffect(() => {
@@ -87,7 +85,6 @@ export default function FAQPage() {
           <article
             key={i}
             ref={(el) => {
-              
               articleRefs.current[i] = el;
             }}
             className="p-6 rounded-lg border border-[var(--color-selected)] bg-[var(--placeholder)]/15
