@@ -13,8 +13,8 @@ const createAccentStyles = (color: string): CSSProperties =>
     "--shadow-color": `${color}66`,
   }) as CSSProperties;
 
-// Revalidar cada 6 horas
-export const revalidate = 60 * 60 * 6;
+// Revalidar cada 6 horas (21600s)
+export const revalidate = 21600;
 
 interface UpdateDetailPageProps {
   params: {

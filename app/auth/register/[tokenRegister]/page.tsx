@@ -21,7 +21,7 @@ export default function ValidacionPage() {
     semester: "",
     motivation: "",
     program: "",
-    skills: [] as string[],
+    skills: [] as Skill[],
     password: "",
     confirmPassword: "",
   });
@@ -44,7 +44,7 @@ export default function ValidacionPage() {
     semester: "",
     motivation: "",
     program: "",
-    skills: [] as string[],
+    skills: [] as Skill[],
     password: "",
     confirmPassword: "",
   });

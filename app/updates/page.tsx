@@ -14,8 +14,8 @@ const createAccentStyles = (color: string): CSSProperties =>
 const isExternalHref = (href?: string): boolean =>
   typeof href === "string" && href.startsWith("http");
 
-// Revalidar cada 6 horas
-export const revalidate = 60 * 60 * 6;
+// Revalidar cada 6 horas (21600s)
+export const revalidate = 21600;
 
 // Genera metadatos dinámicos usando la primera actualización
 export async function generateMetadata(): Promise<Metadata> {
