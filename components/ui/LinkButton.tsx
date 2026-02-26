@@ -24,9 +24,9 @@ const sizeMap: Record<ButtonSize, string> = {
 
 const variantMap: Record<ButtonVariant, string> = {
   solid:
-    "bg-[var(--color-variable-collection-botones)] text-white border-transparent hover:bg-opacity-90 active:scale-95",
+    "bg-blue-600 text-white border-transparent hover:bg-blue-700 active:scale-95",
   outline:
-    "bg-transparent text-[var(--color-variable-collection-botones)] border-[var(--color-variable-collection-botones)] hover:bg-[var(--color-variable-collection-botones)]/10 active:scale-95",
+    "bg-transparent text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white active:scale-95",
 };
 
 export default function LinkButton({
