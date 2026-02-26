@@ -3,7 +3,11 @@
 import { useState, FormEvent, useEffect } from "react";
 import { useCsrf } from "@/hooks/useCsrf";
 
-// Iconos SVG para redes sociales
+import Button from "@/components/ui/buttonContact";
+import AlertBox from "@/components/ui/AlertBox";
+
+/* ================= ICONOS ================= */
+
 function LinkedInIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -61,7 +65,7 @@ function EmailIcon({ className }: { className?: string }) {
   );
 }
 
-// Segmento form de contacto
+/* ================= CONTACT SECTION ================= */
 
 export default function ContactSection() {
   const [formData, setFormData] = useState({
@@ -69,21 +73,23 @@ export default function ContactSection() {
     email: "",
     message: "",
   });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [submitStatus, setSubmitStatus] = useState<{
     type: "success" | "error" | null;
     message: string;
   }>({ type: null, message: "" });
+
   const { fetchWithCsrf, refetch, hasToken, error: csrfError } = useCsrf();
 
   useEffect(() => {
-    if (!hasToken) {
-      void refetch();
-    }
+    if (!hasToken) void refetch();
   }, [hasToken, refetch]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     const trimmedPayload = {
       name: formData.name.trim(),
       email: formData.email.trim(),
@@ -113,44 +119,27 @@ export default function ContactSection() {
     try {
       const response = await fetchWithCsrf("/api/contact", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(trimmedPayload),
       });
 
-      const data = await response
-        .json()
-        .catch(() => ({ message: "Error desconocido al procesar la respuesta." }));
+      const data = await response.json().catch(() => ({}));
 
-      if (response.status === 403) {
-        await refetch();
-      }
+      if (response.status === 403) await refetch();
 
       if (response.ok) {
         setSubmitStatus({
           type: "success",
           message: data.message || "¡Mensaje enviado con éxito!",
         });
-        // Limpiar el formulario
-        setFormData({
-          name: "",
-          email: "",
-          message: "",
-        });
+        setFormData({ name: "", email: "", message: "" });
       } else {
-        const errorMessage =
-          data?.message ||
-          data?.error ||
-          data?.Error ||
-          "Error al enviar el mensaje. Intenta de nuevo.";
         setSubmitStatus({
           type: "error",
-          message: errorMessage,
+          message: data?.message || "Error al enviar el mensaje. Intenta de nuevo.",
         });
       }
-    } catch (error) {
-      console.error("Error al enviar el formulario:", error);
+    } catch {
       setSubmitStatus({
         type: "error",
         message: "Error de conexión. Por favor, verifica tu conexión a internet.",
@@ -163,174 +152,93 @@ export default function ContactSection() {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    setFormData({
-      ...formData,
-      [e.target.id]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.id]: e.target.value });
   };
 
   return (
     <section id="contacto" className="container mx-auto px-6 md:px-10 lg:px-16 py-16 md:py-20">
-      {/* Título principal */}
-      <div className="mb-8 md:mb-12">
-        <h2 className="font-orbitron font-extrabold text-3xl md:text-[40px] leading-tight md:leading-[56px] tracking-[0.15em] text-white px-4 md:px-7">
-          ¿Tienes un proyecto, empresa o inquietud? Contáctanos
-        </h2>
-      </div>
+      <h2 className="font-orbitron font-extrabold text-3xl md:text-[40px] tracking-[0.15em] text-white mb-10 px-4">
+        ¿Tienes un proyecto, empresa o inquietud? Contáctanos
+      </h2>
 
-      {/* Contenedor principal con dos columnas */}
-      <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 xl:gap-16">
-        {/* Columna izquierda - Formulario */}
-        <div className="flex-1 lg:max-w-[850px]">
-          {/* Texto descriptivo */}
-          <div className="mb-8 md:mb-10 px-4 md:px-5">
-            <p className="font-ubuntu text-white text-base leading-normal tracking-[0.02em]">
-              En Devurity creemos en el poder de la colaboración.
-              <br />
-              Ya seas estudiante, investigador o empresa, este es un espacio para compartir ideas, explorar proyectos y generar conexiones.
-              <br />
-              <br />
-              Escríbenos si quieres presentar un proyecto, unirte al semillero o proponer una colaboración: juntos podemos transformar el aprendizaje en impacto real.
-            </p>
-          </div>
+      <div className="flex flex-col lg:flex-row gap-12">
+        <div className="flex-1">
+          <p className="font-ubuntu text-white mb-10 px-4">
+            En Devurity creemos en el poder de la colaboración.
+            <br />
+            Ya seas estudiante, investigador o empresa, este es un espacio para compartir ideas, explorar proyectos y generar conexiones.
+            <br />
+            <br />
+            Escríbenos si quieres presentar un proyecto, unirte al semillero o proponer una colaboración: juntos podemos transformar el aprendizaje en impacto real.
+          </p>
 
-          {/* Formulario */}
-          <form className="space-y-5 md:space-y-6 px-4 md:px-5" onSubmit={handleSubmit}>
-            {/* Mensaje de estado */}
+          <form onSubmit={handleSubmit} className="space-y-6 px-4">
             {submitStatus.type && (
-              <div
-                className={`p-4 rounded-lg border-2 ${
-                  submitStatus.type === "success"
-                    ? "bg-green-900/20 border-green-500 text-green-300"
-                    : "bg-red-900/20 border-red-500 text-red-300"
-                }`}
-              >
-                <p className="font-ubuntu text-sm">{submitStatus.message}</p>
-              </div>
-            )}
-            {csrfError && !submitStatus.type && (
-              <div className="p-4 rounded-lg border-2 bg-red-900/20 border-red-500 text-red-300">
-                <p className="font-ubuntu text-sm">
-                  No pudimos preparar el envío seguro del formulario. Intenta nuevamente en unos segundos.
-                </p>
-              </div>
+              <AlertBox type={submitStatus.type} message={submitStatus.message} />
             )}
 
-            {/* Campo Nombre */}
-            <div className="space-y-1">
-              <label 
-                htmlFor="name" 
-                className="block font-orbitron font-extrabold text-white text-base tracking-[0.02em]"
-              >
-                Nombre
-              </label>
+            {csrfError && !submitStatus.type && (
+              <AlertBox
+                type="error"
+                message="No pudimos preparar el envío seguro del formulario. Intenta nuevamente en unos segundos."
+              />
+            )}
+
+            <div>
+              <label className="block text-white font-orbitron">Nombre</label>
               <input
-                type="text"
                 id="name"
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full max-w-[506px] h-[40px] bg-transparent border-2 border-[#5b616e] rounded-[15px] px-4 text-white font-ubuntu text-base focus:outline-none focus:border-variable-collection-link transition-colors"
+                className="w-full max-w-[506px] h-[40px] bg-transparent border-2 border-[#5b616e] rounded-[15px] px-4 text-white"
                 required
               />
             </div>
 
-            {/* Campo Correo */}
-            <div className="space-y-1">
-              <label 
-                htmlFor="email" 
-                className="block font-orbitron font-extrabold text-white text-base tracking-[0.02em]"
-              >
-                Correo
-              </label>
+            <div>
+              <label className="block text-white font-orbitron">Correo</label>
               <input
-                type="email"
                 id="email"
+                type="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full max-w-[506px] h-[40px] bg-transparent border-2 border-[#5b616e] rounded-[15px] px-4 text-white font-ubuntu text-base focus:outline-none focus:border-variable-collection-link transition-colors"
+                className="w-full max-w-[506px] h-[40px] bg-transparent border-2 border-[#5b616e] rounded-[15px] px-4 text-white"
                 required
               />
             </div>
 
-            {/* Campo Mensaje */}
-            <div className="space-y-1">
-              <label 
-                htmlFor="message" 
-                className="block font-orbitron font-extrabold text-white text-base tracking-[0.02em]"
-              >
-                Mensaje
-              </label>
+            <div>
+              <label className="block text-white font-orbitron">Mensaje</label>
               <textarea
                 id="message"
-                rows={5}
                 value={formData.message}
                 onChange={handleChange}
-                className="w-full max-w-[506px] h-[137px] bg-transparent border-2 border-[#5b616e] rounded-[15px] px-4 py-3 text-white font-ubuntu text-base resize-none focus:outline-none focus:border-variable-collection-link transition-colors"
+                className="w-full max-w-[506px] h-[137px] bg-transparent border-2 border-[#5b616e] rounded-[15px] px-4 py-3 text-white"
                 required
-              ></textarea>
+              />
             </div>
 
-            {/* Botón Enviar */}
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="border-[3px] border-[#3d3d3d] rounded-lg px-5 py-2 min-w-[100px] hover:border-variable-collection-link transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span className="font-ubuntu font-bold text-white text-base leading-[21px] group-hover:text-variable-collection-link transition-colors">
-                  {isSubmitting ? "Enviando..." : "Enviar"}
-                </span>
-              </button>
-            </div>
+            <Button type="submit" loading={isSubmitting} glow>
+              Enviar
+            </Button>
           </form>
         </div>
 
-        {/* Columna derecha - Información de contacto */}
-        <div className="flex-shrink-0 lg:w-[431px] px-4 md:px-8 py-8">
-          <div className="space-y-4">
-            {/* LinkedIn */}
-            <a
-              href="https://www.linkedin.com/company/devurity"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 px-3 py-4 hover:bg-white/5 rounded-lg transition-colors group"
-            >
-              <LinkedInIcon className="flex-shrink-0" />
-              <div className="border-b border-[#5b616e] flex-1 pb-1">
-                <p className="font-ubuntu text-[#faf8f8] text-base tracking-[0.02em] group-hover:text-variable-collection-link transition-colors">
-                  LinkedIn.com/company/devurity
-                </p>
-              </div>
-            </a>
+        <div className="lg:w-[431px] space-y-4 px-4">
+          <a href="https://www.linkedin.com/company/devurity" target="_blank" className="flex gap-3 items-center">
+            <LinkedInIcon />
+            <span className="text-white">LinkedIn.com/company/devurity</span>
+          </a>
 
-            {/* GitHub */}
-            <a
-              href="https://github.com/SemilleroInvestigacionDevurity"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 px-3 py-4 hover:bg-white/5 rounded-lg transition-colors group"
-            >
-              <GitHubIcon className="flex-shrink-0" />
-              <div className="border-b border-[#5b616e] flex-1 pb-1">
-                <p className="font-ubuntu text-white text-base tracking-[0.02em] group-hover:text-variable-collection-link transition-colors">
-                  Github.com/SemilleroInvestigacionDevurity
-                </p>
-              </div>
-            </a>
+          <a href="https://github.com/SemilleroInvestigacionDevurity" target="_blank" className="flex gap-3 items-center">
+            <GitHubIcon />
+            <span className="text-white">Github.com/SemilleroInvestigacionDevurity</span>
+          </a>
 
-            {/* Email */}
-            <a
-              href="mailto:devurity@usco.edu.co"
-              className="flex items-center gap-3 px-3 py-4 hover:bg-white/5 rounded-lg transition-colors group"
-            >
-              <EmailIcon className="flex-shrink-0" />
-              <div className="border-b border-[#5b616e] flex-1 pb-1">
-                <p className="font-ubuntu text-white text-base tracking-[0.02em] group-hover:text-variable-collection-link transition-colors">
-                  devurity@usco.edu.co
-                </p>
-              </div>
-            </a>
-          </div>
+          <a href="mailto:devurity@usco.edu.co" className="flex gap-3 items-center">
+            <EmailIcon />
+            <span className="text-white">devurity@usco.edu.co</span>
+          </a>
         </div>
       </div>
     </section>

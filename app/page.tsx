@@ -8,6 +8,7 @@ import CTASection from "@/components/landing/CTASection";
 import GalleryPreviewSection from "@/components/landing/GalleryPreviewSection";
 import ReglamentoSection from "@/components/landing/ReglamentoSection";
 // Data fetching functions
+// No modular.
 import {
   getLandingGalleryPreview,
   getLandingNews,

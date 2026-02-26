@@ -1,8 +1,8 @@
-
 "use client";
 export const dynamic = "force-static";
 
 import React, { useState, useEffect, useRef } from "react";
+import Button from "@/components/ui/buttonFAQ"; // 
 
 const faqs = [
   {
@@ -43,7 +43,6 @@ export default function FAQPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeFAQ, setActiveFAQ] = useState<{ q: string; a: string } | null>(null);
 
-  // array de refs que acepta HTMLDivElement o null (importante para TS y desmontado)
   const articleRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Cerrar modal con ESC
@@ -87,26 +86,30 @@ export default function FAQPage() {
           <article
             key={i}
             ref={(el) => {
-              
               articleRefs.current[i] = el;
             }}
             className="p-6 rounded-lg border border-[var(--color-selected)] bg-[var(--placeholder)]/15
-            transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]
-            hover:shadow-[0_0_15px_var(--color-variable-collection-botones)]"
+                       transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]
+                       hover:shadow-[0_0_15px_var(--color-variable-collection-botones)]"
           >
-            <h3 className="font-orbitron text-lg tracking-wide mb-2">{item.q}</h3>
+            <h3 className="font-orbitron text-lg tracking-wide mb-2">
+              {item.q}
+            </h3>
 
             <p className="font-ubuntu text-sm leading-relaxed opacity-90 line-clamp-3">
               {item.a}
             </p>
 
-            <button
+            {/* ✅ BOTÓN MODULAR */}
+            <Button
+              size="sm"
+              hoverScale
+              glow
+              className="mt-3"
               onClick={() => openModalAt(i, item)}
-              className="mt-3 px-3 py-1 rounded-md border border-[var(--color-variable-collection-botones)]
-              bg-[var(--placeholder)]/10 hover:bg-[var(--placeholder)]/20 transition"
             >
               Ver
-            </button>
+            </Button>
           </article>
         ))}
       </div>
@@ -128,20 +131,19 @@ export default function FAQPage() {
                        border border-[var(--color-selected)] rounded-2xl p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-xl font-orbitron">{activeFAQ.q}</h2>
+            <h2 className="text-xl font-orbitron">
+              {activeFAQ.q}
+            </h2>
 
             <p className="text-sm mt-4 whitespace-pre-line leading-relaxed opacity-90">
               {activeFAQ.a}
             </p>
 
             <div className="mt-6 text-right">
-              <button
-                onClick={closeModal}
-                className="px-4 py-1 rounded-md border border-[var(--color-variable-collection-botones)]
-                           hover:bg-[var(--placeholder)]/20 transition"
-              >
+              {/* ✅ BOTÓN MODULAR */}
+              <Button size="sm" onClick={closeModal}>
                 Cerrar
-              </button>
+              </Button>
             </div>
           </div>
         </div>
