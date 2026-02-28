@@ -17,9 +17,9 @@ const createAccentStyles = (color: string): CSSProperties =>
 export const revalidate = 21600;
 
 interface UpdateDetailPageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 // Generar rutas estáticas para cada update
@@ -37,8 +37,9 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: UpdateDetailPageProps): Promise<Metadata> {
+  const { slug } = await params;
   const updates = await getUpdatesFeed();
-  const update = updates.find((item) => item.slug === params.slug);
+  const update = updates.find((item) => item.slug === slug);
 
   if (!update) {
     return {
@@ -57,14 +58,15 @@ export async function generateMetadata({
 export default async function UpdateDetailPage({
   params,
 }: UpdateDetailPageProps) {
+  const { slug } = await params;
   const updates = await getUpdatesFeed();
-  const update = updates.find((item) => item.slug === params.slug);
+  const update = updates.find((item) => item.slug === slug);
 
   if (!update) {
     notFound();
   }
 
-  const canonicalHref = `/updates/${params.slug}`;
+  const canonicalHref = `/updates/${slug}`;
   const hasExternalLink = update.href.startsWith("http") && update.href !== canonicalHref;
   const related = updates.filter((item) => item.slug !== update.slug).slice(0, 3);
 
