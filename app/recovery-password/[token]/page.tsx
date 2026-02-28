@@ -1,14 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, use } from "react";
 import Link from "next/link";
 
-export default function RecoveryPasswordPage({ params }: { params: Promise<{ token: string }> | { token: string } }) {
-  // In newer Next versions params may be a Promise; React.use can unwrap it.
-  // Use a guarded call to support both cases.
-  const maybeUse = (React as any).use;
-  const resolvedParams = maybeUse ? (React as any).use(params) : params;
-  const token = (resolvedParams && (resolvedParams as any).token) || "";
+export default function RecoveryPasswordPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params);
 
   return <RecoveryForm token={token} />;
 }
