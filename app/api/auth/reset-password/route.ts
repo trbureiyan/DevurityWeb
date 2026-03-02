@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     const email: string = decoded.email;
 
     // Hash password and update
-    const hashed = bcryptAdapter.hash(password);
+    const hashed = await bcryptAdapter.hash(password);
     const updated = await updatePasswordByEmail(email, hashed);
     if (!updated) {
       return NextResponse.json({ ok: false, message: "No se pudo actualizar la contraseña" }, { status: 500 });
