@@ -214,7 +214,7 @@ export default function ReglamentosPage() {
       <div className="space-y-6">
         {reglamentoCompleto.map((bloque, bi) => (
           <details
-            key={bi}
+            key={bloque.titulo}
             className="group border border-[var(--color-selected)] bg-[var(--placeholder)]/8 rounded-2xl
                        backdrop-blur-md transition-all duration-300"
           >
@@ -229,7 +229,7 @@ export default function ReglamentosPage() {
             <div className="px-6 pb-6 pt-4 space-y-4">
               {bloque.articulos.map((art, ai) => (
                 <article
-                  key={ai}
+                  key={art.numero}
                   className="p-4 rounded-lg border border-[var(--color-selected)]
                              bg-[var(--placeholder)]/12 transition-all duration-300 hover:scale-[1.02]"
                 >
@@ -257,13 +257,21 @@ export default function ReglamentosPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            role="button"
+            tabIndex={0}
+            aria-label="Cerrar modal"
             onClick={closeModal}
+            onKeyDown={(e) => e.key === "Enter" && closeModal()}
           />
 
           <div
             className="relative z-10 max-w-3xl w-full bg-[var(--variable-collection-placeholder)]/95
                        border border-[var(--color-selected)] rounded-2xl p-6 shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Detalle del artículo del reglamento"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           >
             <h2 className="text-xl font-orbitron">{activeArticle.numero}</h2>
             <p className="text-xs opacity-70 mb-4">{activeArticle.titulo}</p>
