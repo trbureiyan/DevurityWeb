@@ -308,7 +308,7 @@ const emailTemplate = `
       <p><span class="success-icon">✓</span> Tu cuenta ha sido activada exitosamente</p>
 
       <p style="text-align: center;">
-        <a href="${process.env.DOMAIN}/auth/login" class="cta-button">Iniciar Sesión</a>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://devurity.com'}/auth/login" class="cta-button">Iniciar Sesión</a>
       </p>
 
 
