@@ -759,6 +759,13 @@ export async function updateUserProfile(
           if (!project) {
             project = await tx.projects.create({
               data: {
+                slug: proj.title
+                  .toLowerCase()
+                  .trim()
+                  .replace(/\s+/g, "-")
+                  .replace(/[^a-z0-9-]/g, "")
+                  .replace(/-+/g, "-")
+                  .substring(0, 60) + `-${Date.now()}`,
                 title: proj.title,
                 description: projectLink !== '#' ? projectLink : "Created from profile",
               },

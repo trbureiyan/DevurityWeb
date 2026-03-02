@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         data: {
-          users: [user],
+          users: [serializeBigInt(user)],
           total: 1,
           page: 1,
           limit: 1,
@@ -51,15 +51,8 @@ export async function GET(request: NextRequest) {
 
     const result = await findInactiveUsersWithPagination(page, limit);
 
-    // Convert BigInt IDs to strings for JSON serialization
-    const serializedResult = {
-      ...result,
-      users: result.users.map((user: any) => ({
-        ...user,
-        id: user.id.toString(),
-        role_id: user.role_id.toString(),
-      })),
-    };
+    // Serialize all BigInt values recursively to avoid JSON serialization errors
+    const serializedResult = serializeBigInt(result);
 
     return NextResponse.json({
       success: true,
@@ -75,4 +68,29 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+// Helper function to recursively serialize BigInt values to strings
+function serializeBigInt(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (typeof obj === "bigint") {
+    return obj.toString();
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(serializeBigInt);
+  }
+
+  if (typeof obj === "object") {
+    const result: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = serializeBigInt(value);
+    }
+    return result;
+  }
+
+  return obj;
 }
