@@ -8,6 +8,11 @@ ON CONFLICT (name) DO NOTHING;
 INSERT INTO roles (name) VALUES ('user')
 ON CONFLICT (name) DO NOTHING;
 
+INSERT INTO roles (name) VALUES ('content_manager')
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO roles (name) VALUES ('leader_project') ON CONFLICT (name) DO NOTHING;
+
 -- Insertar skills
 INSERT INTO public.skills ("name") VALUES
 	 ('Python'),

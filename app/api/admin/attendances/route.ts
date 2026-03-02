@@ -22,7 +22,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validar que sea un objeto JSON (QR dinámico)
     if (typeof qrData !== "object" || qrData === null) {
       return NextResponse.json(
         {
@@ -33,7 +32,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validar estructura del QR
     if (
       !qrData.userId ||
       !qrData.timestamp ||
@@ -46,7 +44,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verificar que el QR no haya expirado
     const now = Date.now();
     if (now > qrData.expiresAt) {
       return NextResponse.json(
@@ -57,7 +54,6 @@ export async function POST(req: NextRequest) {
 
     const userId = BigInt(qrData.userId);
 
-    // Verificar que el usuario existe
     const user = await prisma.users.findUnique({
       where: { id: userId },
       select: {
@@ -75,17 +71,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Obtener fecha actual (solo fecha, sin hora)
-    const today = new Date();
+    const bogotaNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
+    const today = new Date(bogotaNow);
     today.setHours(0, 0, 0, 0);
 
-    // Verificar si ya existe una asistencia para este usuario hoy
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
     const existingAttendance = await prisma.attendances.findFirst({
       where: {
         user_id: userId,
         attendance_date: {
           gte: today,
-          lt: new Date(today.getTime() + 24 * 60 * 60 * 1000), // Siguiente día
+          lt: tomorrow,
         },
       },
     });
@@ -98,20 +95,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: "Asistencia ya registrada hoy",
-          fecha: existingAttendance.attendance_date.toLocaleString("es-CO"),
+          fecha: existingAttendance.attendance_date.toLocaleString("es-CO", { timeZone: "America/Bogota" }),
           usuario: `${user.name} ${user.last_name}`,
         },
         { status: 409 },
       );
     }
 
-    // Crear nueva asistencia (solo fecha, sin hora)
-    const attendanceDate = new Date();
-    attendanceDate.setHours(0, 0, 0, 0);
-    
     const attendance = await prisma.attendances.create({
       data: {
-        attendance_date: attendanceDate,
+        attendance_date: today,
         user_id: userId,
       },
     });
@@ -127,7 +120,7 @@ export async function POST(req: NextRequest) {
         nombre: `${user.name} ${user.last_name}`,
         correo: user.email,
       },
-      fecha: attendance.attendance_date.toLocaleString("es-CO"),
+      fecha: attendance.attendance_date.toLocaleString("es-CO", { timeZone: "America/Bogota" }),
     });
   } catch (error) {
     console.error("Error al registrar asistencia:", error);

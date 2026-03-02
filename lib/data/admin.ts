@@ -11,105 +11,118 @@ export type RecentUser = {
 };
 
 export type DashboardStats = {
-  totalUsers: number;
-  activeUsers: number;
-  pendingUsers: number;
-  attendanceToday: number;
-  eventsCount: number;
-  projectsCount: number;
+  totalUsers: number | null;
+  activeUsers: number | null;
+  pendingUsers: number | null;
+  attendanceToday: number | null;
+  eventsCount: number | null;
+  projectsCount: number | null;
   recentUsers: RecentUser[];
 };
 
 export async function getAdminDashboardStats(): Promise<DashboardStats> {
-  // Calcula el rango de tiempo para las asistencias de hoy
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const startOfTomorrow = new Date(startOfToday);
-  startOfTomorrow.setDate(startOfToday.getDate() + 1);
+  const now = new Date();
 
-  logger.debug("[Dashboard Stats] Buscando asistencias", {
+  const startOfToday = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+    0, 0, 0
+  ));
+
+  const startOfTomorrow = new Date(startOfToday);
+  startOfTomorrow.setUTCDate(startOfToday.getUTCDate() + 1);
+
+  logger.debug("[Admin Dashboard] Rango asistencias", {
     from: startOfToday.toISOString(),
     to: startOfTomorrow.toISOString(),
   });
 
-  // Ejecuta en paralelo los conteos necesarios para el dashboard
-  const [
-    totalUsers,
-    activeUsers,
-    pendingUsers,
-    attendanceRecordsToday,
-    recentUsersData,
-  ] = await Promise.all([
-    prisma.users.count(),
-    prisma.users.count({ where: { is_active: true } }),
-    prisma.users.count({ where: { is_active: false } }),
-    prisma.attendances.findMany({
-      where: {
-        attendance_date: {
-          gte: startOfToday,
-          lt: startOfTomorrow,
+  let totalUsers: number | null = null;
+  let activeUsers: number | null = null;
+  let pendingUsers: number | null = null;
+  let attendanceToday: number | null = null;
+  let recentUsers: RecentUser[] = [];
+
+  try {
+    const [
+      totalUsersResult,
+      activeUsersResult,
+      pendingUsersResult,
+      attendanceRecordsToday,
+      recentUsersData,
+    ] = await Promise.all([
+      prisma.users.count(),
+      prisma.users.count({ where: { is_active: true } }),
+      prisma.users.count({ where: { is_active: false } }),
+
+      prisma.attendances.findMany({
+        where: {
+          attendance_date: {
+            gte: startOfToday,
+            lt: startOfTomorrow,
+          },
         },
-      },
-      select: {
-        id: true,
-        user_id: true,
-        attendance_date: true,
-      },
-    }),
-    prisma.users.findMany({
-      orderBy: {
-        joined_at: 'desc',
-      },
-      take: 5,
-      select: {
-        id: true,
-        name: true,
-        last_name: true,
-        email: true,
-        joined_at: true,
-        is_active: true,
-      },
-    }),
-  ]);
+        select: { user_id: true },
+      }),
 
-  logger.debug("[Dashboard Stats] Registros de asistencia encontrados", {
-    count: attendanceRecordsToday.length,
-  });
+      prisma.users.findMany({
+        orderBy: { joined_at: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          name: true,
+          last_name: true,
+          email: true,
+          joined_at: true,
+          is_active: true,
+        },
+      }),
+    ]);
 
-  // Cuenta usuarios únicos y registros sin usuario asociado
-  const uniqueAttendanceUsers = new Set<string>();
-  let attendanceWithoutUser = 0;
+    totalUsers = totalUsersResult;
+    activeUsers = activeUsersResult;
+    pendingUsers = pendingUsersResult;
 
-  for (const record of attendanceRecordsToday) {
-    if (record.user_id) {
-      uniqueAttendanceUsers.add(record.user_id.toString());
-    } else {
-      attendanceWithoutUser += 1;
+    const uniqueUsers = new Set<string>();
+    for (const record of attendanceRecordsToday) {
+      if (record.user_id) uniqueUsers.add(record.user_id.toString());
     }
+    attendanceToday = uniqueUsers.size;
+
+    recentUsers = recentUsersData.map(user => ({
+      id: user.id.toString(),
+      name: user.name,
+      last_name: user.last_name,
+      email: user.email,
+      joined_at: user.joined_at ?? new Date(),
+      is_active: user.is_active,
+    }));
+
+  } catch (error) {
+    logger.error("[Admin Dashboard] Error usuarios/asistencias", error);
   }
 
-  // Suma asistencias únicas con entradas anónimas
-  const attendanceToday = uniqueAttendanceUsers.size + attendanceWithoutUser;
-  
-  logger.debug("[Dashboard Stats] Resumen de asistencias", {
-    uniqueUsers: uniqueAttendanceUsers.size,
-    withoutUser: attendanceWithoutUser,
-    totalToday: attendanceToday,
-  });
+  let eventsCount: number | null = null;
+  try {
+    eventsCount = await prisma.updates.count({
+      where: {
+        status: "published",
+        published_at: { lte: new Date() },
+      },
+    });
+  } catch (error) {
+    logger.error("[Admin Dashboard] Error eventos", error);
+  }
 
-  // TODO: Implementar consulta de proyectos y eventos reales cuando estén disponibles en DB o CMS
-  const projectsCount = 0; 
-  const eventsCount = 0;
-
-  // Convertir los usuarios recientes al formato esperado
-  const recentUsers: RecentUser[] = recentUsersData.map((user) => ({
-    id: user.id.toString(),
-    name: user.name,
-    last_name: user.last_name,
-    email: user.email,
-    joined_at: user.joined_at ?? new Date(),
-    is_active: user.is_active,
-  }));
+  let projectsCount: number | null = null;
+  try {
+    projectsCount = await prisma.projects.count({
+      where: { is_archived: false },
+    });
+  } catch (error) {
+    logger.error("[Admin Dashboard] Error proyectos", error);
+  }
 
   return {
     totalUsers,

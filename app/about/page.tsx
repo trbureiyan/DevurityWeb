@@ -1,10 +1,44 @@
 "use client";
 
+
 import Image from "next/image";
 import { IMAGES } from "@/public/images";
 import { useEffect, useState } from "react";
 import logger from "@/lib/logger";
 import TeamMemberCard from "@/components/about/TeamMemberCard";
+
+const SECTIONS = [
+  "Administradores",
+  "Desarrolladores",
+  "Gestores de Contenido",
+  "Líderes de Proyecto",
+  "Integrantes",
+];
+
+const FOUNDERS_USERNAMES = [
+  "brayantoro",
+  "alexlozada",
+  "juanmora",
+  "manueldev",
+  "pablotr",
+];
+
+// Mapear roles a secciones
+function mapRoleToSection(member: { role?: string; username?: string }) {
+  // 1️⃣ Founders primero
+  if (member.username && FOUNDERS_USERNAMES.includes(member.username)) {
+    return SECTIONS[1]; // Web Platform Founders / Desarrolladores
+  }
+
+  // 2️⃣ Rol normal
+  const role = member.role?.toLowerCase() ?? "";
+  if (role.includes("admin")) return SECTIONS[0]; // Administradores
+  if (role.includes("content")) return SECTIONS[2]; // Gestores de Contenido
+  if (role.includes("líder") || role.includes("leader")) return SECTIONS[3]; // Líderes de Proyecto
+
+  // 3️⃣ Todo lo demás → Integrantes
+  return SECTIONS[4];
+}
 
 type SocialLink = {
   icon: string;
@@ -21,34 +55,43 @@ type TeamMember = {
   bio?: string;
   avatar?: string;
   socialLinks?: SocialLink[];
+  skills?: string[];
 };
 
-// Página "Sobre nosotros": presenta misión, visión y grid dinámico de integrantes desde /api/team.
 export default function AboutPage() {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeSection, setActiveSection] = useState(SECTIONS[0]);
 
   useEffect(() => {
-    // Carga miembros del equipo desde API pública; registra errores en logger.
-    async function loadTeamMembers() {
-      try {
-        const response = await fetch("/api/team");
-        const data = await response.json();
-        
-        if (data.success && data.members) {
-          setTeamMembers(data.members);
-        } else {
-          logger.error("Error loading team members:", data.error);
-        }
-      } catch (error) {
-        logger.error("Error fetching team members:", { error });
-      } finally {
-        setLoading(false);
-      }
-    }
+  async function loadTeamMembers() {
+    try {
+      const response = await fetch("/api/team");
 
-    loadTeamMembers();
-  }, []);
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const data = await response.json();
+
+      if (data.success && Array.isArray(data.members)) {
+        setTeamMembers(data.members);
+      } else {
+        logger.error("Invalid team members response:", data);
+      }
+    } catch (error) {
+      logger.error("Error fetching team members:", { error });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  loadTeamMembers();
+}, []);
+
+const filteredMembers = teamMembers.filter(
+  (member) => mapRoleToSection(member) === activeSection
+);
 
   return (
     <main className="min-h-screen bg-black text-white overflow-hidden">
@@ -283,61 +326,82 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+           {/* ================= NUESTRO EQUIPO  ================= */}
       <section className="relative bg-black py-24">
         <div className="container mx-auto px-6 md:px-12">
-          {/* Section Title */}
-          <div className="text-center mb-16">
-            <h2 className="text-6xl md:text-7xl font-bold tracking-wider mb-6">NUESTRO EQUIPO</h2>
+
+          {/* Title */}
+          <div className="text-center mb-8">
+            <h2 className="text-6xl md:text-7xl font-bold tracking-wider mb-4">
+              NUESTRO EQUIPO
+            </h2>
+
+            {/* SUBTÍTULO DINÁMICO */}
+            {/* SUBTÍTULO DINÁMICO EN BLANCO */}
+          <h3 className="text-4xl md:text-5xl font-bold text-white tracking-wide mt-4">
+            {activeSection}
+          </h3>
+
             {/* Decorative lines */}
-            <div className="flex items-center justify-center gap-2">
-              <div className="flex gap-1">
-                <div className="w-12 h-1 bg-white"></div>
-                <div className="w-12 h-1 bg-white"></div>
-                <div className="w-12 h-1 bg-white"></div>
-                <div className="w-6 h-1 bg-white/40"></div>
-                <div className="w-6 h-1 bg-white/40"></div>
-              </div>
-            </div>
+            
           </div>
 
-          {/* Team Grid */}
+         {/* Barra blanca segmentada clickeable */}
+<div className="max-w-4xl mx-auto mb-16">
+  <div className="flex justify-center gap-2">
+    {SECTIONS.map((section, index) => (
+      <button
+        key={section}
+        onClick={() => setActiveSection(section)}
+        className={`h-1 transition-all duration-300 ${
+          activeSection === section
+            ? "bg-white w-16"
+            : "bg-white/40 w-10 hover:bg-white/70"
+        }`}
+      />
+    ))}
+  </div>
+</div>
+
+          {/* GRID FILTRADO */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
-            {loading ? (
-              // Loading skeleton
-              Array.from({ length: 8 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-zinc-900/50 rounded-2xl overflow-hidden animate-pulse"
-                >
-                  <div className="aspect-square bg-zinc-800"></div>
-                  <div className="p-6 space-y-3">
-                    <div className="h-6 bg-zinc-800 rounded"></div>
-                    <div className="h-4 bg-zinc-800 rounded w-3/4"></div>
-                    <div className="h-3 bg-zinc-800 rounded"></div>
-                  </div>
-                </div>
-              ))
-            ) : teamMembers.length > 0 ? (
-              teamMembers.map((member) => (
-                <TeamMemberCard
-                  key={member.id}
-                  id={member.id}
-                  name={member.name}
-                  username={member.username}
-                  role={member.role}
-                  bio={member.bio || "Miembro del equipo Devurity"}
-                  avatar={member.avatar}
-                  socialLinks={member.socialLinks}
-                  tagline={member.tagline}
-                />
-              ))
-            ) : (
-              <div className="col-span-full text-center text-gray-400 py-12">
-                <p className="text-lg">No hay miembros del equipo disponibles en este momento</p>
-              </div>
-            )}
-          </div>
+  {loading ? (
+    Array.from({ length: 8 }).map((_, i) => (
+      <div
+        key={i}
+        className="bg-zinc-900/50 rounded-2xl overflow-hidden animate-pulse"
+      >
+        <div className="aspect-square bg-zinc-800"></div>
+        <div className="p-6 space-y-3">
+          <div className="h-6 bg-zinc-800 rounded"></div>
+          <div className="h-4 bg-zinc-800 rounded w-3/4"></div>
+          <div className="h-3 bg-zinc-800 rounded"></div>
         </div>
+      </div>
+    ))
+  ) : filteredMembers.length === 0 ? (
+    <div className="col-span-full text-center py-16 text-white/70">
+      <p className="text-lg">
+        No hay miembros del equipo disponibles en este momento
+      </p>
+    </div>
+  ) : (
+    filteredMembers.map((member) => (
+      <TeamMemberCard
+        key={member.id}
+        id={member.id}
+        name={member.name}
+        username={member.username}
+        bio={member.bio || "Miembro del equipo Devurity"}
+        avatar={member.avatar}
+        socialLinks={member.socialLinks}
+        tagline={member.tagline}
+        skills={member.skills}
+      />
+    ))
+  )}
+</div>
+       </div>
       </section>
     </main>
   );
