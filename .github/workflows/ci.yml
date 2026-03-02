@@ -11,10 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # Variables mínimas para que el build pase sin secretos reales
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/devurity_ci?schema=public"
-      JWT_SECRET: "ci-only-not-a-real-secret"
+      # Usa secrets si están configurados; cae a valores dummy para CI puro
+      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/devurity_ci?schema=public' }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-not-a-real-secret' }}
       NEXT_PUBLIC_APP_URL: "https://devurity.com"
+      NEXT_PUBLIC_API_URL: "https://devurity.com"
 
     steps:
       - name: Checkout
@@ -26,11 +27,16 @@ jobs:
           node-version: 20
           cache: npm
 
+      # Cache antes de npm ci para que el postinstall (prisma generate) lo aproveche
+      - name: Cache Prisma generated client
+        uses: actions/cache@v4
+        with:
+          path: lib/generated/prisma
+          key: prisma-${{ hashFiles('prisma/schema.prisma') }}
+
+      # postinstall en package.json ya ejecuta prisma generate — no se necesita step explícito
       - name: Install dependencies
         run: npm ci
-
-      - name: Generate Prisma client
-        run: npx prisma generate
 
       - name: Lint
         run: npm run lint
