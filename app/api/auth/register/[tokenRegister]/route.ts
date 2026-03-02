@@ -598,7 +598,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     });
     
     // Hash password de forma asíncrona para no bloquear el event loop
-    const hashedPassword = bcryptAdapter.hash(password);
+    const hashedPassword = await bcryptAdapter.hash(password);
     
     await createUser({
       name: name,
