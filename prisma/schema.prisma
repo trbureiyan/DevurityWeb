@@ -24,8 +24,15 @@ model platforms {
 
 model projects {
   id            BigInt          @id @default(autoincrement())
+  slug          String          @unique
   title         String
   description   String
+  stage         String          @default("incubacion") // incubacion | desarrollo | validacion | produccion | experimentacion
+  focus_areas   String[]
+  stack         String[]
+  hero_image    String?
+  cta_label     String?
+  cta_href      String?
   start_date    DateTime?       @default(dbgenerated("CURRENT_DATE")) @db.Date
   is_archived   Boolean?        @default(false)
   created_at    DateTime        @default(now())
