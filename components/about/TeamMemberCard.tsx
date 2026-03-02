@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, LazyMotion, domAnimation, AnimatePresence } from "framer-motion";
 
 interface SocialLink {
   icon: string;
@@ -60,6 +60,13 @@ const SocialIcon = ({ icon }: { icon: string }) => {
   }
 };
 
+// Referencia estable para el valor por defecto de socialLinks.
+// Declarar [] directamente como valor por defecto en la firma del componente crea un nuevo
+// array en cada render, rompiendo la comparación por referencia de React y provocando
+// re-renders innecesarios en cualquier efecto o memo que dependiera de socialLinks.
+// Una constante a nivel de módulo es creada una sola vez en toda la vida del módulo.
+const EMPTY_SOCIAL_LINKS: SocialLink[] = [];
+
 export default function TeamMemberCard({
   id,
   name,
@@ -67,7 +74,7 @@ export default function TeamMemberCard({
   role,
   bio,
   avatar,
-  socialLinks = [],
+  socialLinks = EMPTY_SOCIAL_LINKS,
   tagline,
 }: TeamMemberCardProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -77,98 +84,107 @@ export default function TeamMemberCard({
   const displayAvatar = (!imageError && avatar) ? avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=400&background=10b981&color=fff&bold=true`;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5 }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="group relative"
-    >
-      {/* Card Container */}
-      <div className="relative bg-gradient-to-br from-zinc-900/50 to-black/50 backdrop-blur-sm border border-zinc-800/50 rounded-2xl overflow-hidden transition-all duration-300 hover:border-emerald-500/50 hover:shadow-[0_0_30px_rgba(16,185,129,0.15)]">
-        
-        {/* Glow Effect on Hover */}
-        <AnimatePresence>
-          {isHovered && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent pointer-events-none"
-            />
-          )}
-        </AnimatePresence>
+    // LazyMotion + m: patrón de tree-shaking de framer-motion recomendado por Vercel.
+    // Reemplaza `motion.*` (bundle completo ~150KB gzip) por `m.*` + `domAnimation` (~18KB).
+    // `domAnimation` cubre opacity, transform, scale y border-radius — suficiente para
+    // las animaciones de esta card. Si se necesitaran layout animations o drag, cambiar
+    // a `domMax` (~36KB). Importar `motion` directamente en cualquier componente que se
+    // use en una lista (como este, en la grilla del equipo) multiplica el costo de parse.
+    <LazyMotion features={domAnimation}>
+      <m.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className="group relative"
+      >
+        {/* Card Container */}
+        <div className="relative bg-gradient-to-br from-zinc-900/50 to-black/50 backdrop-blur-sm border border-zinc-800/50 rounded-2xl overflow-hidden transition-all duration-300 hover:border-emerald-500/50 hover:shadow-[0_0_30px_rgba(16,185,129,0.15)]">
+          
+          {/* Glow Effect on Hover */}
+          <AnimatePresence>
+            {isHovered && (
+              <m.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent pointer-events-none"
+              />
+            )}
+          </AnimatePresence>
 
-        {/* Avatar Section */}
-        <Link href={`/profile/${profileSlug}`} className="block">
-          <div className="relative aspect-square overflow-hidden">
-            <Image
-              src={displayAvatar}
-              alt={name}
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-110"
-              onError={() => setImageError(true)}
-            />
-            {/* Overlay on hover */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            
-            {/* Role badge */}
-            <div className="absolute top-3 left-3 px-3 py-1 bg-emerald-500/90 backdrop-blur-sm rounded-full">
-              <span className="text-xs font-semibold text-white uppercase tracking-wider">
-                {role}
-              </span>
+          {/* Avatar Section */}
+          <Link href={`/profile/${profileSlug}`} className="block">
+            <div className="relative aspect-square overflow-hidden">
+              <Image
+                src={displayAvatar}
+                alt={name}
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                className="object-cover transition-transform duration-500 group-hover:scale-110"
+                onError={() => setImageError(true)}
+              />
+              {/* Overlay on hover */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              
+              {/* Role badge */}
+              <div className="absolute top-3 left-3 px-3 py-1 bg-emerald-500/90 backdrop-blur-sm rounded-full">
+                <span className="text-xs font-semibold text-white uppercase tracking-wider">
+                  {role}
+                </span>
+              </div>
             </div>
-          </div>
-        </Link>
+          </Link>
 
-        {/* Content Section */}
-        <div className="p-6 space-y-4">
-          {/* Name */}
-          <div>
-            <Link 
-              href={`/profile/${profileSlug}`}
-              className="block group/name"
-            >
-              <h3 className="text-xl font-bold text-white group-hover/name:text-emerald-400 transition-colors">
-                {name}
-              </h3>
-            </Link>
-            {tagline && (
-              <p className="text-sm text-emerald-400 mt-1 font-mono">
-                {tagline}
-              </p>
+          {/* Content Section */}
+          <div className="p-6 space-y-4">
+            {/* Name */}
+            <div>
+              <Link 
+                href={`/profile/${profileSlug}`}
+                className="block group/name"
+              >
+                <h3 className="text-xl font-bold text-white group-hover/name:text-emerald-400 transition-colors">
+                  {name}
+                </h3>
+              </Link>
+              {tagline && (
+                <p className="text-sm text-emerald-400 mt-1 font-mono">
+                  {tagline}
+                </p>
+              )}
+            </div>
+
+            {/* Bio/Description */}
+            <p className="text-sm text-zinc-400 line-clamp-3 leading-relaxed">
+              {bio}
+            </p>
+
+            {/* Social Links - Máximo 3 */}
+            {socialLinks.length > 0 && (
+              <div className="flex items-center gap-3 pt-2 border-t border-zinc-800/50">
+                {socialLinks.slice(0, 3).map((link) => (
+                  <a
+                    key={`${link.icon}-${link.url}`}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-800/50 hover:bg-emerald-500/20 border border-zinc-700/50 hover:border-emerald-500/50 text-zinc-400 hover:text-emerald-400 transition-all duration-300 hover:scale-110"
+                    title={link.label}
+                  >
+                    <SocialIcon icon={link.icon} />
+                  </a>
+                ))}
+              </div>
             )}
           </div>
 
-          {/* Bio/Description */}
-          <p className="text-sm text-zinc-400 line-clamp-3 leading-relaxed">
-            {bio}
-          </p>
-
-          {/* Social Links - Máximo 3 */}
-          {socialLinks.length > 0 && (
-            <div className="flex items-center gap-3 pt-2 border-t border-zinc-800/50">
-              {socialLinks.slice(0, 3).map((link, index) => (
-                <a
-                  key={index}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-800/50 hover:bg-emerald-500/20 border border-zinc-700/50 hover:border-emerald-500/50 text-zinc-400 hover:text-emerald-400 transition-all duration-300 hover:scale-110"
-                  title={link.label}
-                >
-                  <SocialIcon icon={link.icon} />
-                </a>
-              ))}
-            </div>
-          )}
+          {/* Bottom accent line */}
+          <div className="h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
-
-        {/* Bottom accent line */}
-        <div className="h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      </div>
-    </motion.div>
+      </m.div>
+    </LazyMotion>
   );
 }
