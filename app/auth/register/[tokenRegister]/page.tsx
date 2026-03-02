@@ -2,11 +2,13 @@
 
 import type React from "react";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useDeferredValue, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCsrf } from "@/hooks/useCsrf";
+import { useTokenValidation } from "@/hooks/useTokenValidation";
+import { useSkillObjects } from "@/hooks/useSkillObjects";
 import { IMAGES } from "@/public/images";
 import ProgramSelector from "@/components/ui/ProgramSelector";
 
@@ -25,16 +27,19 @@ export default function ValidacionPage() {
     password: "",
     confirmPassword: "",
   });
-  const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
+  const availableSkills = useSkillObjects();
   const [skillInput, setSkillInput] = useState("");
-  const [filteredSkills, setFilteredSkills] = useState<Skill[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(
-    null,
-  );
+  const [isOpen, setIsOpen] = useState(false);
+  const deferredSkillInput = useDeferredValue(skillInput);
+  const filteredSkills = useMemo(() => {
+    if (deferredSkillInput.trim() === "") return availableSkills;
+    return availableSkills.filter((skill) =>
+      skill.name.toLowerCase().includes(deferredSkillInput.toLowerCase()),
+    );
+  }, [deferredSkillInput, availableSkills]);
+  const showSuggestions = isOpen && filteredSkills.length > 0;
   const [isSuccess, setIsSuccess] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [tokenValid, setTokenValid] = useState(true);
+  const { tokenValid, isLoading, submissionError: tokenError, showErrorModal: tokenErrorModal, setShowErrorModal: setTokenErrorModal } = useTokenValidation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [acceptDisabled, setAcceptDisabled] = useState(false);
@@ -69,102 +74,6 @@ export default function ValidacionPage() {
       if (footer) footer.style.display = "";
     };
   }, []);
-
-  // Validar token al cargar la página
-  useEffect(() => {
-    const validateToken = async () => {
-      try {
-        const token = window.location.pathname.split("/").pop();
-        const response = await fetch(`/api/auth/register/${token}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-          setTokenValid(false);
-          if (response.status === 409) {
-            setSubmissionError(
-              "Este enlace de registro ya ha sido utilizado. Por favor solicita un nuevo enlace.",
-            );
-            setShowErrorModal(true);
-          } else if (response.status === 422) {
-            setSubmissionError(
-              "Este enlace de registro ha expirado o es inválido. Por favor solicita un nuevo enlace.",
-            );
-            setShowErrorModal(true);
-          } else {
-            setSubmissionError(
-              "Error al validar el enlace de registro. Por favor intenta nuevamente.",
-            );
-            setShowErrorModal(true);
-          }
-        } else {
-          setTokenValid(true);
-        }
-      } catch (error) {
-        setSubmissionError(
-          "Error de conexión al validar el enlace. Por favor intenta nuevamente.",
-        );
-        setShowErrorModal(true);
-        setTokenValid(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    validateToken();
-  }, []);
-
-  // Cargar habilidades disponibles
-  useEffect(() => {
-    const fetchSkills = async () => {
-      try {
-        const response = await fetch("/api/auth/skills");
-        const data = await response.json();
-        if (response.ok) {
-          // Normalizar los datos de skills a objetos { id, name }
-          const normalizedSkills: Skill[] = (data.skills || []).map(
-            (skill: { id: number; name: string }) => ({
-              id: skill.id,
-              name: skill.name,
-            })
-          );
-          setAvailableSkills(normalizedSkills);
-          setFilteredSkills(normalizedSkills);
-        }
-      } catch (error) {
-        // Error fetching skills - no mostrar modal para este error
-      }
-    };
-
-    fetchSkills();
-  }, []);
-
-  // Debounce para detectar cuando el usuario deja de escribir
-  useEffect(() => {
-    if (typingTimeout) {
-      clearTimeout(typingTimeout);
-    }
-
-    if (skillInput.trim() === "") {
-      setFilteredSkills(availableSkills);
-      setShowSuggestions(false);
-    } else {
-      const timeout = setTimeout(() => {
-        const filtered = availableSkills.filter((skill) =>
-          skill.name.toLowerCase().includes(skillInput.toLowerCase()),
-        );
-        setFilteredSkills(filtered);
-        setShowSuggestions(true);
-      }, 300);
-
-      setTypingTimeout(timeout);
-    }
-
-    return () => {
-      if (typingTimeout) {
-        clearTimeout(typingTimeout);
-      }
-    };
-  }, [skillInput, availableSkills]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -321,6 +230,7 @@ export default function ValidacionPage() {
 
   const handleCloseErrorModal = () => {
     setShowErrorModal(false);
+    setTokenErrorModal(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -353,6 +263,7 @@ export default function ValidacionPage() {
             src={IMAGES.register.background}
             alt="Hero"
             fill
+            sizes="(max-width: 768px) 100vw, 768px"
             className="object-cover"
           />
           {/* Overlay oscuro para mejorar contraste */}
@@ -485,9 +396,9 @@ export default function ValidacionPage() {
                     value={skillInput}
                     onChange={handleSkillInputChange}
                     onKeyDown={handleKeyDown}
-                    onFocus={() => setShowSuggestions(true)}
+                    onFocus={() => setIsOpen(true)}
                     onBlur={() =>
-                      setTimeout(() => setShowSuggestions(false), 150)
+                      setTimeout(() => setIsOpen(false), 150)
                     }
                     placeholder={
                       formData.skills.length === 0
@@ -501,6 +412,8 @@ export default function ValidacionPage() {
                 {/* Sugerencias */}
                 {showSuggestions && filteredSkills.length > 0 && (
                   <div
+                    role="listbox"
+                    aria-label="Sugerencias de habilidades"
                     className="bg-[#2e2e2e] border border-gray-600 rounded-lg mt-1 max-h-48 overflow-y-auto"
                     onTouchStart={(e) => e.stopPropagation()} // Prevenir scroll del padre en móviles
                     onTouchMove={(e) => e.stopPropagation()} // Prevenir scroll del padre en móviles
@@ -509,9 +422,13 @@ export default function ValidacionPage() {
                     {filteredSkills.map((skill) => (
                       <div
                         key={skill.id}
+                        role="option"
+                        tabIndex={0}
+                        aria-selected={formData.skills.some((s) => s.id === skill.id)}
                         onClick={() => handleSkillSelect(skill)}
-                        onMouseDown={(e) => e.preventDefault()} // Prevenir blur inmediato
-                        onTouchStart={(e) => e.stopPropagation()} // Prevenir scroll en móviles
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSkillSelect(skill); } }}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onTouchStart={(e) => e.stopPropagation()}
                         className="px-4 py-2 text-white hover:bg-[#3a3a3a] cursor-pointer border-b border-gray-600 last:border-b-0"
                       >
                         {skill.name}
@@ -650,7 +567,12 @@ export default function ValidacionPage() {
 
       {/* Modal de Éxito */}
       {showSuccessModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Registro exitoso"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        >
           <div className="bg-[#1f1a1a] rounded-2xl p-8 max-w-md w-full text-center">
             <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
@@ -700,8 +622,13 @@ export default function ValidacionPage() {
       )}
 
       {/* Modal de Error */}
-      {showErrorModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      {(showErrorModal || tokenErrorModal) && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Error de registro"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        >
           <div className="bg-[#1f1a1a] rounded-2xl p-8 max-w-md w-full text-center">
             <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
@@ -719,9 +646,9 @@ export default function ValidacionPage() {
               </svg>
             </div>
             <h3 className="text-2xl font-bold text-white mb-2">Error</h3>
-            <p className="text-gray-300 mb-6">{submissionError}</p>
+            <p className="text-gray-300 mb-6">{submissionError || tokenError}</p>
             <button
-              onClick={() => setShowErrorModal(false)}
+              onClick={handleCloseErrorModal}
               className="bg-[#CA2B26] hover:bg-[#a82320] text-white px-8 py-3 rounded-lg font-medium transition-colors w-full"
             >
               Aceptar

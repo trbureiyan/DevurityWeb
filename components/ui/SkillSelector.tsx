@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useDeferredValue, useMemo } from "react";
+import { useAvailableSkills } from "@/hooks/useAvailableSkills";
 
 interface SkillSelectorProps {
   selectedSkills: string[];
@@ -13,57 +14,20 @@ export default function SkillSelector({
   onChange,
   maxSkills = 15,
 }: SkillSelectorProps) {
-  const [availableSkills, setAvailableSkills] = useState<string[]>([]);
+  const availableSkills = useAvailableSkills();
   const [skillInput, setSkillInput] = useState("");
-  const [filteredSkills, setFilteredSkills] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
-  // Cargar habilidades disponibles
-  useEffect(() => {
-    const fetchSkills = async () => {
-      try {
-        const response = await fetch("/api/auth/skills");
-        const data = await response.json();
-        if (response.ok) {
-          setAvailableSkills(data.skills || []);
-          setFilteredSkills(data.skills || []);
-        }
-      } catch (error) {
-        console.error("Error fetching skills:", error);
-      }
-    };
+  // Derive filtered skills using deferred value for smooth typing
+  const deferredInput = useDeferredValue(skillInput);
+  const filteredSkills = useMemo(() => {
+    if (!deferredInput.trim()) return availableSkills;
+    return availableSkills.filter((skill) =>
+      skill.toLowerCase().includes(deferredInput.toLowerCase()),
+    );
+  }, [deferredInput, availableSkills]);
 
-    fetchSkills();
-  }, []);
-
-  // Debounce para detectar cuando el usuario deja de escribir
-  useEffect(() => {
-    if (typingTimeout) {
-      clearTimeout(typingTimeout);
-    }
-
-    if (skillInput.trim() === "") {
-      setFilteredSkills(availableSkills);
-      setShowSuggestions(false);
-    } else {
-      const timeout = setTimeout(() => {
-        const filtered = availableSkills.filter((skill) =>
-          skill.toLowerCase().includes(skillInput.toLowerCase())
-        );
-        setFilteredSkills(filtered);
-        setShowSuggestions(true);
-      }, 300);
-
-      setTypingTimeout(timeout);
-    }
-
-    return () => {
-      if (typingTimeout) {
-        clearTimeout(typingTimeout);
-      }
-    };
-  }, [skillInput, availableSkills]);
+  const showSuggestions = isOpen && filteredSkills.length > 0;
 
   const handleSkillInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSkillInput(e.target.value);
@@ -135,8 +99,8 @@ export default function SkillSelector({
           value={skillInput}
           onChange={handleSkillInputChange}
           onKeyDown={handleKeyDown}
-          onFocus={() => setShowSuggestions(true)}
-          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setTimeout(() => setIsOpen(false), 200)}
           placeholder={
             selectedSkills.length === 0
               ? "Escribe para buscar habilidades..."
@@ -157,7 +121,11 @@ export default function SkillSelector({
           {filteredSkills.map((skill) => (
             <div
               key={skill}
+              role="option"
+              tabIndex={0}
+              aria-selected={false}
               onClick={() => handleSkillSelect(skill)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSkillSelect(skill); }}
               onMouseDown={(e) => e.preventDefault()} // Prevenir blur inmediato
               className="px-4 py-2 text-white/90 hover:bg-[#da292e]/20 hover:text-white cursor-pointer border-b border-white/5 last:border-b-0 transition-colors text-sm"
             >

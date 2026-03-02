@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useDeferredValue, useMemo } from "react";
+import { usePrograms } from "@/hooks/usePrograms";
 
 interface ProgramSelectorProps {
   value: string | null;
@@ -21,77 +22,40 @@ export default function ProgramSelector({
   helperText = "Selecciona un programa de la lista desplegable.",
   maxHeight = "max-h-48",
 }: ProgramSelectorProps) {
-  const [programs, setPrograms] = useState<string[]>([]);
-  const [inputValue, setInputValue] = useState(value ?? "");
-  const [filteredPrograms, setFilteredPrograms] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(
-    null,
-  );
+  const programs = usePrograms();
+  const [inputValue, setInputValue] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
 
-  useEffect(() => {
+  // Sync local input value from parent prop without useEffect (derived state pattern)
+  const [prevValue, setPrevValue] = useState<string | null | undefined>(undefined);
+  if (value !== prevValue) {
+    setPrevValue(value);
     setInputValue(value ?? "");
-  }, [value]);
+  }
 
-  useEffect(() => {
-    const fetchPrograms = async () => {
-      try {
-        const response = await fetch("/api/auth/programs");
-        const data = await response.json();
-        if (response.ok) {
-          const list = data.programs || [];
-          setPrograms(list);
-          setFilteredPrograms(list);
-        }
-      } catch (error) {
-        console.error("Error fetching programs:", error);
-      }
-    };
+  // Derive filtered programs using deferred value for smooth typing
+  const deferredInput = useDeferredValue(inputValue);
+  const filteredPrograms = useMemo(() => {
+    if (!deferredInput.trim()) return programs;
+    return programs.filter((program) =>
+      program.toLowerCase().includes(deferredInput.toLowerCase()),
+    );
+  }, [deferredInput, programs]);
 
-    fetchPrograms();
-  }, []);
-
-  useEffect(() => {
-    // Debounce de filtro local para no recalcular en cada pulsación
-    if (typingTimeout) {
-      clearTimeout(typingTimeout);
-    }
-
-    if (inputValue.trim() === "") {
-      setFilteredPrograms(programs);
-      setShowSuggestions(false);
-    } else {
-      const timeout = setTimeout(() => {
-        const filtered = programs.filter((program) =>
-          program.toLowerCase().includes(inputValue.toLowerCase()),
-        );
-        setFilteredPrograms(filtered);
-        setShowSuggestions(true);
-      }, 250);
-
-      setTypingTimeout(timeout);
-    }
-
-    return () => {
-      if (typingTimeout) {
-        clearTimeout(typingTimeout);
-      }
-    };
-  }, [inputValue, programs]);
+  const showSuggestions = isOpen && filteredPrograms.length > 0;
 
   const handleSelect = (programName: string) => {
     // Selecciona y cierra el dropdown
     setInputValue(programName);
     onChange(programName);
-    setShowSuggestions(false);
+    setIsOpen(false);
   };
 
   const handleClear = () => {
     // Limpia selección y restablece listado completo
     setInputValue("");
     onChange(null);
-    setFilteredPrograms(programs);
-    setShowSuggestions(false);
+    setIsOpen(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -111,8 +75,8 @@ export default function ProgramSelector({
           <input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onFocus={() => setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            onFocus={() => setIsOpen(true)}
+            onBlur={() => setTimeout(() => setIsOpen(false), 150)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             className="w-full bg-transparent border-none outline-none text-white placeholder-white/40 text-sm"
@@ -139,7 +103,11 @@ export default function ProgramSelector({
           {filteredPrograms.map((program) => (
             <div
               key={program}
+              role="option"
+              tabIndex={0}
+              aria-selected={false}
               onClick={() => handleSelect(program)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelect(program); }}
               onMouseDown={(e) => e.preventDefault()}
               className="px-4 py-2 text-white/90 hover:bg-[#da292e]/20 hover:text-white cursor-pointer border-b border-white/5 last:border-b-0 transition-colors text-sm"
             >
