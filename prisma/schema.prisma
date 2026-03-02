@@ -104,7 +104,7 @@ model users {
 }
 
 /// Modelo para noticias, eventos y actualizaciones del semillero
-/// Actualiza datos hardcodeados en lib/constants/updates.ts
+/// Nota: lib/constants/updates.ts fue movido a _deprecated/ (sin uso activo en el codebase)
 model updates {
   id            BigInt    @id @default(autoincrement())
   slug          String    @unique
