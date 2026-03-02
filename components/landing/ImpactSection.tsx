@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { IMAGES } from '@/public/images';
 
 // Primer segmento - Presentacion
@@ -37,12 +38,12 @@ export default function ImpactSection() {
             
             {/* Botón de CTA */}
             <div className="mt-6 sm:mt-8 px-4 sm:px-8">
-              <a
+              <Link
                 href="/projects"
                 className="inline-block w-full sm:w-auto text-center bg-variable-collection-botones text-white font-ubuntu font-bold text-sm sm:text-base px-6 sm:px-8 py-3 sm:py-4 rounded-lg hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-lg hover:shadow-variable-collection-botones/50"
               >
                 Observa nuestros proyectos
-              </a>
+              </Link>
             </div>
           </div>
           
