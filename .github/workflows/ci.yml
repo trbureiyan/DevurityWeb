@@ -10,12 +10,26 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: devurity_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
-      # Usa secrets si están configurados; cae a valores dummy para CI puro
-      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/devurity_ci?schema=public' }}
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/devurity_ci?schema=public"
       JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-not-a-real-secret' }}
-      NEXT_PUBLIC_APP_URL: "https://devurity.com"
-      NEXT_PUBLIC_API_URL: "https://devurity.com"
+      NEXT_PUBLIC_APP_URL: "https://devurity-web.vercel.app"
+      NEXT_PUBLIC_API_URL: "https://devurity-web.vercel.app"
 
     steps:
       - name: Checkout
