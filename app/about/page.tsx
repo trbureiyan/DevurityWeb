@@ -1,10 +1,8 @@
-"use client";
-
 import Image from "next/image";
 import { IMAGES } from "@/public/images";
-import { useEffect, useState } from "react";
 import logger from "@/lib/logger";
 import TeamMemberCard from "@/components/about/TeamMemberCard";
+import { findActiveUsersForTeam } from "@/repositories/users/users.repositories";
 
 type SocialLink = {
   icon: string;
@@ -23,32 +21,64 @@ type TeamMember = {
   socialLinks?: SocialLink[];
 };
 
-// Página "Sobre nosotros": presenta misión, visión y grid dinámico de integrantes desde /api/team.
-export default function AboutPage() {
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Carga miembros del equipo desde API pública; registra errores en logger.
-    async function loadTeamMembers() {
-      try {
-        const response = await fetch("/api/team");
-        const data = await response.json();
-        
-        if (data.success && data.members) {
-          setTeamMembers(data.members);
-        } else {
-          logger.error("Error loading team members:", data.error);
-        }
-      } catch (error) {
-        logger.error("Error fetching team members:", { error });
-      } finally {
-        setLoading(false);
+/**
+ * Obtiene y transforma los miembros activos del equipo desde la base de datos
+ * 
+ * Esta función consulta los usuarios activos del equipo y los transforma al formato
+ * requerido por el componente TeamMemberCard, procesando sus enlaces sociales,
+ * habilidades y datos personales.
+ * 
+ * @returns {Promise<TeamMember[]>} Array de miembros del equipo con sus datos formateados
+ * @returns {Promise<TeamMember[]>} Array vacío si ocurre un error en la consulta
+ * 
+ * @example
+ * const members = await getTeamMembers();
+ * // [{ id: "1", name: "Juan Pérez", role: "Developer", ... }]
+ */
+async function getTeamMembers(): Promise<TeamMember[]> {
+  try {
+    // Consulta usuarios activos del equipo desde el repositorio
+    const users = await findActiveUsersForTeam();
+    
+    // Transforma cada usuario al formato TeamMember
+    return users.map((user) => {
+      // Construye array de enlaces sociales desde las plataformas del usuario
+      const socialLinks: SocialLink[] = [];
+      if (user.platforms && user.platforms.length > 0) {
+        user.platforms.forEach((platform) => {
+          socialLinks.push({
+            icon: platform.name.toLowerCase(), // Nombre en minúsculas para iconos
+            url: platform.link,
+            label: platform.name,
+          });
+        });
       }
-    }
+      
+      // Retorna objeto TeamMember con datos formateados
+      return {
+        id: user.id,
+        name: `${user.name} ${user.last_name}`, // Concatena nombre y apellido
+        username: user.username ?? undefined,
+        role: user.role,
+        bio: user.motivation || "Miembro del equipo Devurity", // Fallback si no hay motivación
+        avatar: undefined, // Por definir en futuras implementaciones
+        tagline:
+          user.skills.length > 0
+            ? user.skills.slice(0, 3).join(" \u2022 ") // Muestra máximo 3 habilidades separadas por bullet
+            : undefined,
+        socialLinks: socialLinks.slice(0, 3), // Limita a 3 enlaces sociales
+      };
+    });
+  } catch (error) {
+    // Registra el error y retorna array vacío para no romper la UI
+    logger.error("Error fetching team members:", { error });
+    return [];
+  }
+}
 
-    loadTeamMembers();
-  }, []);
+// Página "Sobre nosotros": presenta misión, visión y grid dinámico de integrantes.
+export default async function AboutPage() {
+  const teamMembers = await getTeamMembers();
 
   return (
     <main className="min-h-screen bg-black text-white overflow-hidden">
@@ -302,22 +332,7 @@ export default function AboutPage() {
 
           {/* Team Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
-            {loading ? (
-              // Loading skeleton
-              Array.from({ length: 8 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-zinc-900/50 rounded-2xl overflow-hidden animate-pulse"
-                >
-                  <div className="aspect-square bg-zinc-800"></div>
-                  <div className="p-6 space-y-3">
-                    <div className="h-6 bg-zinc-800 rounded"></div>
-                    <div className="h-4 bg-zinc-800 rounded w-3/4"></div>
-                    <div className="h-3 bg-zinc-800 rounded"></div>
-                  </div>
-                </div>
-              ))
-            ) : teamMembers.length > 0 ? (
+            {teamMembers.length > 0 ? (
               teamMembers.map((member) => (
                 <TeamMemberCard
                   key={member.id}
