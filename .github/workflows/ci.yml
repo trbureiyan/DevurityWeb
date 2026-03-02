@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      # Variables mínimas para que el build pase sin secretos reales
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/devurity_ci?schema=public"
+      JWT_SECRET: "ci-only-not-a-real-secret"
+      NEXT_PUBLIC_APP_URL: "https://devurity.com"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
