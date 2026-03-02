@@ -204,7 +204,7 @@ export default function ValidacionPage() {
         body: JSON.stringify({
           semester: parseInt(formData.semester),
           motivation: formData.motivation,
-          skills: formData.skills,
+          skills: formData.skills.map((s) => s.id),
           program: formData.program,
           password: formData.password,
         }),
