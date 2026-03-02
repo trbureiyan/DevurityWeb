@@ -52,6 +52,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Apply DB schema
+        run: npx prisma db push --skip-generate
+
+      - name: Seed database
+        run: npm run db:seed
+
+      # Tests deshabilitados temporalmente — habilitar cuando estén listos para CI
+      # - name: Run unit tests
+      #   run: npm test
+
       - name: Lint
         run: npm run lint
 
