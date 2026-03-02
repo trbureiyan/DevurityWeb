@@ -179,7 +179,7 @@ const registerEmailTemplate = (RegisterLink: string) => {
       <p>Gracias por presentar interes en <span class="highlight">DEVURITY</span>, el <strong>Semillero de Innovación Tecnológica</strong>.</p>
       <p>Para completar tu registro, por favor confirma tu correo haciendo clic en el botón de abajo para continuar con tu registro:</p>
       <p style="text-align: center;">
-        <a href="${process.env.DOMAIN}/auth/register/${encodeURIComponent(RegisterLink)}" class="cta-button">Confirmar Correo</a>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://devurity.com'}/auth/register/${encodeURIComponent(RegisterLink)}" class="cta-button">Confirmar Correo</a>
       </p>
       <p>Este enlace expirará en 24 horas. Si no lo usas, deberás solicitar un nuevo enlace.</p>
       <p>Si no solicitaste este registro, puedes ignorar este mensaje.</p>
