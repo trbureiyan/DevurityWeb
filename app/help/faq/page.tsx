@@ -83,7 +83,7 @@ export default function FAQPage() {
       <div className="space-y-6">
         {faqs.map((item, i) => (
           <article
-            key={i}
+            key={item.q}
             ref={(el) => {
               articleRefs.current[i] = el;
             }}
@@ -117,13 +117,21 @@ export default function FAQPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            role="button"
+            tabIndex={0}
+            aria-label="Cerrar modal"
             onClick={closeModal}
+            onKeyDown={(e) => e.key === "Enter" && closeModal()}
           />
 
           <div
             className="relative z-10 max-w-3xl w-full bg-[var(--variable-collection-placeholder)]/95
                        border border-[var(--color-selected)] rounded-2xl p-6 shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Detalle de pregunta frecuente"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           >
             <h2 className="text-xl font-orbitron">{activeFAQ.q}</h2>
 
