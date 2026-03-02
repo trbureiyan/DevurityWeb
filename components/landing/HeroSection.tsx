@@ -18,6 +18,7 @@ export default function HeroSection({ quickNavItems }: HeroSectionProps) {
           src={IMAGES.landing.banner}
           alt="Background waves"
           fill
+          sizes="100vw"
           className="object-cover"
           priority
         />
@@ -76,9 +77,9 @@ export default function HeroSection({ quickNavItems }: HeroSectionProps) {
 
       {/* Menú de navegación rápida lateral derecho */}
       <nav className="hidden xl:flex fixed right-8 top-1/2 -translate-y-1/2 flex-col gap-8 z-10">
-        {quickNavItems.map((item, index) => (
+        {quickNavItems.map((item) => (
           <a
-            key={index}
+            key={item.href}
             href={item.href}
             className="group relative font-ubuntu text-white/70 hover:text-white text-sm transition-colors duration-300 text-right pb-2"
           >

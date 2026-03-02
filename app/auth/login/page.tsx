@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { IMAGES } from "@/public/images";
@@ -19,6 +19,14 @@ interface FormErrors {
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -168,7 +176,7 @@ export default function LoginPage() {
             <div className="relative w-full h-full">
               {slides.map((slide, index) => (
                 <div
-                  key={index}
+                  key={slide.title}
                   className={`absolute inset-0 transition-opacity duration-500 ${
                     index === currentSlide ? "opacity-100" : "opacity-0"
                   }`}
@@ -179,6 +187,7 @@ export default function LoginPage() {
                       src={slide.image}
                       alt={slide.title}
                       fill
+                      sizes="(max-width: 1024px) 100vw, 50vw"
                       className="object-cover"
                       priority={index === 0}
                     />
@@ -204,9 +213,9 @@ export default function LoginPage() {
 
             {/* Controles del carrusel */}
             <div className="absolute bottom-6 left-0 right-0 flex items-center justify-center gap-2 z-10">
-              {slides.map((_, index) => (
+              {slides.map((slide, index) => (
                 <button
-                  key={index}
+                  key={slide.title}
                   onClick={() => setCurrentSlide(index)}
                   className={`h-2 rounded-full transition-all duration-300 ${
                     index === currentSlide
@@ -423,7 +432,12 @@ export default function LoginPage() {
       </div>
       {/* Modal de Error */}
       {showErrorModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Error de inicio de sesión"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        >
           <div className="bg-[#1f1a1a] rounded-2xl p-8 max-w-md w-full text-center">
             <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg

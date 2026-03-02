@@ -99,9 +99,9 @@ export default function Footer() {
               className="flex flex-col space-y-2"
               aria-label="Footer navigation"
             >
-              {footerLinks.map((link, index) => (
+              {footerLinks.map((link) => (
                 <Link
-                  key={index}
+                  key={link.href}
                   href={link.href}
                   className="font-ubuntu text-[#9ca3af] text-sm hover:text-variable-collection-link transition-colors duration-200 inline-block"
                 >
@@ -117,9 +117,9 @@ export default function Footer() {
               Síguenos
             </h4>
             <div className="flex justify-center md:justify-start lg:justify-end items-center gap-4 mb-4">
-              {socialLinks.map((social, index) => (
+              {socialLinks.map((social) => (
                 <a
-                  key={index}
+                  key={social.name}
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -152,8 +152,8 @@ export default function Footer() {
               { name: "Manuel Felipe Rojas Yasno" },
               { name: "Juan Camilo Mora Castañeda" },
               { name: "Pablo Trujillo Artunduaga" },
-            ].map((author, index) => (
-              <div key={index} className="flex flex-col">
+            ].map((author) => (
+              <div key={author.name} className="flex flex-col">
                 <span className="font-ubuntu text-[#9ca3af] text-xs font-medium hover:text-white transition-colors duration-200">
                   {author.name}
                 </span>
