@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tooltip } from "../ui/Tooltip";
 import { USERNAME } from "@/lib/constants/validation";
 
@@ -20,7 +20,7 @@ export function UsernameEditor({
   isEditing,
   onUsernameChange,
 }: UsernameEditorProps) {
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(currentUsername);
   const [error, setError] = useState<string | null>(null);
 
   // Compute canChange and nextChangeDate directly from props (no useEffect needed)
@@ -35,12 +35,10 @@ export function UsernameEditor({
     return { canChange: true, nextChangeDate: null };
   })();
 
-  // Sync local state only when the prop changes (key reset pattern alternative)
-  const [prevUsername, setPrevUsername] = useState<string | undefined>(undefined);
-  if (currentUsername !== prevUsername) {
-    setPrevUsername(currentUsername);
+  // Sync local state when currentUsername prop changes (safe for Concurrent Rendering)
+  useEffect(() => {
     setUsername(currentUsername);
-  }
+  }, [currentUsername]);
 
   const validateUsername = (value: string): string | null => {
     // Sanitiza y aplica reglas de longitud/patrón
