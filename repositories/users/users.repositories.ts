@@ -768,6 +768,8 @@ export async function updateUserProfile(
                   .substring(0, 60) + `-${Date.now()}`,
                 title: proj.title,
                 description: projectLink !== '#' ? projectLink : "Created from profile",
+                focus_areas: [],
+                stack: [],
               },
             });
           }
