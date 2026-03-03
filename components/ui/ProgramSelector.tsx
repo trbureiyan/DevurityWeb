@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useDeferredValue, useMemo } from "react";
+import React, { useState, useDeferredValue, useMemo, useEffect } from "react";
 import { usePrograms } from "@/hooks/usePrograms";
 
 interface ProgramSelectorProps {
@@ -23,15 +23,14 @@ export default function ProgramSelector({
   maxHeight = "max-h-48",
 }: ProgramSelectorProps) {
   const programs = usePrograms();
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState(value ?? "");
   const [isOpen, setIsOpen] = useState(false);
 
-  // Sync local input value from parent prop without useEffect (derived state pattern)
-  const [prevValue, setPrevValue] = useState<string | null | undefined>(undefined);
-  if (value !== prevValue) {
-    setPrevValue(value);
+  // Sync local input value when the parent-controlled value changes
+  // (e.g. form reset, external selection). Safe with Concurrent Rendering.
+  useEffect(() => {
     setInputValue(value ?? "");
-  }
+  }, [value]);
 
   // Derive filtered programs using deferred value for smooth typing
   const deferredInput = useDeferredValue(inputValue);
