@@ -2,32 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { authMiddleware } from "./lib/auth/middleware";
 import { csrfAdapter } from "./lib/csrf";
-
-// Tipo extendido del payload JWT (ahora incluye role)
-interface JwtPayload {
-  sub: string;
-  role?: string;
-  exp?: number;
-}
-
-/**
- * Decode JWT payload without cryptographic verification (Edge-compatible).
- * Safe because: token is HttpOnly, was verified at login,
- * and full verification happens in API routes (Node.js runtime).
- */
-function decodeJwtPayload(token: string): JwtPayload | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-
-    // Base64url decode the payload (second part)
-    const payload = parts[1];
-    const decoded = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(decoded) as JwtPayload;
-  } catch {
-    return null;
-  }
-}
+import { verifyJwtPayload } from "./lib/auth/jwt-edge";
 
 const redirectMap: Record<string, string> = {
   "/auth": "/auth/login",
@@ -58,7 +33,7 @@ export async function middleware(
   // is trying to access the login page, redirect them to profile to
   // avoid showing the login UI to already-authenticated users.
   if (token && (normalisedPath === "/auth/login" || normalisedPath === "/login" || normalisedPath === "/auth")) {
-    const decoded = decodeJwtPayload(token);
+    const decoded = await verifyJwtPayload(token);
     if (decoded?.sub) {
       const url = request.nextUrl.clone();
       url.pathname = `/profile/${decoded.sub}`;
@@ -106,7 +81,7 @@ export async function middleware(
   // Verificar roles para rutas de admin — decodifica el JWT directamente
   // sin verificación criptográfica (Edge-compatible)
   if (currentPath.startsWith("/admin")) {
-    const roleCheck = checkUserRole(request, token);
+    const roleCheck = await checkUserRole(request, token);
     if (roleCheck) {
       return roleCheck;
     }
@@ -142,19 +117,19 @@ function denyAccess(request: NextRequest): NextResponse {
   }
 }
 
-// Función para verificar roles de usuario — decode JWT sin crypto (Edge-compatible)
-function checkUserRole(
+// Función para verificar roles de usuario — verifica firma HS256 con crypto.subtle (Edge-compatible)
+async function checkUserRole(
   request: NextRequest,
   token: string | undefined,
-): NextResponse | null {
+): Promise<NextResponse | null> {
   if (!token) {
     return denyAccess(request);
   }
 
-  const decoded = decodeJwtPayload(token);
+  const decoded = await verifyJwtPayload(token);
 
   if (!decoded) {
-    console.error("Error decodificando JWT en middleware");
+    console.error("JWT inválido o expirado en middleware de admin");
     return denyAccess(request);
   }
 
