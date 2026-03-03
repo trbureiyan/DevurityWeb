@@ -358,6 +358,8 @@ async function main() {
   for (const project of projectsCatalog) {
     await prisma.projects.upsert({
       where: { slug: project.slug },
+      // NOTA: start_date NO se actualiza intencionalmente para preservar la fecha
+      // histórica real del inicio del proyecto. Solo se establece durante la creación inicial.
       update: {
         title: project.title,
         description: project.description,
