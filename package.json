@@ -24,7 +24,7 @@
     "html5-qrcode": "^2.3.8",
     "i": "^0.3.7",
     "jsonwebtoken": "^9.0.2",
-    "next": "15.5.9",
+    "next": "^15.5.12",
     "nodemailer": "^7.0.9",
     "orbitron": "^0.1.0",
     "qrcode": "^1.5.4",
