@@ -28,8 +28,8 @@ model projects {
   title         String
   description   String
   stage         String          @default("incubacion") // incubacion | desarrollo | validacion | produccion | experimentacion
-  focus_areas   String[]
-  stack         String[]
+  focus_areas   String[]        @default([])
+  stack         String[]        @default([])
   hero_image    String?
   cta_label     String?
   cta_href      String?
