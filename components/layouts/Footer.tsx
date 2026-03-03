@@ -8,7 +8,7 @@ export default function Footer() {
     { label: "Sobre Nosotros", href: "/about" },
     { label: "Proyectos", href: "/projects" },
     { label: "Eventos", href: "/updates" },
-    { label: "Contacto", href: "/contact" },
+    { label: "Contacto", href: "/#contacto" },
   ];
 
   const socialLinks = [
