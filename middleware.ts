@@ -72,19 +72,19 @@ export async function middleware(
   if (token && (currentPath === "/auth/login" || currentPath === "/auth/register")) {
     try {
       const decoded = await validateAuthToken(token);
-      
+
       // Obtener el usuario para usar su username en lugar del ID
       const response = await fetch(`${request.nextUrl.origin}/api/auth/me`, {
         headers: { cookie: request.headers.get("cookie") || "" }
       });
-      
+
       if (response.ok) {
         const userData = await response.json();
         const profileSlug = userData.username || decoded.sub;
         const profileUrl = new URL(`/profile/${profileSlug}`, request.url);
         return NextResponse.redirect(profileUrl);
       }
-      
+
       // Fallback al ID si falla la obtención del username
       const profileUrl = new URL(`/profile/${decoded.sub}`, request.url);
       return NextResponse.redirect(profileUrl);
@@ -100,7 +100,7 @@ export async function middleware(
   }
 
   // Verificar roles para rutas de admin
-  if (currentPath.startsWith("/admin")) {
+  if (currentPath.startsWith("/admin") || currentPath.startsWith("/api/admin")) {
     const roleCheck = await checkUserRole(request);
     if (roleCheck) {
       return roleCheck;
