@@ -32,11 +32,8 @@ export function createApiErrorResponse(
 
 // Crear redirección a login
 export function createLoginRedirect(request: NextRequest): NextResponse {
-  const loginUrl = new URL("/login", request.url);
+  const loginUrl = new URL("/auth/login", request.url);
   const response = NextResponse.redirect(loginUrl);
-
-  // Eliminar cookie inválida
-  response.cookies.delete("auth_token");
 
   return response;
 }
