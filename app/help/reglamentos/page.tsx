@@ -180,7 +180,7 @@ const reglamentoCompleto = [
 /* ------------------------------- COMPONENTE ------------------------------- */
 export default function ReglamentosPage() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [activeArticle, setActiveArticle] = useState<any>(null);
+  const [activeArticle, setActiveArticle] = useState<{ titulo: string; numero: string; texto: string } | null>(null);
 
   // cerrar modal con ESC
   useEffect(() => {
@@ -189,7 +189,7 @@ export default function ReglamentosPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  function openModal(titulo: string, art: any) {
+  function openModal(titulo: string, art: { numero: string; texto: string }) {
     setActiveArticle({ titulo, ...art });
     setModalOpen(true);
   }
@@ -212,7 +212,7 @@ export default function ReglamentosPage() {
 
       {/* --- BLOQUES DE REGLAS --- */}
       <div className="space-y-6">
-        {reglamentoCompleto.map((bloque, bi) => (
+        {reglamentoCompleto.map((bloque, _bi) => (
           <details
             key={bloque.titulo}
             className="group border border-[var(--color-selected)] bg-[var(--placeholder)]/8 rounded-2xl
@@ -227,7 +227,7 @@ export default function ReglamentosPage() {
             </summary>
 
             <div className="px-6 pb-6 pt-4 space-y-4">
-              {bloque.articulos.map((art, ai) => (
+              {bloque.articulos.map((art, _ai) => (
                 <article
                   key={art.numero}
                   className="p-4 rounded-lg border border-[var(--color-selected)]
