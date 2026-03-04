@@ -4,7 +4,7 @@ import {
   createSkill,
 } from "@/repositories/skills/skills.repositories";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const skills = await getAllSkills();
     return NextResponse.json({ success: true, data: skills });
@@ -34,10 +34,10 @@ export async function POST(request: NextRequest) {
       { success: true, data: newSkill },
       { status: 201 },
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error creating skill:", error);
 
-    if (error.code === "P2002") {
+    if ((error as { code?: string }).code === "P2002") {
       return NextResponse.json(
         { success: false, error: "A skill with this name already exists" },
         { status: 409 },

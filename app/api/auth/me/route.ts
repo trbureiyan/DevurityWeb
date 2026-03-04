@@ -5,10 +5,9 @@ import logger from "@/lib/logger";
 
 // Simple in-memory cache for /api/auth/me
 // This cache is process-local and intended as a short-lived optimization (dev/staging or single-instance)
-type CacheEntry = { value: any; expiresAt: number };
-const ME_CACHE = (global as any).__meCache || new Map<string, CacheEntry>();
-(global as any).__meCache = ME_CACHE;
-const ME_CACHE_TTL = 30 * 1000; // 30 seconds
+type CacheEntry = { value: unknown; expiresAt: number };
+const ME_CACHE = ((global as Record<string, unknown>).__meCache as Map<string, CacheEntry> | undefined) ?? new Map<string, CacheEntry>();
+(global as Record<string, unknown>).__meCache = ME_CACHE;
 
 export async function GET(request: NextRequest) {
   try {

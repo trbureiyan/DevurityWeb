@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     // If userId is provided, return single user
     if (userId) {
       const result = await findInactiveUsersWithPagination(1, 1000); // Get all inactive users
-      const user = result.users.find((u: any) => u.id === userId);
+      const user = result.users.find((u: { id: unknown }) => u.id === userId);
 
       if (!user) {
         return NextResponse.json(
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Helper function to recursively serialize BigInt values to strings
-function serializeBigInt(obj: any): any {
+function serializeBigInt(obj: unknown): unknown {
   if (obj === null || obj === undefined) {
     return obj;
   }
@@ -85,7 +85,7 @@ function serializeBigInt(obj: any): any {
   }
 
   if (typeof obj === "object") {
-    const result: any = {};
+    const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       result[key] = serializeBigInt(value);
     }

@@ -8,7 +8,7 @@ import { EmailOptions, sendEmail } from "@/lib/email";
 import { errorRequest } from "@/lib/error";
 
 // Helper function to serialize BigInt values
-function serializeBigInt(obj: any): any {
+function serializeBigInt(obj: unknown): unknown {
   if (obj === null || obj === undefined) {
     return obj;
   }
@@ -22,7 +22,7 @@ function serializeBigInt(obj: any): any {
   }
 
   if (typeof obj === "object") {
-    const result: any = {};
+    const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       result[key] = serializeBigInt(value);
     }
