@@ -22,9 +22,6 @@
     "db:deploy:dry": "DRY_RUN=1 tsx scripts/deploy-db.ts deploy",
     "db:status": "tsx scripts/deploy-db.ts status"
   },
-  "prisma": {
-    "seed": "npm run db:seed"
-  },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.17.1",
