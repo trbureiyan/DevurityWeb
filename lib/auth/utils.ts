@@ -1,4 +1,4 @@
-import { validateToken } from "../jwt";
+import { verifyJwtPayload } from "./jwt-edge";
 import { NextRequest, NextResponse } from "next/server";
 
 //Extraer token de las cookies
@@ -6,17 +6,17 @@ export function extractTokenFromCookies(request: NextRequest): string | null {
   return request.cookies.get("auth_token")?.value || null;
 }
 
-//Validar token y extraer datos
+//Validar token y extraer datos (Edge-compatible, usa Web Crypto API)
 export async function validateAuthToken(
   token: string,
 ): Promise<{ sub: string }> {
-  const decoded = (await validateToken(token)) as { sub: string };
+  const decoded = await verifyJwtPayload(token);
 
-  if (!decoded.sub) {
+  if (!decoded?.sub) {
     throw new Error("Token inválido: falta subject");
   }
 
-  return decoded;
+  return { sub: decoded.sub };
 }
 
 //Crear respuesta de error para APIs

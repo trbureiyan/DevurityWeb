@@ -531,7 +531,7 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
       </section>
 
       {/* ═══ Sección destacada + Agenda rápida ═══ */}
-      <section className="relative bg-black py-24 -mt-px">
+      {highlight && <section className="relative bg-black py-24 -mt-px">
         <div className="container mx-auto px-6 md:px-12">
           <div className="grid lg:grid-cols-[1.3fr_0.7fr] gap-16 items-start">
 
@@ -669,7 +669,7 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
             </aside>
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* ═══ Historial ═══ */}
       <section id="historial" className="relative bg-black py-24">
