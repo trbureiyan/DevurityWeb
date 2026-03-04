@@ -46,6 +46,7 @@ function TeamAvatars({
               src={member.avatarUrl}
               alt={member.name}
               fill
+              sizes="30px"
               className="object-cover"
             />
           ) : (
@@ -104,6 +105,7 @@ export default function ProjectsPreviewSection({ projects }: ProjectsPreviewSect
                       src={project.imageUrl}
                       alt={project.title}
                       fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       className="object-cover"
                     />
                   </div>
@@ -136,9 +138,9 @@ export default function ProjectsPreviewSection({ projects }: ProjectsPreviewSect
 
               {/* Tags de tecnologías */}
               <div className="flex flex-wrap gap-2 items-center">
-                {project.tags.map((tag, index) => (
+                {project.tags.map((tag) => (
                   <span
-                    key={index}
+                    key={tag}
                     className="font-ubuntu text-[#d5d9e9] text-base leading-normal"
                     style={{ textShadow: "rgba(0,0,0,0.12) 0px 4px 4px" }}
                   >

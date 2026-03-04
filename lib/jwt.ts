@@ -8,7 +8,7 @@ if (!JWT_SECRET) {
 
 export const generateToken = async (
   payload: object,
-  expiresIn: number = 86400 /* expira en 1 horas*/,
+  expiresIn: number = 86400 /* expira en 24 horas */,
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     jwt.sign(payload, JWT_SECRET, { expiresIn: expiresIn }, (err, token) => {

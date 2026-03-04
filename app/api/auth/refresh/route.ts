@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     let decoded;
     try {
       decoded = (await validateToken(currentToken)) as { sub: string };
-    } catch (error) {
+    } catch {
       // Token inválido o expirado
       return NextResponse.json(
         { error: "Token inválido o expirado" },

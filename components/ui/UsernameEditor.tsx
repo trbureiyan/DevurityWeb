@@ -22,29 +22,23 @@ export function UsernameEditor({
 }: UsernameEditorProps) {
   const [username, setUsername] = useState(currentUsername);
   const [error, setError] = useState<string | null>(null);
-  const [canChange, setCanChange] = useState(true);
-  const [nextChangeDate, setNextChangeDate] = useState<Date | null>(null);
 
+  // Compute canChange and nextChangeDate directly from props (no useEffect needed)
+  const { canChange, nextChangeDate } = (() => {
+    if (!usernameLastChanged) return { canChange: true, nextChangeDate: null };
+    const lastChanged = new Date(usernameLastChanged);
+    const oneWeekLater = new Date(lastChanged.getTime() + USERNAME.CHANGE_COOLDOWN);
+    const now = new Date();
+    if (now < oneWeekLater) {
+      return { canChange: false, nextChangeDate: oneWeekLater };
+    }
+    return { canChange: true, nextChangeDate: null };
+  })();
+
+  // Sync local state when currentUsername prop changes (safe for Concurrent Rendering)
   useEffect(() => {
     setUsername(currentUsername);
   }, [currentUsername]);
-
-  useEffect(() => {
-    // Calcula si se puede cambiar (cooldown semanal) y fecha del próximo cambio; el padre decide cuándo persistir
-    if (usernameLastChanged) {
-      const lastChanged = new Date(usernameLastChanged);
-      const oneWeekLater = new Date(lastChanged.getTime() + USERNAME.CHANGE_COOLDOWN);
-      const now = new Date();
-
-      if (now < oneWeekLater) {
-        setCanChange(false);
-        setNextChangeDate(oneWeekLater);
-      } else {
-        setCanChange(true);
-        setNextChangeDate(null);
-      }
-    }
-  }, [usernameLastChanged]);
 
   const validateUsername = (value: string): string | null => {
     // Sanitiza y aplica reglas de longitud/patrón

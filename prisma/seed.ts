@@ -258,6 +258,135 @@ async function main() {
 
   console.log(`✅ Skills processed: ${createdCount} created, ${existingCount} already existed`);
 
+  // Crear proyectos del catálogo
+  const projectsCatalog = [
+    {
+      slug: "secops-honeynet",
+      title: "SecOps Honeynet",
+      description:
+        "Infraestructura contenida de honeypots para observar tácticas reales y ajustar la postura defensiva con datos verificables.",
+      stage: "incubacion",
+      focus_areas: ["Ciberseguridad"],
+      stack: ["Python"],
+      hero_image: null,
+      cta_label: null,
+      cta_href: null,
+      start_date: new Date("2025-09-04"),
+    },
+    {
+      slug: "maqagr-app",
+      title: "Desarrollo de Aplicación Agrícola (MaqAgr)",
+      description:
+        "Aplicativo web que aborda la baja mecanización del campo colombiano. Integra cálculos para verificar la compatibilidad tractor-implemento (potencia, terreno y especificaciones), apoyando decisiones que reducen costos y evitan daños al suelo.",
+      stage: "desarrollo",
+      focus_areas: ["Agrotech", "Productividad"],
+      stack: ["Node.js", "React", "Tailwind", "MongoDB"],
+      hero_image: null,
+      cta_label: "Poster en AmiTIC 2025",
+      cta_href: "https://www.linkedin.com/feed/update/urn:li:activity:7386808584354971648",
+      start_date: new Date("2025-09-26"),
+    },
+    {
+      slug: "devurity-web",
+      title: "Pagina Oficial del Semillero Devurity",
+      description:
+        "Plataforma web informativa y de gestión para el semillero, destacando proyectos, eventos y facilitando la colaboración entre miembros.",
+      stage: "produccion",
+      focus_areas: ["Desarrollo Web", "Comunidad", "Diseño UI/UX", "Branding"],
+      stack: ["Next.js", "React", "Typescript", "Open Source", "TailwindCSS", "Prisma", "PostgreSQL"],
+      hero_image: null,
+      cta_label: "Repositorio público",
+      cta_href: "https://www.github.com/trbureiyan/DevurityWeb",
+      start_date: new Date("2025-11-06"),
+    },
+    {
+      slug: "granja-hrm",
+      title: "Sistema de Gestión de Personal (Granja)",
+      description:
+        "Plataforma operativa para turnos, bases de datos y control documental del talento en granjas tecnificadas.",
+      stage: "incubacion",
+      focus_areas: ["Operaciones", "RRHH"],
+      stack: [],
+      hero_image: null,
+      cta_label: null,
+      cta_href: null,
+      start_date: new Date("2025-10-16"),
+    },
+    {
+      slug: "cancer-temprano",
+      title: "Detección de Cáncer en Etapas Tempranas",
+      description:
+        "Flujo de trabajo para analizar información y destacar registros con características de interés.",
+      stage: "experimentacion",
+      focus_areas: ["Salud"],
+      stack: [],
+      hero_image: null,
+      cta_label: null,
+      cta_href: null,
+      start_date: new Date("2025-08-28"),
+    },
+    {
+      slug: "enterprise-cyber-lab",
+      title: "Entorno de Ciberseguridad Empresarial",
+      description:
+        "Laboratorio controlado para evaluar amenazas internas, ejercicios de respuesta y cumplimiento basado en escenarios de negocio.",
+      stage: "incubacion",
+      focus_areas: ["Ciberseguridad", "Compliance"],
+      stack: ["Linux"],
+      hero_image: null,
+      cta_label: null,
+      cta_href: null,
+      start_date: new Date("2025-09-04"),
+    },
+    {
+      slug: "modalidad-grado",
+      title: "Proyecto Modalidad de Grado",
+      description:
+        "Iniciativa transversal que consolida entregables académicos, investigación aplicada y transferencia de conocimiento.",
+      stage: "incubacion",
+      focus_areas: ["Investigacion", "Educacion"],
+      stack: [],
+      hero_image: null,
+      cta_label: null,
+      cta_href: null,
+      start_date: new Date("2025-10-09"),
+    },
+  ];
+
+  console.log(`⏳ Creating ${projectsCatalog.length} projects...`);
+
+  for (const project of projectsCatalog) {
+    await prisma.projects.upsert({
+      where: { slug: project.slug },
+      // NOTA: start_date NO se actualiza intencionalmente para preservar la fecha
+      // histórica real del inicio del proyecto. Solo se establece durante la creación inicial.
+      update: {
+        title: project.title,
+        description: project.description,
+        stage: project.stage,
+        focus_areas: project.focus_areas,
+        stack: project.stack,
+        hero_image: project.hero_image,
+        cta_label: project.cta_label,
+        cta_href: project.cta_href,
+      },
+      create: {
+        slug: project.slug,
+        title: project.title,
+        description: project.description,
+        stage: project.stage,
+        focus_areas: project.focus_areas,
+        stack: project.stack,
+        hero_image: project.hero_image,
+        cta_label: project.cta_label,
+        cta_href: project.cta_href,
+        start_date: project.start_date,
+      },
+    });
+  }
+
+  console.log(`✅ Projects processed: ${projectsCatalog.length} upserted`);
+
   // Crear updates/noticias iniciales
   const updates = [
     {

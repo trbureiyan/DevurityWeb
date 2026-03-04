@@ -53,6 +53,10 @@ export default function MobileMenu({
           isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"
         }`}
         onClick={closeMenu}
+        onKeyDown={(e) => { if (e.key === 'Escape') closeMenu(); }}
+        role="button"
+        tabIndex={-1}
+        aria-label="Cerrar menú"
         aria-hidden={!isMenuOpen}
       />
 
@@ -133,8 +137,8 @@ export default function MobileMenu({
           )}
 
           <ul className="space-y-1">
-            {navigationItems.map((item, index) => (
-              <li key={index}>
+            {navigationItems.map((item) => (
+              <li key={item.href}>
                 <Link
                   href={item.href}
                   className="block font-ubuntu font-medium text-white text-lg py-4 px-4 hover:text-variable-collection-link hover:bg-white/5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-variable-collection-link focus:ring-inset"

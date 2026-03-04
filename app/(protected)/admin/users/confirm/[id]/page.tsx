@@ -182,26 +182,26 @@ export default function UserDetailPage() {
           {/* Personal Information */}
           <div className="space-y-3 lg:space-y-4">
             <div>
-              <label className="block text-gray-400 text-xs lg:text-sm font-medium mb-1">
+              <span className="block text-gray-400 text-xs lg:text-sm font-medium mb-1">
                 Nombre Completo
-              </label>
+              </span>
               <p className="text-white text-sm lg:text-base">
                 {user.name} {user.last_name}
               </p>
             </div>
 
             <div>
-              <label className="block text-gray-400 text-xs lg:text-sm font-medium mb-1">
+              <span className="block text-gray-400 text-xs lg:text-sm font-medium mb-1">
                 Email Universitario
-              </label>
+              </span>
               <p className="text-white text-sm lg:text-base">{user.email}</p>
             </div>
 
             {user.personal_email && (
               <div>
-                <label className="block text-gray-400 text-xs lg:text-sm font-medium mb-1">
+                <span className="block text-gray-400 text-xs lg:text-sm font-medium mb-1">
                   Email Personal
-                </label>
+                </span>
                 <p className="text-white text-sm lg:text-base">
                   {user.personal_email}
                 </p>
@@ -212,16 +212,16 @@ export default function UserDetailPage() {
           {/* Academic Information */}
           <div className="space-y-3 lg:space-y-4">
             <div>
-              <label className="block text-gray-400 text-xs lg:text-sm font-medium mb-1">
+              <span className="block text-gray-400 text-xs lg:text-sm font-medium mb-1">
                 Semestre
-              </label>
+              </span>
               <p className="text-white text-sm lg:text-base">{user.semester}</p>
             </div>
 
             <div>
-              <label className="block text-gray-400 text-xs lg:text-sm font-medium mb-1">
+              <span className="block text-gray-400 text-xs lg:text-sm font-medium mb-1">
                 Rol Solicitado
-              </label>
+              </span>
               <p className="text-white text-sm lg:text-base capitalize">
                 {user.roles.name}
               </p>
@@ -231,9 +231,9 @@ export default function UserDetailPage() {
 
         {/* Motivation */}
         <div className="mt-4 lg:mt-6">
-          <label className="block text-gray-400 text-xs lg:text-sm font-medium mb-2">
+          <span className="block text-gray-400 text-xs lg:text-sm font-medium mb-2">
             Motivación
-          </label>
+          </span>
           <div className="bg-[#0A0808] border border-[#2E2E2E] rounded-lg p-3 lg:p-4">
             <p className="text-white text-sm lg:text-base leading-relaxed">
               {user.motivation}
@@ -244,13 +244,13 @@ export default function UserDetailPage() {
         {/* Skills */}
         {user.user_skills.length > 0 && (
           <div className="mt-4 lg:mt-6">
-            <label className="block text-gray-400 text-xs lg:text-sm font-medium mb-2">
+            <span className="block text-gray-400 text-xs lg:text-sm font-medium mb-2">
               Habilidades
-            </label>
+            </span>
             <div className="flex flex-wrap gap-2">
-              {user.user_skills.map((userSkill, index) => (
+              {user.user_skills.map((userSkill) => (
                 <span
-                  key={index}
+                  key={userSkill.skills.name}
                   className="bg-[#2E2E2E] text-white text-xs lg:text-sm px-2 lg:px-3 py-1 rounded-full"
                 >
                   {userSkill.skills.name}

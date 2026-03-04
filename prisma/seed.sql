@@ -256,3 +256,8 @@ SELECT COUNT(*) as total_skills FROM skills;
 SELECT COUNT(*) as total_platforms FROM platforms;
 SELECT COUNT(*) as total_programs FROM programs;
 SELECT COUNT(*) as total_updates FROM updates;
+
+-- ============================================================
+-- Si después de restaurar un backup aparece P2002 en (id),
+-- ejecutar: npx prisma db execute --file prisma/repair-sequences.sql --schema prisma/schema.prisma
+-- ============================================================

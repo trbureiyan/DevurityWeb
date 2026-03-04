@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { getPublishedUpdates, getLatestUpdates, mapUpdateToNewsEvent } from "@/repositories/updates/updates.repositories";
+import { getPublishedUpdates, getLatestUpdates} from "@/repositories/updates/updates.repositories"; // mapUpdateToNewsEvent # Repositorio de updates deprecado TODO: Si no se va a usar para otra cosa, mover esta función a un helper específico de updates o eliminarla si no se necesita.
 import type { UpdateItem, NewsEvent } from "@/lib/types/update.types";
 
 // -- Cache revision para el feed de actualizaciones --

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Tooltip } from "./Tooltip";
 import { URL as URL_CONSTANTS } from "@/lib/constants/validation";
 
@@ -47,6 +47,15 @@ export default function SocialLinksEditor({
   const [limitError, setLimitError] = useState<string | null>(null);
   const [shakeIndex, setShakeIndex] = useState<number | null>(null);
 
+  // Stable IDs for list keys (avoid index-as-key)
+  const nextIdRef = useRef(links.length);
+  const linkIdsRef = useRef<number[]>(links.map((_, i) => i));
+  // Sync ref length with links (handles external changes)
+  while (linkIdsRef.current.length < links.length) {
+    linkIdsRef.current.push(nextIdRef.current++);
+  }
+  linkIdsRef.current.length = links.length;
+
   const platformKey = (label: string) => label.trim().toLowerCase();
 
   const handleAddLink = () => {
@@ -58,11 +67,13 @@ export default function SocialLinksEditor({
       return;
     }
 
+    linkIdsRef.current.push(nextIdRef.current++);
     onChange([...links, { label: "Website", url: "", icon: "website" }]);
     setLimitError(null);
   };
 
   const handleRemoveLink = (index: number) => {
+    linkIdsRef.current.splice(index, 1);
     const newLinks = [...links];
     newLinks.splice(index, 1);
     onChange(newLinks);
@@ -129,7 +140,7 @@ export default function SocialLinksEditor({
       
       {links.map((link, index) => (
         <div 
-          key={index} 
+          key={linkIdsRef.current[index]} 
           className={`flex gap-2 items-start animate-in fade-in slide-in-from-top-2 duration-200 ${
             shakeIndex === index ? "animate-shake" : ""
           }`}

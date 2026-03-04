@@ -24,8 +24,15 @@ model platforms {
 
 model projects {
   id            BigInt          @id @default(autoincrement())
+  slug          String          @unique
   title         String
   description   String
+  stage         String          @default("incubacion") // incubacion | desarrollo | validacion | produccion | experimentacion
+  focus_areas   String[]        @default([])
+  stack         String[]        @default([])
+  hero_image    String?
+  cta_label     String?
+  cta_href      String?
   start_date    DateTime?       @default(dbgenerated("CURRENT_DATE")) @db.Date
   is_archived   Boolean?        @default(false)
   created_at    DateTime        @default(now())
@@ -104,7 +111,7 @@ model users {
 }
 
 /// Modelo para noticias, eventos y actualizaciones del semillero
-/// Actualiza datos hardcodeados en lib/constants/updates.ts
+/// Nota: lib/constants/updates.ts fue movido a _deprecated/ (sin uso activo en el codebase)
 model updates {
   id            BigInt    @id @default(autoincrement())
   slug          String    @unique

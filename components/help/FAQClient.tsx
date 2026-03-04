@@ -53,7 +53,7 @@ export default function FAQClient({ faqs }: FAQClientProps) {
       <div className="space-y-6">
         {faqs.map((item, i) => (
           <article
-            key={i}
+            key={item.q}
             ref={(el) => {
               articleRefs.current[i] = el;
             }}
@@ -83,10 +83,18 @@ export default function FAQClient({ faqs }: FAQClientProps) {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
           onClick={closeModal}
+          onKeyDown={(e) => { if (e.key === 'Escape') closeModal(); }}
+          role="button"
+          tabIndex={-1}
+          aria-label="Cerrar modal"
         >
           <div
             className="relative w-full max-w-2xl bg-[#0a0a0a] border border-[var(--color-selected)] rounded-xl p-8 shadow-2xl animate-scale-up"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Detalle de pregunta frecuente"
           >
             <button
               onClick={closeModal}

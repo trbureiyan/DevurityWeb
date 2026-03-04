@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const isPasswordValid = bcryptAdapter.compare(
+    const isPasswordValid = await bcryptAdapter.compare(
       normalizedPassword,
       user.password,
     );
@@ -108,6 +108,7 @@ export async function POST(request: Request) {
 
     const tokenPayload = {
       sub: user.id.toString(),
+      role: user.roles.name,
     };
 
     const token = await generateToken(tokenPayload, 14400);

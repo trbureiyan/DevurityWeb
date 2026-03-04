@@ -39,14 +39,36 @@ export default function AdminLayout({
     ? getInitials(user.name, user.last_name ?? "")
     : getInitials("Usuario", "Devurity");
 
+  // Listener global para cerrar el menú móvil con Escape cuando está abierto.
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isMobileMenuOpen) {
+        closeMobileMenu();
+      }
+    };
+    
+    if (isMobileMenuOpen) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [isMobileMenuOpen]);
+
   return (
     <div className="flex min-h-screen bg-background text-foreground p-6 gap-6">
-      {/* Mobile Menu Overlay */}
+      {/*
+        Mobile Menu Overlay — fondo semitransparente que cierra el menú al pulsarlo.
+        role="button": necesario porque un <div> no tiene semántica interactiva por defecto;
+          sin esto, los lectores de pantalla ignoran onClick por completo.
+        Escape: manejado con listener global para accesibilidad (estándar WCAG 2.1 §2.1.2).
+      */}
       <div
         className={`fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden transition-opacity duration-300 ${
           isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"
         }`}
-  onClick={closeMobileMenu}
+        onClick={closeMobileMenu}
+        role="button"
+        tabIndex={-1}
+        aria-label="Cerrar menú"
         aria-hidden={!isMobileMenuOpen}
       />
 

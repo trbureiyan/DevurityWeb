@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState } from "react";
 import { Orbitron } from "next/font/google";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import QRDynamic from "@/components/qr-dynamic";
@@ -12,6 +12,7 @@ import { UsernameEditor } from "@/components/ui/UsernameEditor";
 import { Tooltip } from "@/components/ui/Tooltip";
 import ProgramSelector from "@/components/ui/ProgramSelector";
 import { useCsrf } from "@/hooks/useCsrf";
+import { useProfileData } from "@/hooks/useProfileData";
 import logger from "@/lib/logger";
 
 // Configurar fuente Orbitron
@@ -34,34 +35,74 @@ interface SocialLinkData {
   label: string;
 }
 
-// Define la estructura de los datos del usuario obtenidos de la API
-interface UserData {
-  id: string;
-  name: string;
-  last_name: string;
-  email: string;
-  skills: string[];
-  role: string;
-  motivation: string;
-  semester: number;
-  program?: string | null;
-  username?: string;
-  username_last_changed?: string;
-  created_at?: string;
-  createdAt?: string;
-  joined_at?: string;
-  joinedAt?: string;
-  website?: string;
-  github?: string;
-  bio?: string;
-  avatar?: string;
-  avatar_url?: string;
-  profile_image?: string;
-  profileImage?: string;
-  image?: string;
-  photo?: string;
-  working_on?: ProjectData[];
-  social_links?: SocialLinkData[];
+function SocialIconDisplay({ icon }: { icon: string }) {
+  const key = icon.toLowerCase();
+  switch (key) {
+    case "github":
+      return (
+        <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+        </svg>
+      );
+    case "linkedin":
+      return (
+        <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M4.983 3.5A2.5 2.5 0 1 1 0 3.5a2.5 2.5 0 0 1 4.983 0zM.32 8.478h4.4V24h-4.4zM8.388 8.478h4.216v2.118h.06c.588-1.116 2.024-2.292 4.168-2.292 4.458 0 5.278 2.936 5.278 6.756V24h-4.4v-6.764c0-1.614-.028-3.688-2.246-3.688-2.25 0-2.595 1.757-2.595 3.574V24h-4.4z" />
+        </svg>
+      );
+    case "youtube":
+      return (
+        <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M23.498 6.186a2.974 2.974 0 0 0-2.09-2.103C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.408.583a2.974 2.974 0 0 0-2.09 2.103A31.533 31.533 0 0 0 .5 12a31.53 31.53 0 0 0 .002 5.814 2.974 2.974 0 0 0 2.09 2.103C4.495 20.5 12 20.5 12 20.5s7.505 0 9.408-.583a2.974 2.974 0 0 0 2.09-2.103A31.533 31.533 0 0 0 23.5 12a31.53 31.53 0 0 0-.002-5.814zM9.75 15.5v-7l6 3.5-6 3.5z" />
+        </svg>
+      );
+    case "twitter":
+      return (
+        <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M22.46 6c-.77.35-1.6.58-2.46.69a4.3 4.3 0 0 0 1.88-2.37 8.59 8.59 0 0 1-2.72 1.04 4.28 4.28 0 0 0-7.36 2.92c0 .34.04.67.11 1A12.15 12.15 0 0 1 3.15 4.8a4.28 4.28 0 0 0 1.32 5.71 4.25 4.25 0 0 1-1.94-.54v.06a4.28 4.28 0 0 0 3.44 4.19 4.3 4.3 0 0 1-1.93.07 4.28 4.28 0 0 0 3.99 2.97A8.6 8.6 0 0 1 2 19.54a12.14 12.14 0 0 0 6.56 1.92c7.88 0 12.2-6.53 12.2-12.2 0-.19-.01-.39-.02-.58A8.7 8.7 0 0 0 22.46 6z" />
+        </svg>
+      );
+    case "facebook":
+      return (
+        <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M22.675 0H1.325C.594 0 0 .593 0 1.326v21.348C0 23.407.594 24 1.325 24H12.82v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.794.143v3.24l-1.918.001c-1.504 0-1.796.715-1.796 1.764v2.313h3.587l-.467 3.622h-3.12V24h6.116C23.406 24 24 23.407 24 22.674V1.326C24 .593 23.406 0 22.675 0z" />
+        </svg>
+      );
+    case "instagram":
+      return (
+        <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07c3.252.148 4.771 1.691 4.919 4.919c.058 1.265.069 1.645.069 4.849c0 3.205-.012 3.584-.069 4.849c-.149 3.225-1.664 4.771-4.919 4.919c-1.266.058-1.644.07-4.85.07c-3.204 0-3.584-.012-4.849-.07c-3.26-.149-4.771-1.699-4.919-4.92c-.058-1.265-.07-1.644-.07-4.849c0-3.204.013-3.583.07-4.849c.149-3.227 1.664-4.771 4.919-4.919c1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072C2.695.272.273 2.69.073 7.052C.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948c.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072c4.354-.2 6.782-2.618 6.979-6.98c.059-1.28.073-1.689.073-4.948c0-3.259-.014-3.667-.072-4.947c-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324a6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8a4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881a1.44 1.44 0 0 0 0-2.881z" />
+        </svg>
+      );
+    case "orcid":
+      return (
+        <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M12 24a12 12 0 1 1 0-24 12 12 0 0 1 0 24zM8.344 7.353c-.497 0-.9.4-.9.897v7.5c0 .496.403.897.9.897s.9-.4.9-.897v-7.5c0-.496-.403-.897-.9-.897zm2.974 8.606h1.395V7.353h-1.395v8.606zm6.338-4.2a2.792 2.792 0 0 0-2.79-2.79h-1.258v1.3h1.258c.822 0 1.49.667 1.49 1.49 0 .822-.668 1.49-1.49 1.49h-1.258v1.3h1.258a2.792 2.792 0 0 0 2.79-2.79zm-9.327-3.306c.497 0 .9-.4.9-.897 0-.496-.403-.897-.9-.897a.898.898 0 0 0-.9.897c0 .496.403.897.9.897z" />
+        </svg>
+      );
+    case "bento.me":
+      return (
+        <svg className="size-5" viewBox="0 0 24 24" aria-hidden fill="none">
+          <defs>
+            <linearGradient id="bentoGradient" x1="2" y1="22" x2="22" y2="2" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#C54CFF" />
+              <stop offset="1" stopColor="#00E5FF" />
+            </linearGradient>
+          </defs>
+          <rect x="3" y="3" width="18" height="18" rx="5" ry="5" fill="#0B0B0F" stroke="url(#bentoGradient)" strokeWidth="1.5" />
+          <path
+            d="M8.5 7.5h7a.75.75 0 0 1 .75.75v2.5a.75.75 0 0 1-.75.75h-7a.75.75 0 0 1-.75-.75v-2.5a.75.75 0 0 1 .75-.75zm0 5h7a.75.75 0 0 1 .75.75v2.5a.75.75 0 0 1-.75.75h-7a.75.75 0 0 1-.75-.75v-2.5a.75.75 0 0 1 .75-.75z"
+            fill="url(#bentoGradient)"
+          />
+        </svg>
+      );
+    default:
+      return (
+        <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+          <path d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+  }
 }
 
 // Vista de perfil: lectura y edición de datos con control de propiedad, QR dinámico y normalización de enlaces.
@@ -70,10 +111,7 @@ export default function ProfilePage() {
   const id = params.id as string;
   const { fetchWithCsrf } = useCsrf();
   
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null); // ID del usuario autenticado
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { userData, setUserData, currentUserId, loading, error } = useProfileData(id);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   
@@ -332,77 +370,6 @@ export default function ProfilePage() {
 
   // --- Lógica del componente ---
 
-  const renderSocialIcon = (icon: string): ReactNode => {
-    const key = icon.toLowerCase();
-    switch (key) {
-      case "github":
-        return (
-          <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
-          </svg>
-        );
-      case "linkedin":
-        return (
-          <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M4.983 3.5A2.5 2.5 0 1 1 0 3.5a2.5 2.5 0 0 1 4.983 0zM.32 8.478h4.4V24h-4.4zM8.388 8.478h4.216v2.118h.06c.588-1.116 2.024-2.292 4.168-2.292 4.458 0 5.278 2.936 5.278 6.756V24h-4.4v-6.764c0-1.614-.028-3.688-2.246-3.688-2.25 0-2.595 1.757-2.595 3.574V24h-4.4z" />
-          </svg>
-        );
-      case "youtube":
-        return (
-          <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M23.498 6.186a2.974 2.974 0 0 0-2.09-2.103C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.408.583a2.974 2.974 0 0 0-2.09 2.103A31.533 31.533 0 0 0 .5 12a31.53 31.53 0 0 0 .002 5.814 2.974 2.974 0 0 0 2.09 2.103C4.495 20.5 12 20.5 12 20.5s7.505 0 9.408-.583a2.974 2.974 0 0 0 2.09-2.103A31.533 31.533 0 0 0 23.5 12a31.53 31.53 0 0 0-.002-5.814zM9.75 15.5v-7l6 3.5-6 3.5z" />
-          </svg>
-        );
-      case "twitter":
-        return (
-          <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M22.46 6c-.77.35-1.6.58-2.46.69a4.3 4.3 0 0 0 1.88-2.37 8.59 8.59 0 0 1-2.72 1.04 4.28 4.28 0 0 0-7.36 2.92c0 .34.04.67.11 1A12.15 12.15 0 0 1 3.15 4.8a4.28 4.28 0 0 0 1.32 5.71 4.25 4.25 0 0 1-1.94-.54v.06a4.28 4.28 0 0 0 3.44 4.19 4.3 4.3 0 0 1-1.93.07 4.28 4.28 0 0 0 3.99 2.97A8.6 8.6 0 0 1 2 19.54a12.14 12.14 0 0 0 6.56 1.92c7.88 0 12.2-6.53 12.2-12.2 0-.19-.01-.39-.02-.58A8.7 8.7 0 0 0 22.46 6z" />
-          </svg>
-        );
-      case "facebook":
-        return (
-          <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M22.675 0H1.325C.594 0 0 .593 0 1.326v21.348C0 23.407.594 24 1.325 24H12.82v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.794.143v3.24l-1.918.001c-1.504 0-1.796.715-1.796 1.764v2.313h3.587l-.467 3.622h-3.12V24h6.116C23.406 24 24 23.407 24 22.674V1.326C24 .593 23.406 0 22.675 0z" />
-          </svg>
-        );
-      case "instagram":
-        return (
-          <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M12 2.163c3.204 0 3.584.012 4.85.07c3.252.148 4.771 1.691 4.919 4.919c.058 1.265.069 1.645.069 4.849c0 3.205-.012 3.584-.069 4.849c-.149 3.225-1.664 4.771-4.919 4.919c-1.266.058-1.644.07-4.85.07c-3.204 0-3.584-.012-4.849-.07c-3.26-.149-4.771-1.699-4.919-4.92c-.058-1.265-.07-1.644-.07-4.849c0-3.204.013-3.583.07-4.849c.149-3.227 1.664-4.771 4.919-4.919c1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072C2.695.272.273 2.69.073 7.052C.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948c.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072c4.354-.2 6.782-2.618 6.979-6.98c.059-1.28.073-1.689.073-4.948c0-3.259-.014-3.667-.072-4.947c-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324a6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8a4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881a1.44 1.44 0 0 0 0-2.881z" />
-          </svg>
-        );
-      case "orcid":
-        return (
-          <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M12 24a12 12 0 1 1 0-24 12 12 0 0 1 0 24zM8.344 7.353c-.497 0-.9.4-.9.897v7.5c0 .496.403.897.9.897s.9-.4.9-.897v-7.5c0-.496-.403-.897-.9-.897zm2.974 8.606h1.395V7.353h-1.395v8.606zm6.338-4.2a2.792 2.792 0 0 0-2.79-2.79h-1.258v1.3h1.258c.822 0 1.49.667 1.49 1.49 0 .822-.668 1.49-1.49 1.49h-1.258v1.3h1.258a2.792 2.792 0 0 0 2.79-2.79zm-9.327-3.306c.497 0 .9-.4.9-.897 0-.496-.403-.897-.9-.897a.898.898 0 0 0-.9.897c0 .496.403.897.9.897z" />
-          </svg>
-        );
-      case "bento.me":
-        return (
-          <svg className="size-5" viewBox="0 0 24 24" aria-hidden fill="none">
-            <defs>
-              <linearGradient id="bentoGradient" x1="2" y1="22" x2="22" y2="2" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#C54CFF" />
-                <stop offset="1" stopColor="#00E5FF" />
-              </linearGradient>
-            </defs>
-            <rect x="3" y="3" width="18" height="18" rx="5" ry="5" fill="#0B0B0F" stroke="url(#bentoGradient)" strokeWidth="1.5" />
-            <path
-              d="M8.5 7.5h7a.75.75 0 0 1 .75.75v2.5a.75.75 0 0 1-.75.75h-7a.75.75 0 0 1-.75-.75v-2.5a.75.75 0 0 1 .75-.75zm0 5h7a.75.75 0 0 1 .75.75v2.5a.75.75 0 0 1-.75.75h-7a.75.75 0 0 1-.75-.75v-2.5a.75.75 0 0 1 .75-.75z"
-              fill="url(#bentoGradient)"
-            />
-          </svg>
-        );
-      default:
-        // Fallback link / chain icon
-        return (
-          <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-            <path d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        );
-    }
-  };
-
   const normalizeExternalLink = (href?: string | null) => {
     if (!href) return undefined;
     const trimmed = href.trim();
@@ -412,85 +379,6 @@ export default function ProfilePage() {
     if (trimmed.startsWith("/")) return trimmed;
     return `https://${trimmed.replace(/^\/+/, "")}`;
   };
-
-  // Cargar datos del usuario desde API REAL
-  // Carga secuencial: primero usuario autenticado, luego perfil solicitado; cancela al desmontar.
-  useEffect(() => {
-    const abortController = new AbortController();
-    
-    async function fetchUserData() {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        console.log("Cargando datos para ID:", id);
-        
-        // PRIMERO obtener el usuario autenticado
-        try {
-          const meResponse = await fetch('/api/auth/me', {
-            signal: abortController.signal
-          });
-          
-          if (meResponse.ok) {
-            const meData = await meResponse.json();
-            setCurrentUserId(meData.user.id.toString());
-            logger.debug("Usuario autenticado cargado", { userId: meData.user.id });
-          } else {
-            logger.warn("No se pudo obtener usuario autenticado", { status: meResponse.status });
-          }
-        } catch (err) {
-          if (err instanceof Error && err.name === 'AbortError') return;
-          logger.error("Error obteniendo usuario autenticado", { error: err });
-        }
-        
-        // DESPUÉS cargar el perfil
-        const response = await fetch(`/api/auth/users/${id}`, {
-          signal: abortController.signal
-        });
-
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        logger.debug("Datos de perfil recibidos", { userId: id });
-        
-        // El API ahora retorna { user: {...} }
-        const user = data.user || data;
-        
-        // Verificar si el componente sigue montado antes de actualizar el estado
-        if (!abortController.signal.aborted) {
-          setUserData(user);
-          logger.debug("Perfil cargado correctamente", { userId: user.id });
-        }
-
-      } catch (err) {
-        // Ignorar errores de abort
-        if (err instanceof Error && err.name === 'AbortError') {
-          logger.debug("Fetch de perfil cancelado");
-          return;
-        }
-        
-        logger.error("Error cargando datos del usuario", { error: err, userId: id });
-        if (!abortController.signal.aborted) {
-          setError(err instanceof Error ? err.message : "Error desconocido");
-        }
-      } finally {
-        if (!abortController.signal.aborted) {
-          setLoading(false);
-        }
-      }
-    }
-    
-    if (id) {
-      fetchUserData();
-    }
-    
-    // Cleanup: cancelar fetch si el componente se desmonta o id cambia
-    return () => {
-      abortController.abort();
-    };
-  }, [id]);
 
   // Genera las iniciales del usuario a partir de su nombre y apellido
   const getInitials = (name: string, lastName: string) => {
@@ -722,11 +610,11 @@ export default function ProfilePage() {
               {infoItems.length > 0 && (
                 <div className="mt-8 border-t border-white/10 pt-6">
                   <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-white/60">
-                    {infoItems.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-2 transition-colors hover:text-white">
+                    {infoItems.map((item) => (
+                      <div key={item.text} className="flex items-center gap-2 transition-colors hover:text-white">
                         {item.icon}
                         {item.href ? (
-                          idx === infoItems.findIndex(i => i.text === "GitHub") && isEditing ? (
+                          item.text === "GitHub" && isEditing ? (
                             <div className="flex items-center gap-2">
                               <input
                                 type="text"
@@ -822,8 +710,8 @@ export default function ProfilePage() {
               ) : (
                 <ul className="mt-5 space-y-3">
                   {userData.working_on && userData.working_on.length > 0 ? (
-                    userData.working_on.map((project, index) => (
-                      <li key={index} className="flex items-center gap-2">
+                    userData.working_on.map((project) => (
+                      <li key={project.title} className="flex items-center gap-2">
                         <span className="size-1.5 rounded-full bg-[#da292e]" />
                         <Link
                           href={project.link}
@@ -855,21 +743,21 @@ export default function ProfilePage() {
               ) : (
                 <div className="mt-5 space-y-4">
                   {userData.social_links && userData.social_links.length > 0 ? (
-                    userData.social_links.map((social, index) => {
+                    userData.social_links.map((social) => {
                       const socialHref = social.url.startsWith('http://') || social.url.startsWith('https://') 
                         ? social.url 
                         : `https://${social.url}`;
                       
                       return (
                         <a
-                          key={index}
+                          key={`${social.icon}-${social.url}`}
                           href={socialHref}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="group flex items-center gap-4 rounded-xl border border-transparent bg-white/5 px-4 py-3 transition-all hover:bg-white/10"
                         >
                           <span className="flex size-10 items-center justify-center rounded-full bg-black/40 text-white/80 group-hover:text-white">
-                            {renderSocialIcon(social.icon)}
+                            <SocialIconDisplay icon={social.icon} />
                           </span>
                           <div className="flex flex-1 flex-col overflow-hidden">
                             <span className="truncate border-b border-white/10 pb-1 text-sm text-white/60 group-hover:border-white/30 group-hover:text-white/90 transition-colors">

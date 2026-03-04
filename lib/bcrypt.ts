@@ -1,11 +1,11 @@
-import { compareSync, genSaltSync, hashSync } from "bcrypt";
+import bcrypt from "bcryptjs";
 
 export const bcryptAdapter = {
-  hash: (password: string) => {
-    const salt = genSaltSync(15);
-    return hashSync(password, salt);
+  hash: async (password: string): Promise<string> => {
+    const salt = await bcrypt.genSalt(12);
+    return bcrypt.hash(password, salt);
   },
-  compare: (password: string, hashed: string) => {
-    return compareSync(password, hashed);
+  compare: async (password: string, hashed: string): Promise<boolean> => {
+    return bcrypt.compare(password, hashed);
   },
 };

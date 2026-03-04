@@ -22,13 +22,13 @@ interface User {
   }>;
 }
 
-interface PaginatedResponse {
-  users: User[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+// interface PaginatedResponse {
+//   users: User[];
+//   total: number;
+//   page: number;
+//   limit: number;
+//   totalPages: number;
+// }
 
 export default function ConfirmUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -78,7 +78,7 @@ export default function ConfirmUsersPage() {
     if (!csrfLoading) {
       fetchPendingUsers();
     }
-  }, [csrfLoading]);
+  }, [csrfLoading, fetchPendingUsers]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {

@@ -14,10 +14,10 @@ export async function POST(req: Request) {
     }
 
     // Validate token
-    let decoded: any;
+    let decoded: { type?: string; email?: string } | null = null;
     try {
-      decoded = await validateToken(token);
-    } catch (err) {
+      decoded = (await validateToken(token)) as { type?: string; email?: string };
+    } catch {
       return NextResponse.json({ ok: false, message: "Token inválido o expirado" }, { status: 401 });
     }
 
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     const email: string = decoded.email;
 
     // Hash password and update
-    const hashed = bcryptAdapter.hash(password);
+    const hashed = await bcryptAdapter.hash(password);
     const updated = await updatePasswordByEmail(email, hashed);
     if (!updated) {
       return NextResponse.json({ ok: false, message: "No se pudo actualizar la contraseña" }, { status: 500 });

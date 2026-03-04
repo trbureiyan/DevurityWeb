@@ -56,6 +56,7 @@ export default function EventsSection({ news }: EventsSectionProps) {
                     alt="Devurity Tech"
                     fill
                     className="object-cover object-center"
+                    sizes="(max-width: 1024px) 100vw, 720px"
                     priority
                   />
                 </div>

@@ -16,6 +16,7 @@ export default function AboutSection() {
               src={IMAGES.landing.devBG} 
               alt="DEV Background"
               fill
+              sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent flex items-center justify-center">
@@ -42,6 +43,7 @@ export default function AboutSection() {
               src={IMAGES.landing.urityBG} 
               alt="URITY Background"
               fill
+              sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent flex items-center justify-center">

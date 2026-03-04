@@ -127,6 +127,7 @@ export default function AdminSidebar({
             src="/images/landing/wave-background.jpg"
             alt="Cover"
             fill
+            sizes="225px"
             className="object-cover"
           />
         </div>

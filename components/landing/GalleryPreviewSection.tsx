@@ -140,9 +140,9 @@ export default function GalleryPreviewSection({ images }: GalleryPreviewSectionP
 
 							{/* Indicadores */}
 							<div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
-								{previewImages.map((_, index) => (
+								{previewImages.map((image, index) => (
 									<button
-										key={index}
+										key={image}
 										onClick={() => goToSlide(index)}
 										className={`h-2 rounded-full transition-all ${
 											index === currentIndex

@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     const token = await generateToken({ email, type: "recovery" }, 60 * 60);
 
     // Build recovery link using env or request url
-    const origin = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
+    const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
     const recoveryLink = `${origin}/recovery-password/${encodeURIComponent(token)}`;
 
     const html = `
