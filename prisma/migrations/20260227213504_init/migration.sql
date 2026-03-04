@@ -1,3 +1,6 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateTable
 CREATE TABLE "attendances" (
     "id" BIGSERIAL NOT NULL,
@@ -18,8 +21,15 @@ CREATE TABLE "platforms" (
 -- CreateTable
 CREATE TABLE "projects" (
     "id" BIGSERIAL NOT NULL,
+    "slug" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
+    "stage" TEXT NOT NULL DEFAULT 'incubacion',
+    "focus_areas" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "stack" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "hero_image" TEXT,
+    "cta_label" TEXT,
+    "cta_href" TEXT,
     "start_date" DATE DEFAULT CURRENT_DATE,
     "is_archived" BOOLEAN DEFAULT false,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -120,6 +130,9 @@ CREATE TABLE "updates" (
 
     CONSTRAINT "updates_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "projects_slug_key" ON "projects"("slug");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");

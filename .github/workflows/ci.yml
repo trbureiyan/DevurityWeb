@@ -52,8 +52,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Apply DB schema
-        run: npx prisma db push --skip-generate
+      - name: Apply DB migrations
+        run: npm run db:migrate
+
+      - name: Repair DB sequences
+        run: npm run db:repair
 
       - name: Seed database
         run: npm run db:seed

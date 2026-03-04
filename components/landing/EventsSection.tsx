@@ -1,9 +1,7 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { useUpdates } from "@/hooks/useUpdates";
+import { getLatestNewsForLanding } from "@/lib/data/updates";
 
 const CTA_HREF = "/updates";
 
@@ -14,12 +12,9 @@ const createAccentStyles = (color: string): CSSProperties => {
 
 const isExternalHref = (href: string): boolean => href.startsWith("http");
 
-export default function EventsSection() {
-  // Lee del mismo localStorage que usa updates/page.tsx
-  const { allUpdates } = useUpdates();
-
-  // Tomar las 3 más recientes
-  const latestNews = allUpdates.slice(0, 3);
+export default async function EventsSection() {
+  // Carga los 3 ítems más recientes desde la DB (Server Component)
+  const latestNews = await getLatestNewsForLanding(3);
 
   return (
     <section id="eventos" className="relative w-full py-10 md:py-16 overflow-hidden">
@@ -77,9 +72,9 @@ export default function EventsSection() {
                 const useExternal = isExternalHref(itemHref);
                 const isLastCard = index === latestNews.length - 1;
 
-                // displayDate viene de useUpdates, date es el alias
-                const displayDate = item.displayDate;
-                const description = item.excerpt;
+                // displayDate viene de NewsEvent como .date, description como .description
+                const displayDate = item.date;
+                const description = item.description;
 
                 const TitleLink = useExternal ? (
                   <a

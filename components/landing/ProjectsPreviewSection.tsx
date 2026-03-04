@@ -1,11 +1,10 @@
-"use client";
-
 import Link from "next/link";
-import { useProjects, STAGE_LABELS, STAGE_COLORS } from "@/hooks/useProjects";
+import { STAGE_LABELS, STAGE_COLORS } from "@/hooks/useProjects";
+import { getProjectsCatalog } from "@/lib/data/projects";
 
 // Muestra los 3 proyectos más recientes en el landing
-export default function ProjectsPreviewSection() {
-  const { allProjects } = useProjects();
+export default async function ProjectsPreviewSection() {
+  const allProjects = await getProjectsCatalog();
 
   const sorted = [...allProjects].sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -54,11 +53,6 @@ export default function ProjectsPreviewSection() {
                   <span className={`text-xs font-ubuntu uppercase tracking-wider border px-3 py-1 rounded-full ${STAGE_COLORS[project.stage]}`}>
                     {STAGE_LABELS[project.stage]}
                   </span>
-                  {project.isLocal && (
-                    <span className="text-[10px] text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-ubuntu uppercase">
-                      nuevo
-                    </span>
-                  )}
                 </div>
 
                 <h3 className="font-orbitron text-xl text-white group-hover:text-variable-collection-link transition-colors line-clamp-2">
