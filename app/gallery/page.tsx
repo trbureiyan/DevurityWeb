@@ -2,8 +2,10 @@ import { GALLERY_IMAGES } from "@/lib/constants/gallery";
 import GalleryClient from "@/components/gallery/GalleryClient";
 import type { Metadata } from "next";
 import { siteIcons } from "@/lib/constants/metadata";
+
 // SSR estático para la galería de eventos.
 export const dynamic = "force-static";
+
 // SEO en meta para la página de galería.
 export const metadata: Metadata = {
   title: "Galería de Eventos | Devurity",
@@ -12,11 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default function Galeria() {
-  return (
-    <main className="min-h-screen w-full px-10 py-16">
-      <h1 className="text-4xl font-bold mb-10 text-center">Galería</h1>
-
-      <GalleryClient images={GALLERY_IMAGES} />
-    </main>
-  );
+  // GalleryClient ya renderiza su propio <main> con layout completo.
+  // No envolver en otro contenedor para evitar doble padding/scroll.
+  return <GalleryClient images={GALLERY_IMAGES} />;
 }
