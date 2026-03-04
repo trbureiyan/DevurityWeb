@@ -1,0 +1,156 @@
+"use client";
+
+import React, { useState, useEffect, useRef } from "react";
+
+const faqs = [
+  {
+    q: "¿Quién puede ser miembro del semillero Devurity?",
+    a: "Cualquier estudiante de la Universidad con interés en diseño, desarrollo, investigación o creación de proyectos tecnológicos puede postularse al semillero, sin necesidad de conocimientos previos."
+  },
+  {
+    q: "¿Cómo me inscribo al semillero?",
+    a: "Debes diligenciar el formulario de inscripción oficial. La solicitud será revisada por el coordinador o tutor, y se te notificará la aceptación junto con la asignación de tu rol inicial."
+  },
+  {
+    q: "¿Se controla la asistencia a las sesiones?",
+    a: "Sí. La asistencia se registra mediante un sistema de códigos QR para validar la participación en actividades, reuniones y trabajo en equipo dentro del semillero."
+  },
+  {
+    q: "¿Cómo funcionan los proyectos dentro del semillero?",
+    a: "Los proyectos se conforman por grupos de trabajo. Cada proyecto debe contar con objetivos claros, documentación, avances periódicos y evidencias compartidas, además del uso de repositorios colaborativos."
+  },
+  {
+    q: "¿Se puede usar el laboratorio libremente?",
+    a: "El laboratorio está disponible para trabajo académico, reuniones, prototipado y desarrollo de proyectos. Su uso está sujeto a disponibilidad y responsabilidad en el cuidado del espacio."
+  },
+  {
+    q: "¿Puedo reservar el laboratorio?",
+    a: "Sí. El laboratorio puede reservarse para exposiciones, tutorías, trabajo colaborativo o sesiones de proyecto mediante solicitud previa."
+  },
+  {
+    q: "¿Qué pasa si incumplo las normas del laboratorio?",
+    a: "Dependiendo de la falta, pueden aplicarse sanciones como suspensión temporal del acceso, trabajos de mantenimiento del espacio o restricción permanente del ingreso, según la gravedad."
+  },
+  {
+    q: "¿El semillero otorga certificaciones o reconocimientos?",
+    a: "Sí, la participación activa en proyectos, eventos o procesos internos del semillero puede ser certificada según criterios establecidos por la coordinación del semillero."
+  }
+];
+
+export default function FAQPage() {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [activeFAQ, setActiveFAQ] = useState<{ q: string; a: string } | null>(null);
+
+  // array de refs que acepta HTMLDivElement o null (importante para TS y desmontado)
+  const articleRefs = useRef<(HTMLElement | null)[]>([]);
+
+  // Cerrar modal con ESC
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeModal();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  function openModalAt(index: number, faq: { q: string; a: string }) {
+    const target = articleRefs.current[index];
+
+    if (target) {
+      target.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }
+
+    setTimeout(() => {
+      setActiveFAQ(faq);
+      setModalOpen(true);
+    }, 300);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    setActiveFAQ(null);
+  }
+
+  return (
+    <section className="py-16 max-w-6xl mx-auto px-6 animate-fade-up">
+      <h1 className="text-4xl font-orbitron text-center mb-10 tracking-wide">
+        Preguntas Frecuentes – Devurity
+      </h1>
+
+      <div className="space-y-6">
+        {faqs.map((item, i) => (
+          <article
+            key={item.q}
+            ref={(el) => {
+              articleRefs.current[i] = el;
+            }}
+            className="p-6 rounded-lg border border-[var(--color-selected)] bg-[var(--placeholder)]/15
+            transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]
+            hover:shadow-[0_0_15px_var(--color-variable-collection-botones)]"
+          >
+            <h3 className="font-orbitron text-lg tracking-wide mb-2">{item.q}</h3>
+
+            <p className="font-ubuntu text-sm leading-relaxed opacity-90 line-clamp-3">
+              {item.a}
+            </p>
+
+            <button
+              onClick={() => openModalAt(i, item)}
+              className="mt-3 px-3 py-1 rounded-md border border-[var(--color-variable-collection-botones)]
+              bg-[var(--placeholder)]/10 hover:bg-[var(--placeholder)]/20 transition"
+            >
+              Ver
+            </button>
+          </article>
+        ))}
+      </div>
+
+      <footer className="mt-14 text-center opacity-60 text-sm tracking-wide">
+        Si no encuentras tu respuesta, consulta directamente con el coordinador del semillero.
+      </footer>
+
+      {/* MODAL */}
+      {modalOpen && activeFAQ && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            role="button"
+            tabIndex={0}
+            aria-label="Cerrar modal"
+            onClick={closeModal}
+            onKeyDown={(e) => e.key === "Enter" && closeModal()}
+          />
+
+          <div
+            className="relative z-10 max-w-3xl w-full bg-[var(--variable-collection-placeholder)]/95
+                       border border-[var(--color-selected)] rounded-2xl p-6 shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Detalle de pregunta frecuente"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-orbitron">{activeFAQ.q}</h2>
+
+            <p className="text-sm mt-4 whitespace-pre-line leading-relaxed opacity-90">
+              {activeFAQ.a}
+            </p>
+
+            <div className="mt-6 text-right">
+              <button
+                onClick={closeModal}
+                className="px-4 py-1 rounded-md border border-[var(--color-variable-collection-botones)]
+                           hover:bg-[var(--placeholder)]/20 transition"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}

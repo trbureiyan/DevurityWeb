@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: devurity_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/devurity_ci?schema=public"
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-not-a-real-secret' }}
+      NEXT_PUBLIC_APP_URL: "https://devurityweb.vercel.app"
+      NEXT_PUBLIC_API_URL: "https://devurityweb.vercel.app"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Cache antes de npm ci para que el postinstall (prisma generate) lo aproveche
+      - name: Cache Prisma generated client
+        uses: actions/cache@v4
+        with:
+          path: lib/generated/prisma
+          key: prisma-${{ hashFiles('prisma/schema.prisma') }}
+
+      # postinstall en package.json ya ejecuta prisma generate — no se necesita step explícito
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply DB migrations
+        run: npm run db:migrate
+
+      - name: Repair DB sequences
+        run: npm run db:repair
+
+      - name: Seed database
+        run: npm run db:seed
+
+      # Tests deshabilitados temporalmente — habilitar cuando estén listos para CI
+      # - name: Run unit tests
+      #   run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

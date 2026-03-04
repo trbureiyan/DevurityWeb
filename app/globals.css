@@ -1,0 +1,285 @@
+@import "tailwindcss";
+
+/* Prevenir overflow horizontal global */
+html,
+body {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+/* Variables de colores Devurity */
+:root {
+    --background: #171212;
+    --foreground: #ffffff;
+    --buttons: #ca2b26;
+    --link: #f66661;
+    --selected: #555555;
+    --placeholder: #2e2e2e;
+
+    /* Variables con nombre de colección para compatibilidad */
+    --variable-collection-botones: rgba(202, 43, 38, 1);
+    --variable-collection-fondo: rgba(23, 18, 18, 1);
+    --variable-collection-link: rgba(246, 102, 97, 1);
+    --variable-collection-placeholder: rgba(46, 46, 46, 1);
+    --variable-collection-selected: rgba(85, 85, 85, 1);
+
+    /* Animaciones */
+    --animate-spin: spin 1s linear infinite;
+}
+
+@theme {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-buttons: var(--buttons);
+    --color-link: var(--link);
+    --color-selected: var(--selected);
+    --color-placeholder: var(--placeholder);
+
+    /* Colores con alias para Tailwind */
+    --color-variable-collection-botones: var(--variable-collection-botones);
+    --color-variable-collection-fondo: var(--variable-collection-fondo);
+    --color-variable-collection-link: var(--variable-collection-link);
+    --color-variable-collection-placeholder: var(
+        --variable-collection-placeholder
+    );
+    --color-variable-collection-selected: var(--variable-collection-selected);
+
+    /* Fuentes personalizadas */
+    --font-family-orbitron: var(--font-orbitron), sans-serif;
+    --font-family-ubuntu: var(--font-ubuntu), sans-serif;
+}
+
+/* Base styles */
+@layer base {
+  html {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    color-scheme: dark;
+    scrollbar-width: thin;
+    scrollbar-color: var(--variable-collection-selected) var(--variable-collection-fondo);
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  
+  button,
+  input,
+  select,
+  textarea {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    outline: none;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: var(--variable-collection-fondo);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--variable-collection-selected);
+    border-radius: 9999px;
+    border: 2px solid var(--variable-collection-fondo);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--variable-collection-link);
+  }
+}
+
+/* Utility classes */
+@layer utilities {
+    .all-\[unset\] {
+        all: unset;
+    }
+
+    .font-orbitron {
+        font-family: var(--font-orbitron), sans-serif;
+    }
+
+    .font-ubuntu {
+        font-family: var(--font-ubuntu), sans-serif;
+    }
+}
+
+/* Animaciones personalizadas */
+.animate-fade-in {
+    animation: fade-in 1s var(--animation-delay, 0s) ease forwards;
+}
+
+.animate-fade-up {
+    animation: fade-up 1s var(--animation-delay, 0s) ease forwards;
+}
+
+.animate-bounce {
+    animation: bounce 1s infinite;
+}
+
+.animate-marquee {
+    animation: marquee var(--duration) infinite linear;
+}
+
+.animate-marquee-vertical {
+    animation: marquee-vertical var(--duration) linear infinite;
+}
+
+.animate-shimmer {
+    animation: shimmer 8s infinite;
+}
+
+.animate-spin {
+    animation: var(--animate-spin);
+}
+
+/* Keyframes */
+@keyframes spin {
+    to {
+        transform: rotate(1turn);
+    }
+}
+
+@keyframes bounce {
+    0%,
+    100% {
+        transform: translateY(-25%);
+        animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+    }
+    50% {
+        transform: translateY(0);
+        animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+}
+
+@keyframes image-glow {
+    0% {
+        opacity: 0;
+        animation-timing-function: cubic-bezier(0.74, 0.25, 0.76, 1);
+    }
+    10% {
+        opacity: 0.7;
+        animation-timing-function: cubic-bezier(0.12, 0.01, 0.08, 0.99);
+    }
+    to {
+        opacity: 0.4;
+    }
+}
+
+@keyframes fade-in {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes fade-up {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes shimmer {
+    0%,
+    90%,
+    to {
+        background-position: calc(-100% - var(--shimmer-width)) 0;
+    }
+    30%,
+    60% {
+        background-position: calc(100% + var(--shimmer-width)) 0;
+    }
+}
+
+@keyframes marquee {
+    0% {
+        transform: translate(0);
+    }
+    to {
+        transform: translateX(calc(-100% - var(--gap)));
+    }
+}
+
+@keyframes marquee-vertical {
+    0% {
+        transform: translateY(0);
+    }
+    to {
+        transform: translateY(calc(-100% - var(--gap)));
+    }
+}
+
+/* Animación de shake para errores de validación */
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+        transform: translateX(-4px);
+    }
+    20%, 40%, 60%, 80% {
+        transform: translateX(4px);
+    }
+}
+
+.animate-shake {
+    animation: shake 0.5s ease-in-out;
+}
+
+/*
+  WCAG 2.3.3 — Respetar preferencia de movimiento reducido.
+  Se activa cuando el usuario configura "Reducir movimiento" en su OS
+
+  Doble capa de protección:
+    1. Override universal (0.01ms): aplica a TODAS las animaciones del navegador,
+       incluyendo librerías de terceros y animaciones inline. No las elimina del árbol
+       de estilos, solo las hace imperceptibles. Algunos navegadores antiguos pueden
+       ignorar duraciones extremadamente cortas, de ahí la segunda capa.
+    2. animation: none en clases custom: garantía explícita para las clases del proyecto.
+       Más específico y confiable que depender solo del override de duración.
+
+  Nota: las animaciones de framer-motion se controlan vía JS y no responden a este media
+  query. Para soporte completo en componentes animados con framer-motion usar el hook
+  `useReducedMotion()` de la librería (trabajo pendiente).
+*/
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        /* Capa 1: reducir a duración imperceptible sin eliminar del flujo de estilos */
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    /* Capa 2: desactivación explícita de las clases de animación propias del proyecto */
+    .animate-fade-in,
+    .animate-fade-up,
+    .animate-bounce,
+    .animate-marquee,
+    .animate-marquee-vertical,
+    .animate-shimmer,
+    .animate-spin,
+    .animate-shake,
+    .animate-float {
+        animation: none !important;
+    }
+}
