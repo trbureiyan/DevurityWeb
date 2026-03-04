@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
       } else {
         setMessage(data?.message || 'Si el correo existe, recibirás un enlace para restablecer la contraseña.');
       }
-    } catch (err) {
+    } catch {
       setError('Error de red');
     } finally {
       setLoading(false);
