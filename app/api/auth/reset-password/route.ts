@@ -14,10 +14,10 @@ export async function POST(req: Request) {
     }
 
     // Validate token
-    let decoded: any;
+    let decoded: { type?: string; email?: string } | null = null;
     try {
-      decoded = await validateToken(token);
-    } catch (err) {
+      decoded = (await validateToken(token)) as { type?: string; email?: string };
+    } catch {
       return NextResponse.json({ ok: false, message: "Token inválido o expirado" }, { status: 401 });
     }
 
