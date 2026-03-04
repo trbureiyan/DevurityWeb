@@ -38,7 +38,7 @@ export default function ValidacionPage() {
     );
   }, [deferredSkillInput, availableSkills]);
   const showSuggestions = isOpen && filteredSkills.length > 0;
-  const [isSuccess, setIsSuccess] = useState(false);
+//  const [isSuccess, setIsSuccess] = useState(false); # No se usa actualmente, pero podría ser útil para mostrar un mensaje de éxito después del registro.
   const { tokenValid, isLoading, submissionError: tokenError, showErrorModal: tokenErrorModal, setShowErrorModal: setTokenErrorModal } = useTokenValidation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -54,7 +54,7 @@ export default function ValidacionPage() {
     confirmPassword: "",
   });
   const router = useRouter();
-  const { fetchWithCsrf, loading: csrfLoading } = useCsrf();
+  const { fetchWithCsrf } = useCsrf();
 
   useEffect(() => {
     // Ocultar elementos con type casting
@@ -173,7 +173,7 @@ export default function ValidacionPage() {
       setIsSubmitting(false);
       setShowSuccessModal(true);
       // Registro completado exitosamente
-    } catch (error) {
+    } catch {
       // Error submitting form
       setSubmissionError("Error de conexión. Por favor intenta nuevamente.");
       setShowErrorModal(true);
@@ -212,7 +212,7 @@ export default function ValidacionPage() {
     });
   };
 
-  const handleCloseSuccessModal = () => {
+  const _handleCloseSuccessModal = () => {
     setShowSuccessModal(false);
   };
 
@@ -221,8 +221,8 @@ export default function ValidacionPage() {
     if (!showSuccessModal) return;
     setAcceptDisabled(true);
     const t = setTimeout(() => {
-      // After 3 seconds, navigate to home
-      router.push("/");
+      // After 3 seconds, navigate to home — replace prevents back-button returning to the empty form
+      router.replace("/");
     }, 3000);
 
     return () => clearTimeout(t);
