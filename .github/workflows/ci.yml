@@ -28,8 +28,8 @@ jobs:
     env:
       DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/devurity_ci?schema=public"
       JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-not-a-real-secret' }}
-      NEXT_PUBLIC_APP_URL: "https://devurity-web.vercel.app"
-      NEXT_PUBLIC_API_URL: "https://devurity-web.vercel.app"
+      NEXT_PUBLIC_APP_URL: "https://devurityweb.vercel.app"
+      NEXT_PUBLIC_API_URL: "https://devurityweb.vercel.app"
 
     steps:
       - name: Checkout
