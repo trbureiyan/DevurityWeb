@@ -155,6 +155,7 @@ export default function TeamMemberCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-9 h-9 flex items-center justify-center rounded-full bg-[var(--background)] text-[var(--foreground)] hover:bg-[#E94560] transition"
+                  aria-label={link.label}
                   title={link.label}
                 >
                   <SocialIcon icon={link.icon} />

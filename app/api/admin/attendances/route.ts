@@ -71,10 +71,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const bogotaNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
-    const today = new Date(bogotaNow);
-    today.setHours(0, 0, 0, 0);
+    const nowInSystemTz = new Date();
+    const bogotaDateFormatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Bogota",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const bogotaParts = bogotaDateFormatter.formatToParts(nowInSystemTz);
+    const yearPart = bogotaParts.find((p) => p.type === "year");
+    const monthPart = bogotaParts.find((p) => p.type === "month");
+    const dayPart = bogotaParts.find((p) => p.type === "day");
+    if (!yearPart || !monthPart || !dayPart) {
+      throw new Error("No se pudo determinar la fecha actual de Bogotá");
+    }
+    const year = Number(yearPart.value);
+    const month = Number(monthPart.value);
+    const day = Number(dayPart.value);
 
+    // Construct UTC boundaries corresponding to the Bogota calendar day
+    const today = new Date(Date.UTC(year, month - 1, day));
     const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
 
     const existingAttendance = await prisma.attendances.findFirst({
