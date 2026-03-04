@@ -31,7 +31,8 @@
     "nodemailer": "^7.0.9",
     "qrcode": "^1.5.4",
     "react": "19.1.2",
-    "react-dom": "19.1.2"
+    "react-dom": "19.1.2",
+    "react-icons": "^5.5.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -46,7 +47,7 @@
     "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
-    "prisma": "^6.17.1",
+    "prisma": "^6.19.2",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",
