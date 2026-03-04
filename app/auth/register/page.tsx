@@ -189,7 +189,7 @@ export default function RegistroPage() {
         "¡Registro exitoso! Verifica tu correo para completar el registro.",
       );
       setShowSuccessModal(true);
-    } catch (error) {
+    } catch {
       setModalMessage(
         "Error de conexión. Por favor, verifica tu conexión e intenta nuevamente.",
       );
@@ -201,7 +201,7 @@ export default function RegistroPage() {
     }
   };
 
-  const nextSlide = () => {
+  const _nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % slides.length);
   };
 
@@ -213,7 +213,7 @@ export default function RegistroPage() {
     setShowSuccessModal(false);
   };
 
-  const prevSlide = () => {
+  const _prevSlide = () => {
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   };
 

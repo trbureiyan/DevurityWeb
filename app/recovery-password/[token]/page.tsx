@@ -43,7 +43,7 @@ function RecoveryForm({ token }: { token: string }) {
       } else {
         setSuccess('Contraseña actualizada correctamente.');
       }
-    } catch (err) {
+    } catch {
       setError('Error de red');
     } finally {
       setLoading(false);
