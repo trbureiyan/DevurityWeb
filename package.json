@@ -14,7 +14,8 @@
     "postinstall": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
     "db:push": "prisma db push",
-    "db:migrate": "prisma migrate deploy"
+    "db:migrate": "prisma migrate deploy",
+    "db:repair": "prisma db execute --file prisma/repair-sequences.sql --schema prisma/schema.prisma"
   },
   "prisma": {
     "seed": "npm run db:seed"
