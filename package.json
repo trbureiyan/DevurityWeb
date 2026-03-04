@@ -54,11 +54,5 @@
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.0.18"
-  },
-  "prisma": {
-    "migrations": {
-      "path": "prisma/migrations",
-      "seed": "tsx prisma/seed.ts"
-    }
   }
 }
