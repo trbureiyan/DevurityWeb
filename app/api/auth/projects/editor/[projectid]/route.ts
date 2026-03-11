@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 const supabase = supabaseAdmin;
 export async function POST(
   request: NextRequest,
-  { params }: { params: { projectid: string } },
+  { params }: { params: Promise<{ projectid: string }> },
 ) {
   const user = await requireAuth(request);
 
