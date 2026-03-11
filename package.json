@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "postinstall": "prisma generate",
+    "vercel-build": "prisma migrate deploy && next build",
     "db:seed": "tsx prisma/seed.ts",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate deploy",
@@ -20,9 +21,6 @@
     "db:deploy": "tsx scripts/deploy-db.ts deploy",
     "db:deploy:dry": "DRY_RUN=1 tsx scripts/deploy-db.ts deploy",
     "db:status": "tsx scripts/deploy-db.ts status"
-  },
-  "prisma": {
-    "seed": "npm run db:seed"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

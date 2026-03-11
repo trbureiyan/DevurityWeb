@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { STAGE_LABELS, STAGE_COLORS } from "@/hooks/useProjects";
-import { getProjectsCatalog } from "@/lib/data/projects";
+import { getProjectsCatalog, type ProjectItem } from "@/lib/data/projects";
 
 // Muestra los 3 proyectos más recientes en el landing
 export default async function ProjectsPreviewSection() {
-  const allProjects = await getProjectsCatalog();
+  let allProjects: ProjectItem[];
+  try {
+    allProjects = await getProjectsCatalog();
+  } catch {
+    // Si la DB no está disponible o el schema está desincronizado,
+    // degradar a lista vacía para que el build estático no aborte.
+    allProjects = [];
+  }
 
   const sorted = [...allProjects].sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
