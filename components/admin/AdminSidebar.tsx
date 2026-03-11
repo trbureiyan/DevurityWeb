@@ -5,13 +5,13 @@ import Image from "next/image";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { ComponentType, SVGProps } from "react";
 import {
-  AdjustmentsHorizontalIcon,
   ArrowLeftOnRectangleIcon,
   CalendarDaysIcon,
   ClipboardDocumentListIcon,
   DocumentTextIcon,
   FolderIcon,
   PencilSquareIcon,
+  QrCodeIcon,
   Squares2X2Icon,
   UserCircleIcon,
   UsersIcon,
@@ -53,16 +53,16 @@ const menuItems: MenuItem[] = [
   },
   {
     label: "Proyectos",
-    href: "/admin/projects",
+    href: "/projects",
     icon: FolderIcon,
     isActive: (pathname) =>
-      pathname.startsWith("/admin/projects") || pathname.startsWith("/admin/proyectos"),
+      pathname.startsWith("/projects") || pathname.startsWith("/admin/proyectos"),
   },
   {
     label: "Eventos y noticias",
-    href: "/admin/updates",
+    href: "/updates",
     icon: CalendarDaysIcon,
-    isActive: (pathname) => pathname.startsWith("/admin/eventos"),
+    isActive: (pathname) => pathname.startsWith("/updates"),
   },
   {
     label: "Perfiles",
@@ -77,16 +77,16 @@ const menuItems: MenuItem[] = [
     isActive: (pathname) => pathname.startsWith("/admin/perfiles"),
   },
   {
-    label: "Contenidos pagina",
-    href: "/admin/contents",
+    label: "Galeria",
+    href: "/gallery",
     icon: DocumentTextIcon,
-    isActive: (pathname) => pathname.startsWith("/admin/contenidos"),
+    isActive: (pathname) => pathname.startsWith("/gallery"),
   },
   {
-    label: "Configuracion pagina",
-    href: "/admin/settings",
-    icon: AdjustmentsHorizontalIcon,
-    isActive: (pathname) => pathname.startsWith("/admin/configuracion"),
+    label: "Asistencias",
+    href: "/admin/attendances",
+    icon: QrCodeIcon,
+    isActive: (pathname) => pathname.startsWith("/admin/attendances"),
   },
 ];
 
@@ -127,6 +127,7 @@ export default function AdminSidebar({
             src="/images/landing/wave-background.jpg"
             alt="Cover"
             fill
+            sizes="225px"
             className="object-cover"
           />
         </div>

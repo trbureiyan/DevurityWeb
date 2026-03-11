@@ -242,3 +242,44 @@ body {
 .animate-shake {
     animation: shake 0.5s ease-in-out;
 }
+
+/*
+  WCAG 2.3.3 — Respetar preferencia de movimiento reducido.
+  Se activa cuando el usuario configura "Reducir movimiento" en su OS
+
+  Doble capa de protección:
+    1. Override universal (0.01ms): aplica a TODAS las animaciones del navegador,
+       incluyendo librerías de terceros y animaciones inline. No las elimina del árbol
+       de estilos, solo las hace imperceptibles. Algunos navegadores antiguos pueden
+       ignorar duraciones extremadamente cortas, de ahí la segunda capa.
+    2. animation: none en clases custom: garantía explícita para las clases del proyecto.
+       Más específico y confiable que depender solo del override de duración.
+
+  Nota: las animaciones de framer-motion se controlan vía JS y no responden a este media
+  query. Para soporte completo en componentes animados con framer-motion usar el hook
+  `useReducedMotion()` de la librería (trabajo pendiente).
+*/
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        /* Capa 1: reducir a duración imperceptible sin eliminar del flujo de estilos */
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    /* Capa 2: desactivación explícita de las clases de animación propias del proyecto */
+    .animate-fade-in,
+    .animate-fade-up,
+    .animate-bounce,
+    .animate-marquee,
+    .animate-marquee-vertical,
+    .animate-shimmer,
+    .animate-spin,
+    .animate-shake,
+    .animate-float {
+        animation: none !important;
+    }
+}

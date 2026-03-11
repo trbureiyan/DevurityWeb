@@ -8,7 +8,7 @@ import { EmailOptions, sendEmail } from "@/lib/email";
 import { errorRequest } from "@/lib/error";
 
 // Helper function to serialize BigInt values
-function serializeBigInt(obj: any): any {
+function serializeBigInt(obj: unknown): unknown {
   if (obj === null || obj === undefined) {
     return obj;
   }
@@ -22,7 +22,7 @@ function serializeBigInt(obj: any): any {
   }
 
   if (typeof obj === "object") {
-    const result: any = {};
+    const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       result[key] = serializeBigInt(value);
     }
@@ -308,7 +308,7 @@ const emailTemplate = `
       <p><span class="success-icon">✓</span> Tu cuenta ha sido activada exitosamente</p>
 
       <p style="text-align: center;">
-        <a href="${process.env.DOMAIN}/auth/login" class="cta-button">Iniciar Sesión</a>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://devurity.com'}/auth/login" class="cta-button">Iniciar Sesión</a>
       </p>
 
 

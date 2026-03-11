@@ -16,7 +16,7 @@ const NAVIGATION_ITEMS = [
   { label: "Nosotros", href: "/about" },
   { label: "Proyectos", href: "/projects" },
   { label: "Eventos", href: "/updates" },
-  { label: "Asistencia", href: "admin/attendances" },
+  { label: "Asistencia", href: "/admin/attendances" },
 ];
 
 export default function Navbar() {
@@ -117,9 +117,9 @@ export default function Navbar() {
           aria-label="Main navigation"
         >
           <ul className="flex items-center gap-9">
-            {NAVIGATION_ITEMS.map((item, index) => (
+            {NAVIGATION_ITEMS.map((item) => (
               <li
-                key={index}
+                key={item.href}
                 className="flex flex-col items-center justify-center"
               >
                 <Link

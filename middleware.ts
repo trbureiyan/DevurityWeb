@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { authMiddleware } from "./lib/auth/middleware";
 import { csrfAdapter } from "./lib/csrf";
-import { validateAuthToken } from "./lib/auth/utils";
+import { verifyJwtPayload } from "./lib/auth/jwt-edge";
 
 const redirectMap: Record<string, string> = {
   "/auth": "/auth/login",
@@ -33,10 +33,14 @@ export async function middleware(
   // is trying to access the login page, redirect them to profile to
   // avoid showing the login UI to already-authenticated users.
   if (token && (normalisedPath === "/auth/login" || normalisedPath === "/login" || normalisedPath === "/auth")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/profile";
-    url.search = "";
-    return NextResponse.redirect(url, 308);
+    const decoded = await verifyJwtPayload(token);
+    if (decoded?.sub) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/profile/${decoded.sub}`;
+      url.search = "";
+      return NextResponse.redirect(url, 308);
+    }
+    // Token inválido — dejar pasar para que se autentique de nuevo
   }
 
   const redirectTarget = redirectMap[normalisedPath];
@@ -68,40 +72,15 @@ export async function middleware(
     return NextResponse.rewrite(request.nextUrl);
   }
 
-  // Si el usuario ya está autenticado y trata de acceder a login/registro, redirigir a perfil
-  if (token && (currentPath === "/auth/login" || currentPath === "/auth/register")) {
-    try {
-      const decoded = await validateAuthToken(token);
-      
-      // Obtener el usuario para usar su username en lugar del ID
-      const response = await fetch(`${request.nextUrl.origin}/api/auth/me`, {
-        headers: { cookie: request.headers.get("cookie") || "" }
-      });
-      
-      if (response.ok) {
-        const userData = await response.json();
-        const profileSlug = userData.username || decoded.sub;
-        const profileUrl = new URL(`/profile/${profileSlug}`, request.url);
-        return NextResponse.redirect(profileUrl);
-      }
-      
-      // Fallback al ID si falla la obtención del username
-      const profileUrl = new URL(`/profile/${decoded.sub}`, request.url);
-      return NextResponse.redirect(profileUrl);
-    } catch {
-      // Token inválido, dejar pasar para que se autentique de nuevo
-    }
-  }
-
-  // Si no hay token y es ruta protegida, guardar intent URL
+  // Si no hay token y es ruta protegida, redirigir a login
   if (!token && isProtectedPath(currentPath)) {
     const loginUrl = new URL("/auth/login", request.url);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Verificar roles para rutas de admin
-  if (currentPath.startsWith("/admin")) {
-    const roleCheck = await checkUserRole(request);
+  // Verificar roles para rutas de admin y sus endpoints de API
+  if (currentPath.startsWith("/admin") || currentPath.startsWith("/api/admin")) {
+    const roleCheck = await checkUserRole(request, token);
     if (roleCheck) {
       return roleCheck;
     }
@@ -137,37 +116,23 @@ function denyAccess(request: NextRequest): NextResponse {
   }
 }
 
-// Función para verificar roles de usuario
+// Función para verificar roles de usuario — usa JWT Edge-compatible directamente
+// para evitar self-fetch que es inestable en Vercel Edge Runtime.
 async function checkUserRole(
   request: NextRequest,
+  token: string | undefined,
 ): Promise<NextResponse | null> {
-  try {
-    // Usar el endpoint simple de verificación de admin
-    const adminResponse = await fetch(
-      `${request.nextUrl.origin}/api/auth/is-admin`,
-      {
-        headers: {
-          cookie: request.headers.get("cookie") || "",
-        },
-      },
-    );
+  if (!token) {
+    return denyAccess(request);
+  }
 
-    if (!adminResponse.ok) {
-      console.error(
-        `Error en is-admin: ${adminResponse.status} ${adminResponse.statusText}`,
-      );
-      return denyAccess(request);
-    }
-
-    const adminData = await adminResponse.json();
-
-    // Verificar que el usuario sea admin
-    if (!adminData.isAdmin) {
-      return denyAccess(request);
-    }
-  } catch (error) {
-    console.error("Error verificando si es admin:", error);
-    // SEGURIDAD: En caso de error, DENEGAR acceso por defecto (fail-secure)
+  // Verificar rol directamente desde el JWT (Edge-compatible)
+  const decoded = await verifyJwtPayload(token);
+  if (!decoded) {
+    console.error("[Admin middleware] JWT inválido o expirado");
+    return denyAccess(request);
+  }
+  if (decoded.role !== "admin") {
     return denyAccess(request);
   }
 
@@ -250,3 +215,4 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js)$).*)",
   ],
 };
+

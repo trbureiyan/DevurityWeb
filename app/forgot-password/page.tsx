@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
       } else {
         setMessage(data?.message || 'Si el correo existe, recibirás un enlace para restablecer la contraseña.');
       }
-    } catch (err) {
+    } catch {
       setError('Error de red');
     } finally {
       setLoading(false);
@@ -52,7 +52,7 @@ export default function ForgotPasswordPage() {
         <div className="grid lg:grid-cols-2">
           {/* Left visual panel - nice image and messaging */}
           <div className="relative min-h-[320px] lg:min-h-[600px] hidden lg:block">
-            <Image src={IMAGES.login.slide1} alt="Recuperar" fill className="object-cover" />
+            <Image src={IMAGES.login.slide1} alt="Recuperar" fill sizes="50vw" className="object-cover" />
             <div className="absolute inset-0 bg-black/40"></div>
             <div className="absolute inset-0 flex flex-col items-start justify-center p-12">
               <h2 className="text-white font-orbitron text-4xl mb-2">Recupera tu acceso</h2>
@@ -78,9 +78,10 @@ export default function ForgotPasswordPage() {
 
                 <form onSubmit={handleSubmit} className="mt-4 space-y-4" noValidate>
                   <div>
-                    <label className="text-white font-ubuntu block mb-2">Correo electrónico</label>
+                    <label htmlFor="recovery-email" className="text-white font-ubuntu block mb-2">Correo electrónico</label>
                     <div className="relative">
                       <input
+                        id="recovery-email"
                         type="email"
                         inputMode="email"
                         autoComplete="email"

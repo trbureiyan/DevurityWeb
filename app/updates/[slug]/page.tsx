@@ -13,32 +13,38 @@ const createAccentStyles = (color: string): CSSProperties =>
     "--shadow-color": `${color}66`,
   }) as CSSProperties;
 
-// Revalidar cada 6 horas
-export const revalidate = 60 * 60 * 6;
+// Revalidar cada 6 horas (21600s)
+export const revalidate = 21600;
 
 interface UpdateDetailPageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 // Generar rutas estáticas para cada update
 export async function generateStaticParams() {
-  const updates = await getUpdatesFeed();
+  try {
+    const updates = await getUpdatesFeed();
 
-  return updates
-    .filter((item) => Boolean(item.slug))
-    .map((item) => ({
-      slug: item.slug,
-    }));
+    return updates
+      .filter((item) => Boolean(item.slug))
+      .map((item) => ({
+        slug: item.slug,
+      }));
+  } catch (error) {
+    console.error("[generateStaticParams] Error al cargar updates:", error);
+    return [];
+  }
 }
 
 // Generar metadata dinámicamente para cada update
 export async function generateMetadata({
   params,
 }: UpdateDetailPageProps): Promise<Metadata> {
+  const { slug } = await params;
   const updates = await getUpdatesFeed();
-  const update = updates.find((item) => item.slug === params.slug);
+  const update = updates.find((item) => item.slug === slug);
 
   if (!update) {
     return {
@@ -57,14 +63,15 @@ export async function generateMetadata({
 export default async function UpdateDetailPage({
   params,
 }: UpdateDetailPageProps) {
+  const { slug } = await params;
   const updates = await getUpdatesFeed();
-  const update = updates.find((item) => item.slug === params.slug);
+  const update = updates.find((item) => item.slug === slug);
 
   if (!update) {
     notFound();
   }
 
-  const canonicalHref = `/updates/${params.slug}`;
+  const canonicalHref = `/updates/${slug}`;
   const hasExternalLink = update.href.startsWith("http") && update.href !== canonicalHref;
   const related = updates.filter((item) => item.slug !== update.slug).slice(0, 3);
 

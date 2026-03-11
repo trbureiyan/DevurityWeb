@@ -250,9 +250,343 @@ INSERT INTO public.updates (slug, title, display_date, published_at, description
 	 ('visita-granja-usco', 'Visita a la granja USCO', '2024-2', '2024-02-01', 'El semillero visitó la granja USCO para plantear proyectos de modernización y apoyo técnico.', ARRAY['Granja', 'USCO', 'modernización', 'proyectos', 'Interdisciplinario'], '#bf6b65', 'https://www.linkedin.com/feed/update/urn:li:activity:7385374125529403392', false, 'published')
 ON CONFLICT (slug) DO NOTHING;
 
+-- ============================================================
+-- Insertar / actualizar catálogo de proyectos
+-- Fuente de verdad: prisma/seeders/05-projects.ts
+-- NOTA: start_date NO se actualiza en ON CONFLICT para preservar
+--       la fecha histórica real de inicio del proyecto.
+-- ============================================================
+
+-- ── En Continuidad ─────────────────────────────────────────────────────────
+
+INSERT INTO public.projects (slug, title, description, stage, focus_areas, stack, hero_image, cta_label, cta_href, start_date, is_archived)
+VALUES (
+  'cancer-temprano',
+  'Detección de Cáncer (IA)',
+  'Pipeline de IA para analizar registros clínicos y resaltar señales de interés en etapas tempranas, reduciendo el tiempo de triaje diagnóstico.',
+  'desarrollo',
+  ARRAY['Salud', 'Inteligencia Artificial'],
+  ARRAY['Python', 'Machine Learning', 'Deep Learning'],
+  NULL, NULL, NULL,
+  '2025-08-28',
+  false
+)
+ON CONFLICT (slug) DO UPDATE SET
+  title        = EXCLUDED.title,
+  description  = EXCLUDED.description,
+  stage        = EXCLUDED.stage,
+  focus_areas  = EXCLUDED.focus_areas,
+  stack        = EXCLUDED.stack,
+  hero_image   = EXCLUDED.hero_image,
+  cta_label    = EXCLUDED.cta_label,
+  cta_href     = EXCLUDED.cta_href,
+  is_archived  = EXCLUDED.is_archived,
+  updated_at   = NOW();
+
+INSERT INTO public.projects (slug, title, description, stage, focus_areas, stack, hero_image, cta_label, cta_href, start_date, is_archived)
+VALUES (
+  'secops-honeynet',
+  'Honeypot / SecOps Honeynet',
+  'Infraestructura contenida de honeypots para observar tácticas reales y ajustar la postura defensiva con datos verificables.',
+  'desarrollo',
+  ARRAY['Ciberseguridad'],
+  ARRAY['Python', 'Linux', 'Docker'],
+  NULL, NULL, NULL,
+  '2025-09-04',
+  false
+)
+ON CONFLICT (slug) DO UPDATE SET
+  title        = EXCLUDED.title,
+  description  = EXCLUDED.description,
+  stage        = EXCLUDED.stage,
+  focus_areas  = EXCLUDED.focus_areas,
+  stack        = EXCLUDED.stack,
+  is_archived  = EXCLUDED.is_archived,
+  updated_at   = NOW();
+
+INSERT INTO public.projects (slug, title, description, stage, focus_areas, stack, hero_image, cta_label, cta_href, start_date, is_archived)
+VALUES (
+  'plataforma-aprendizaje',
+  'Plataforma Web de Aprendizaje',
+  'Entorno web interactivo para cursos, recursos y seguimiento del progreso académico dirigido a la comunidad universitaria.',
+  'desarrollo',
+  ARRAY['Educación', 'Desarrollo Web'],
+  ARRAY['Next.js', 'React', 'TypeScript', 'PostgreSQL'],
+  NULL, NULL, NULL,
+  '2025-10-01',
+  false
+)
+ON CONFLICT (slug) DO UPDATE SET
+  title        = EXCLUDED.title,
+  description  = EXCLUDED.description,
+  stage        = EXCLUDED.stage,
+  focus_areas  = EXCLUDED.focus_areas,
+  stack        = EXCLUDED.stack,
+  is_archived  = EXCLUDED.is_archived,
+  updated_at   = NOW();
+
+INSERT INTO public.projects (slug, title, description, stage, focus_areas, stack, hero_image, cta_label, cta_href, start_date, is_archived)
+VALUES (
+  'maqagr-app',
+  'Desarrollo de Aplicación Agrícola (MaqAgr)',
+  'Aplicativo web que evalúa compatibilidad tractor-implemento (potencia, terreno y especificaciones), apoyando decisiones que reducen costos y evitan daños al suelo.',
+  'desarrollo',
+  ARRAY['Agrotech', 'Productividad'],
+  ARRAY['Node.js', 'React', 'Tailwind CSS', 'MongoDB'],
+  NULL,
+  'Poster en AmiTIC 2025',
+  'https://www.linkedin.com/feed/update/urn:li:activity:7386808584354971648',
+  '2025-09-26',
+  false
+)
+ON CONFLICT (slug) DO UPDATE SET
+  title        = EXCLUDED.title,
+  description  = EXCLUDED.description,
+  stage        = EXCLUDED.stage,
+  focus_areas  = EXCLUDED.focus_areas,
+  stack        = EXCLUDED.stack,
+  cta_label    = EXCLUDED.cta_label,
+  cta_href     = EXCLUDED.cta_href,
+  is_archived  = EXCLUDED.is_archived,
+  updated_at   = NOW();
+
+INSERT INTO public.projects (slug, title, description, stage, focus_areas, stack, hero_image, cta_label, cta_href, start_date, is_archived)
+VALUES (
+  'devurity-web',
+  'Página Oficial del Semillero Devurity',
+  'Plataforma web informativa y de gestión para el semillero, destacando proyectos, eventos y facilitando la colaboración entre miembros.',
+  'produccion',
+  ARRAY['Desarrollo Web', 'Comunidad', 'Diseño UI/UX', 'Branding'],
+  ARRAY['Next.js', 'React', 'TypeScript', 'TailwindCSS', 'Prisma', 'PostgreSQL'],
+  NULL,
+  'Repositorio público',
+  'https://www.github.com/trbureiyan/DevurityWeb',
+  '2025-11-06',
+  false
+)
+ON CONFLICT (slug) DO UPDATE SET
+  title        = EXCLUDED.title,
+  description  = EXCLUDED.description,
+  stage        = EXCLUDED.stage,
+  focus_areas  = EXCLUDED.focus_areas,
+  stack        = EXCLUDED.stack,
+  cta_label    = EXCLUDED.cta_label,
+  cta_href     = EXCLUDED.cta_href,
+  is_archived  = EXCLUDED.is_archived,
+  updated_at   = NOW();
+
+INSERT INTO public.projects (slug, title, description, stage, focus_areas, stack, hero_image, cta_label, cta_href, start_date, is_archived)
+VALUES (
+  'etflow',
+  'ETFlow',
+  'Herramienta de automatización de flujos ETL orientada a integrar fuentes de datos heterogéneas con bajo código.',
+  'desarrollo',
+  ARRAY['Data Science', 'Backend Development'],
+  ARRAY['Python', 'TypeScript'],
+  NULL, NULL, NULL,
+  '2025-10-01',
+  false
+)
+ON CONFLICT (slug) DO UPDATE SET
+  title        = EXCLUDED.title,
+  description  = EXCLUDED.description,
+  stage        = EXCLUDED.stage,
+  focus_areas  = EXCLUDED.focus_areas,
+  stack        = EXCLUDED.stack,
+  is_archived  = EXCLUDED.is_archived,
+  updated_at   = NOW();
+
+-- ── En Pausa / Definición ───────────────────────────────────────────────────
+
+INSERT INTO public.projects (slug, title, description, stage, focus_areas, stack, hero_image, cta_label, cta_href, start_date, is_archived)
+VALUES (
+  'sistema-gestion-personal',
+  'Sistema de Gestión de Personal',
+  'Plataforma para administrar nóminas, turnos, documentos y desempeño del talento humano en organizaciones medianas.',
+  'pausa',
+  ARRAY['Operaciones', 'RRHH'],
+  ARRAY[]::text[],
+  NULL, NULL, NULL,
+  '2025-10-16',
+  false
+)
+ON CONFLICT (slug) DO UPDATE SET
+  title        = EXCLUDED.title,
+  description  = EXCLUDED.description,
+  stage        = EXCLUDED.stage,
+  focus_areas  = EXCLUDED.focus_areas,
+  is_archived  = EXCLUDED.is_archived,
+  updated_at   = NOW();
+
+INSERT INTO public.projects (slug, title, description, stage, focus_areas, stack, hero_image, cta_label, cta_href, start_date, is_archived)
+VALUES (
+  'granja-hrm',
+  'Gestión de Personal de la Granja',
+  'Plataforma operativa para turnos, bases de datos y control documental del talento en granjas tecnificadas.',
+  'pausa',
+  ARRAY['Operaciones', 'RRHH', 'Agrotech'],
+  ARRAY[]::text[],
+  NULL, NULL, NULL,
+  '2025-10-16',
+  false
+)
+ON CONFLICT (slug) DO UPDATE SET
+  title        = EXCLUDED.title,
+  description  = EXCLUDED.description,
+  stage        = EXCLUDED.stage,
+  focus_areas  = EXCLUDED.focus_areas,
+  is_archived  = EXCLUDED.is_archived,
+  updated_at   = NOW();
+
+INSERT INTO public.projects (slug, title, description, stage, focus_areas, stack, hero_image, cta_label, cta_href, start_date, is_archived)
+VALUES (
+  'enterprise-cyber-lab',
+  'Entorno de Ciberseguridad Empresarial',
+  'Laboratorio controlado para evaluar amenazas internas, ejercicios de respuesta y cumplimiento basado en escenarios de negocio.',
+  'pausa',
+  ARRAY['Ciberseguridad', 'Compliance'],
+  ARRAY['Linux'],
+  NULL, NULL, NULL,
+  '2025-09-04',
+  false
+)
+ON CONFLICT (slug) DO UPDATE SET
+  title        = EXCLUDED.title,
+  description  = EXCLUDED.description,
+  stage        = EXCLUDED.stage,
+  focus_areas  = EXCLUDED.focus_areas,
+  stack        = EXCLUDED.stack,
+  is_archived  = EXCLUDED.is_archived,
+  updated_at   = NOW();
+
+INSERT INTO public.projects (slug, title, description, stage, focus_areas, stack, hero_image, cta_label, cta_href, start_date, is_archived)
+VALUES (
+  'nutriplant',
+  'Nutriplant',
+  'Sistema de monitoreo y recomendación de nutrición vegetal para optimizar rendimientos en cultivos controlados.',
+  'pausa',
+  ARRAY['Agrotech', 'Inteligencia Artificial'],
+  ARRAY[]::text[],
+  NULL, NULL, NULL,
+  '2025-10-01',
+  false
+)
+ON CONFLICT (slug) DO UPDATE SET
+  title        = EXCLUDED.title,
+  description  = EXCLUDED.description,
+  stage        = EXCLUDED.stage,
+  focus_areas  = EXCLUDED.focus_areas,
+  is_archived  = EXCLUDED.is_archived,
+  updated_at   = NOW();
+
+INSERT INTO public.projects (slug, title, description, stage, focus_areas, stack, hero_image, cta_label, cta_href, start_date, is_archived)
+VALUES (
+  'modelo-pruebas-psicologia',
+  'Modelo de Pruebas para Psicología',
+  'Plataforma digital para administrar, calificar y analizar baterías psicológicas estandarizadas.',
+  'pausa',
+  ARRAY['Salud', 'Educación'],
+  ARRAY[]::text[],
+  NULL, NULL, NULL,
+  '2025-10-01',
+  false
+)
+ON CONFLICT (slug) DO UPDATE SET
+  title        = EXCLUDED.title,
+  description  = EXCLUDED.description,
+  stage        = EXCLUDED.stage,
+  focus_areas  = EXCLUDED.focus_areas,
+  is_archived  = EXCLUDED.is_archived,
+  updated_at   = NOW();
+
+INSERT INTO public.projects (slug, title, description, stage, focus_areas, stack, hero_image, cta_label, cta_href, start_date, is_archived)
+VALUES (
+  'conteo-enfermedades-alevinos',
+  'Conteo y Clasificación de Enfermedades en Alevinos',
+  'Sistema de visión por computadora para detectar y clasificar enfermedades en alevinos durante la etapa de cría.',
+  'pausa',
+  ARRAY['Computer Vision', 'Agrotech', 'Inteligencia Artificial'],
+  ARRAY['Python', 'Computer Vision'],
+  NULL, NULL, NULL,
+  '2025-10-01',
+  false
+)
+ON CONFLICT (slug) DO UPDATE SET
+  title        = EXCLUDED.title,
+  description  = EXCLUDED.description,
+  stage        = EXCLUDED.stage,
+  focus_areas  = EXCLUDED.focus_areas,
+  stack        = EXCLUDED.stack,
+  is_archived  = EXCLUDED.is_archived,
+  updated_at   = NOW();
+
+INSERT INTO public.projects (slug, title, description, stage, focus_areas, stack, hero_image, cta_label, cta_href, start_date, is_archived)
+VALUES (
+  'modulo-inventario-granja',
+  'Módulo Inventario y Auditorías Granja',
+  'Módulo de control de inventario y auditorías internas para la gestión eficiente de activos en granjas experimentales.',
+  'pausa',
+  ARRAY['Operaciones', 'Agrotech'],
+  ARRAY[]::text[],
+  NULL, NULL, NULL,
+  '2025-10-01',
+  false
+)
+ON CONFLICT (slug) DO UPDATE SET
+  title        = EXCLUDED.title,
+  description  = EXCLUDED.description,
+  stage        = EXCLUDED.stage,
+  focus_areas  = EXCLUDED.focus_areas,
+  is_archived  = EXCLUDED.is_archived,
+  updated_at   = NOW();
+
+-- ── Cancelados (archivados) ─────────────────────────────────────────────────
+
+INSERT INTO public.projects (slug, title, description, stage, focus_areas, stack, hero_image, cta_label, cta_href, start_date, is_archived)
+VALUES (
+  'videojuego-emociones',
+  'Videojuego sobre Emociones',
+  'Videojuego educativo orientado al reconocimiento y gestión emocional para niños en edad escolar.',
+  'incubacion',
+  ARRAY['Educación', 'Salud'],
+  ARRAY[]::text[],
+  NULL, NULL, NULL,
+  '2025-10-01',
+  true
+)
+ON CONFLICT (slug) DO UPDATE SET
+  title        = EXCLUDED.title,
+  description  = EXCLUDED.description,
+  is_archived  = EXCLUDED.is_archived,
+  updated_at   = NOW();
+
+INSERT INTO public.projects (slug, title, description, stage, focus_areas, stack, hero_image, cta_label, cta_href, start_date, is_archived)
+VALUES (
+  'modalidad-grado',
+  'Proyecto Modalidad de Grado',
+  'Iniciativa transversal que consolida entregables académicos, investigación aplicada y transferencia de conocimiento.',
+  'incubacion',
+  ARRAY['Investigación', 'Educación'],
+  ARRAY[]::text[],
+  NULL, NULL, NULL,
+  '2025-10-09',
+  true
+)
+ON CONFLICT (slug) DO UPDATE SET
+  title        = EXCLUDED.title,
+  description  = EXCLUDED.description,
+  is_archived  = EXCLUDED.is_archived,
+  updated_at   = NOW();
+
 -- Verificar datos insertados
 SELECT * FROM roles;
 SELECT COUNT(*) as total_skills FROM skills;
 SELECT COUNT(*) as total_platforms FROM platforms;
 SELECT COUNT(*) as total_programs FROM programs;
+SELECT COUNT(*) as total_projects FROM projects;
 SELECT COUNT(*) as total_updates FROM updates;
+
+-- ============================================================
+-- Si después de restaurar un backup aparece P2002 en (id),
+-- ejecutar: npx prisma db execute --file prisma/repair-sequences.sql --schema prisma/schema.prisma
+-- ============================================================

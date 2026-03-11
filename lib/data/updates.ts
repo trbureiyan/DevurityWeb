@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { getPublishedUpdates, getLatestUpdates, mapUpdateToNewsEvent } from "@/repositories/updates/updates.repositories";
+import { getPublishedUpdates, getLatestUpdates} from "@/repositories/updates/updates.repositories"; // mapUpdateToNewsEvent # Repositorio de updates deprecado TODO: Si no se va a usar para otra cosa, mover esta función a un helper específico de updates o eliminarla si no se necesita.
 import type { UpdateItem, NewsEvent } from "@/lib/types/update.types";
 
 // -- Cache revision para el feed de actualizaciones --
@@ -47,14 +47,19 @@ function mapToUpdateItem(update: {
 
 export const getUpdatesFeed = unstable_cache(
   async (): Promise<UpdateItem[]> => {
-    const updates = await getPublishedUpdates();
-    return updates.map(mapToUpdateItem);
+    try {
+      const updates = await getPublishedUpdates();
+      return updates.map(mapToUpdateItem);
+    } catch (error) {
+      console.error("[getUpdatesFeed] Error fetching updates from DB:", error);
+      return [];
+    }
   },
   // Claves de cache: nombre + revisión para invalidación manual
   ["updates-feed", UPDATES_CACHE_REV],
   {
-    // Revalidación de 6 horas
-    revalidate: 60 * 60 * 6,
+    // Revalidación cada 60 segundos para que los datos aparezcan pronto tras deploy
+    revalidate: 60,
   }
 );
 
@@ -63,10 +68,16 @@ export const getUpdatesFeed = unstable_cache(
 
 export const getLatestNewsForLanding = unstable_cache(
   async (count: number = 3): Promise<NewsEvent[]> => {
-    return getLatestUpdates(count);
+    try {
+      return await getLatestUpdates(count);
+    } catch (error) {
+      console.error("[getLatestNewsForLanding] Error fetching latest news from DB:", error);
+      return [];
+    }
   },
   ["latest-news-landing", UPDATES_CACHE_REV],
   {
-    revalidate: 60 * 60 * 6,
+    // Revalidación cada 60 segundos para que los datos aparezcan pronto tras deploy
+    revalidate: 60,
   }
 );

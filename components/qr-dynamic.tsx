@@ -39,11 +39,38 @@ export default function QRDynamic({ userId, className }: QRDynamicProps) {
   const { fetchWithCsrf } = useCsrf();
   const generateNewQRRef = useRef<() => Promise<void>>(null);
   const isGeneratingRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  // Limpiar temporizador
+  const clearTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  // Iniciar temporizador
+  const startTimer = useCallback(() => {
+    clearTimer();
+
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prevTime) => {
+        if (prevTime <= 1) {
+          clearTimer();
+          // Usar la referencia para generar nuevo QR cuando expire
+          if (generateNewQRRef.current) {
+            generateNewQRRef.current();
+          }
+          return 120;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+  }, [clearTimer]);
 
   // Función para generar nuevo QR dinámico
   const generateNewQR = useCallback(async () => {
     if (!userId || isGeneratingRef.current) {
-      console.log("❌ No se puede generar QR - sin userId o ya generando");
       return;
     }
 
@@ -60,63 +87,54 @@ export default function QRDynamic({ userId, className }: QRDynamicProps) {
 
       const data = await res.json();
 
+      if (!isMountedRef.current) return;
+
       if (res.ok) {
         setQrData(data);
-        setTimeLeft(120); // Reiniciar contador a 2 minutos
+        setTimeLeft(120);
+        startTimer();
       } else {
         console.error("Error al generar QR:", data.error);
         setError(data.error || "Error al generar QR");
       }
     } catch (error) {
+      if (!isMountedRef.current) return;
       console.error("Error de conexión:", error);
       setError("Error de conexión al generar QR");
     } finally {
       isGeneratingRef.current = false;
-      setIsGenerating(false);
+      if (isMountedRef.current) {
+        setIsGenerating(false);
+      }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, fetchWithCsrf]);
+  // startTimer excluido intencionalmente para evitar loop infinito
 
-  // Actualizar la referencia cuando generateNewQR cambia
-  useEffect(() => {
-    generateNewQRRef.current = generateNewQR;
-  }, [generateNewQR]);
+  // Mantener la referencia actualizada (asignación en render, válido para refs no-DOM)
+  generateNewQRRef.current = generateNewQR;
 
   useEffect(() => {
+    isMountedRef.current = true;
+
     if (!userId) {
       return undefined;
     }
 
-    if (generateNewQRRef.current) {
-      generateNewQRRef.current();
-    }
+    // setTimeout para evitar doble invocación en StrictMode
+    const timeoutId = setTimeout(() => {
+      if (isMountedRef.current && !isGeneratingRef.current) {
+        generateNewQRRef.current?.();
+      }
+    }, 0);
 
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      isMountedRef.current = false;
+      clearTimeout(timeoutId);
+      clearTimer();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
-
-  // Iniciar temporizador
-  const startTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prevTime) => {
-        if (prevTime <= 1) {
-          clearInterval(timerRef.current!);
-          // Usar la referencia para generar nuevo QR cuando expire
-          if (generateNewQRRef.current) {
-            generateNewQRRef.current();
-          }
-          return 120;
-        }
-        return prevTime - 1;
-      });
-    }, 1000);
-  }, []);
 
   // Formatear tiempo en minutos y segundos
   const formatTime = (seconds: number): string => {
@@ -125,12 +143,6 @@ export default function QRDynamic({ userId, className }: QRDynamicProps) {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  useEffect(() => {
-    // Iniciar temporizador cuando se genera nuevo QR
-    if (qrData) {
-      startTimer();
-    }
-  }, [qrData, startTimer]);
   // Clases combinadas para el contenedor del componente
   const cardClassName = mergeClassNames(
     "rounded-[28px] border border-white/5 bg-[#221b1b] p-6 shadow-[0_24px_60px_rgba(0,0,0,0.45)]",

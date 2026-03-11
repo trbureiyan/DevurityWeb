@@ -1,14 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, use } from "react";
 import Link from "next/link";
 
-export default function RecoveryPasswordPage({ params }: { params: Promise<{ token: string }> | { token: string } }) {
-  // In newer Next versions params may be a Promise; React.use can unwrap it.
-  // Use a guarded call to support both cases.
-  const maybeUse = (React as any).use;
-  const resolvedParams = maybeUse ? (React as any).use(params) : params;
-  const token = (resolvedParams && (resolvedParams as any).token) || "";
+export default function RecoveryPasswordPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params);
 
   return <RecoveryForm token={token} />;
 }
@@ -47,7 +43,7 @@ function RecoveryForm({ token }: { token: string }) {
       } else {
         setSuccess('Contraseña actualizada correctamente.');
       }
-    } catch (err) {
+    } catch {
       setError('Error de red');
     } finally {
       setLoading(false);
@@ -58,10 +54,17 @@ function RecoveryForm({ token }: { token: string }) {
     <main className="min-h-screen bg-black flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-[#1A1616] rounded-2xl p-8">
         <h1 className="text-white font-orbitron text-2xl mb-4">Establecer nueva contraseña</h1>
+        {/*
+          htmlFor + id vincula explícitamente cada <label> con su <input>.
+          Sin esta asociación, los lectores de pantalla no anuncian el label al
+          enfocar el campo, y hacer clic en el texto del label no enfoca el input.
+          Los ids deben ser únicos en el documento — el prefijo del campo los diferencia.
+        */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-white block mb-2">Nueva contraseña</label>
+            <label htmlFor="new-password" className="text-white block mb-2">Nueva contraseña</label>
             <input
+              id="new-password"
               type="password"
               required
               value={password}
@@ -70,8 +73,9 @@ function RecoveryForm({ token }: { token: string }) {
             />
           </div>
           <div>
-            <label className="text-white block mb-2">Confirmar contraseña</label>
+            <label htmlFor="confirm-password" className="text-white block mb-2">Confirmar contraseña</label>
             <input
+              id="confirm-password"
               type="password"
               required
               value={confirm}

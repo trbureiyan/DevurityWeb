@@ -1,37 +1,15 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# ─── Dependencies ────────────────────────────────────────────────────────────
 /node_modules
+node_modules/
 /.pnp
 .pnp.js
+.npm
 
-# testing
-/coverage
-
-# next.js
-.next/
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-*.log
-*.log.*
-Thumbs.db
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.yarn/*
-
-# local env files
-.env*.local
+# ─── Environment / Secrets ───────────────────────────────────────────────────
 .env
+.env*.local
 .env.local
 .env.development.local
 .env.test.local
@@ -39,30 +17,115 @@ yarn-error.log*
 .env.env.staging.local
 .env.*.local
 
-# IDE
+# ─── Next.js ─────────────────────────────────────────────────────────────────
+.next/
+/.next/
+/out/
 
-.vscode/
+# ─── Build Output ────────────────────────────────────────────────────────────
+/build
+dist/
+build/
 
-# vercel
+# ─── Vercel ──────────────────────────────────────────────────────────────────
 .vercel
 
-# typescript
+# ─── TypeScript ──────────────────────────────────────────────────────────────
 *.tsbuildinfo
 next-env.d.ts
 
-# cache
+# ─── Logs ────────────────────────────────────────────────────────────────────
+logs/
+/logs/
+logs/out/
+/logs/out/
+*.log
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.yarn/*
 
-*.sublime-project
-*.sublime-workspace
+# ─── Runtime Data ────────────────────────────────────────────────────────────
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# ─── Testing ─────────────────────────────────────────────────────────────────
+/coverage
+testing/
+.nyc_output/
+test-results/
+src/test-models.js
+
+# ─── Documentation (generated/output only) ───────────────────────────────────
+/docs/site/
+/docs/out/
+/documentation/out/
+/.context/
+*.pdf
+*.docx
+*.doc
+*.pptx
+*.xlsx
+
+# ─── Postman ─────────────────────────────────────────────────────────────────
+postman/experimental/
+postman-reports/
+newman/
+*.postman_collection.json
+*.postman_environment.json
+*.postman_globals.json
+postman-cloud-agent.log
+
+# ─── Database ────────────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+database/backups/
+
+# ─── Cache ───────────────────────────────────────────────────────────────────
 .cache/
 .eslintcache
 .prettiercache
 
-# Prisma generated files
+# ─── IDE ─────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.history/
+*.sublime-project
+*.sublime-workspace
+
+# ─── OS Files ────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.pem
+*.swp
+*.swo
+*~
+
+# ─── Temporary Files ─────────────────────────────────────────────────────────
+tmp/
+temp/
+*.tmp
+
+# ─── Backups ─────────────────────────────────────────────────────────────────
+backup/
+backups/
+*.bak
+*.backup
+
+# ─── Agent / Skills ──────────────────────────────────────────────────────────
+skills-lock.json
+.agent
+.agents/
+
+# ─── Prisma Generated Files ──────────────────────────────────────────────────
 lib/generated/
 lib/generated/prisma/
 
-# Prisma engine binaries
+# ─── Prisma Engine Binaries ──────────────────────────────────────────────────
 *.dll.node
 *.so.node
 query_engine-*

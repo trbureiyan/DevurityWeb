@@ -28,6 +28,61 @@ type StatCard = {
 // Normaliza cantidades para la región
 const numberFormatter = new Intl.NumberFormat("es-CO");
 
+// Tarjeta placeholder para accesos ocultos.
+// Extraído al nivel de módulo para evitar el antipatrón de "componente dentro de componente":
+// si se definiera dentro de AdminDashboardClient, React crearía un tipo de componente nuevo
+// en cada render del padre, forzando unmount + remount completo en cada actualización
+// de estado — destruyendo animaciones y estado local del placeholder.
+function QuickAccessPlaceholder({
+  label,
+  onRestore,
+}: {
+  label: string;
+  onRestore: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-2xl border border-dashed border-[rgba(140,140,140,0.3)] bg-[#1b1414] p-5 shadow-[0px_0px_0px_1px_rgba(140,140,140,0.1)]">
+      <div>
+        <p className="text-[15px] font-semibold text-[rgba(255,255,255,0.9)]">
+          {label} oculto
+        </p>
+        <p className="text-[13px] text-[rgba(255,255,255,0.7)]">
+          Recupera el acceso rápido cuando lo necesites.
+        </p>
+      </div>
+      <button
+        onClick={onRestore}
+        className="inline-flex items-center gap-2 rounded-md bg-[#0a66c2] px-3 py-2 text-[14px] font-semibold text-white transition-colors hover:bg-[#0a66c2]/90"
+      >
+        <ArrowPathIcon className="h-4 w-4" aria-hidden="true" />
+        Restaurar
+      </button>
+    </div>
+  );
+}
+
+// Muestra el valor de una estadística con sus estados de carga y error.
+// Extraído como componente propio en lugar de la función `renderStatValue` anterior:
+// una función que retorna JSX y se llama como `{renderStatValue(x)}` es un componente
+// disfrazado de función helper — no puede tener hooks, no aparece en DevTools y
+// no se beneficia de la memoización de React. Declararla como componente es la forma
+// idiomática y habilita optimizaciones futuras con React.memo si el grid crece.
+function StatValue({ value, loading }: { value: number | null; loading: boolean }) {
+  if (loading) {
+    return <span className="h-8 w-20 animate-pulse rounded bg-white/10" />;
+  }
+
+  if (value === null || Number.isNaN(value)) {
+    return <span className="text-[15px] text-[rgba(255,255,255,0.6)]">--</span>;
+  }
+
+  return (
+    <span className="text-[30px] font-semibold tracking-tight text-white">
+      {numberFormatter.format(value)}
+    </span>
+  );
+}
+
 interface AdminDashboardClientProps {
   initialStats: DashboardStats;
 }
@@ -139,50 +194,6 @@ export default function AdminDashboardClient({ initialStats }: AdminDashboardCli
     [stats],
   );
 
-  // Tarjeta placeholder para accesos ocultos
-  const QuickAccessPlaceholder = ({
-    label,
-    onRestore,
-  }: {
-    label: string;
-    onRestore: () => void;
-  }) => (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-dashed border-[rgba(140,140,140,0.3)] bg-[#1b1414] p-5 shadow-[0px_0px_0px_1px_rgba(140,140,140,0.1)]">
-      <div>
-        <p className="text-[15px] font-semibold text-[rgba(255,255,255,0.9)]">
-          {label} oculto
-        </p>
-        <p className="text-[13px] text-[rgba(255,255,255,0.7)]">
-          Recupera el acceso rápido cuando lo necesites.
-        </p>
-      </div>
-      <button
-        onClick={onRestore}
-        className="inline-flex items-center gap-2 rounded-md bg-[#0a66c2] px-3 py-2 text-[14px] font-semibold text-white transition-colors hover:bg-[#0a66c2]/90"
-      >
-        <ArrowPathIcon className="h-4 w-4" aria-hidden="true" />
-        Restaurar
-      </button>
-    </div>
-  );
-
-  // Resuelve el valor que se mostrará en cada tarjeta de estadística
-  const renderStatValue = (value: number | null) => {
-    if (loadingStats) {
-      return <span className="h-8 w-20 animate-pulse rounded bg-white/10" />;
-    }
-
-    if (value === null || Number.isNaN(value)) {
-      return <span className="text-[15px] text-[rgba(255,255,255,0.6)]">--</span>;
-    }
-
-    return (
-      <span className="text-[30px] font-semibold tracking-tight text-white">
-        {numberFormatter.format(value)}
-      </span>
-    );
-  };
-
   return (
     <div className="space-y-8 p-6">
       {/* Hero del panel con accesos directos principales */}
@@ -269,7 +280,7 @@ export default function AdminDashboardClient({ initialStats }: AdminDashboardCli
                 </span>
               </div>
               <div className="mt-6 space-y-1">
-                {renderStatValue(stat.value)}
+                <StatValue value={stat.value} loading={loadingStats} />
                 <p className="text-[15px] text-[rgba(255,255,255,0.7)]">{stat.label}</p>
               </div>
             </article>
@@ -571,8 +582,8 @@ export default function AdminDashboardClient({ initialStats }: AdminDashboardCli
             </div>
             {loadingStats ? (
               <div className="mt-5 space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="animate-pulse">
+                {["skeleton-recent-1", "skeleton-recent-2", "skeleton-recent-3"].map((id) => (
+                  <div key={id} className="animate-pulse">
                     <div className="h-4 bg-white/10 rounded w-3/4 mb-2" />
                     <div className="h-3 bg-white/5 rounded w-full" />
                   </div>

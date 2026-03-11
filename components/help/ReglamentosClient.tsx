@@ -97,12 +97,20 @@ export default function ReglamentosClient({ reglamento }: ReglamentosClientProps
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={closeModal}
+            onKeyDown={(e) => { if (e.key === 'Escape') closeModal(); }}
+            role="button"
+            tabIndex={-1}
+            aria-label="Cerrar modal"
           />
 
           <div
             className="relative z-10 max-w-3xl w-full bg-[var(--variable-collection-placeholder)]/95
                        border border-[var(--color-selected)] rounded-2xl p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Detalle de artículo"
           >
             <h2 className="text-xl font-orbitron">{activeArticle.numero}</h2>
             <p className="text-xs opacity-70 mb-4">{activeArticle.titulo}</p>
