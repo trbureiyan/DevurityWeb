@@ -116,8 +116,8 @@ function denyAccess(request: NextRequest): NextResponse {
   }
 }
 
-// Función para verificar roles de usuario — consulta la BD en vivo para evitar
-// que un JWT emitido con un rol anterior bloquee el acceso después de un cambio de rol.
+// Función para verificar roles de usuario — usa JWT Edge-compatible directamente
+// para evitar self-fetch que es inestable en Vercel Edge Runtime.
 async function checkUserRole(
   request: NextRequest,
   token: string | undefined,
@@ -126,25 +126,10 @@ async function checkUserRole(
     return denyAccess(request);
   }
 
-  // Verificar rol contra la BD
-  try {
-    const isAdminUrl = new URL("/api/auth/is-admin", request.url);
-    const isAdminRes = await fetch(isAdminUrl, {
-      headers: { cookie: request.headers.get("cookie") ?? "" },
-      cache: "no-store",
-    });
-    if (isAdminRes.ok) {
-      const data = (await isAdminRes.json()) as { isAdmin: boolean };
-      return data.isAdmin === true ? null : denyAccess(request);
-    }
-  } catch (err) {
-    console.error("[Admin middleware] Error verificando rol en BD:", err);
-  }
-
-  // Fallback: usar el rol del JWT si el endpoint no responde
+  // Verificar rol directamente desde el JWT (Edge-compatible)
   const decoded = await verifyJwtPayload(token);
   if (!decoded) {
-    console.error("JWT inválido o expirado en middleware de admin");
+    console.error("[Admin middleware] JWT inválido o expirado");
     return denyAccess(request);
   }
   if (decoded.role !== "admin") {

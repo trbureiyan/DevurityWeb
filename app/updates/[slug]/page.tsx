@@ -24,13 +24,18 @@ interface UpdateDetailPageProps {
 
 // Generar rutas estáticas para cada update
 export async function generateStaticParams() {
-  const updates = await getUpdatesFeed();
+  try {
+    const updates = await getUpdatesFeed();
 
-  return updates
-    .filter((item) => Boolean(item.slug))
-    .map((item) => ({
-      slug: item.slug,
-    }));
+    return updates
+      .filter((item) => Boolean(item.slug))
+      .map((item) => ({
+        slug: item.slug,
+      }));
+  } catch (error) {
+    console.error("[generateStaticParams] Error al cargar updates:", error);
+    return [];
+  }
 }
 
 // Generar metadata dinámicamente para cada update

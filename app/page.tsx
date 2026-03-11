@@ -22,8 +22,8 @@ export const metadata: Metadata = {
   icons: siteIcons,
 };
 
-// Forzar render estático general landing
-export const dynamic = "force-static";
+// Forzar render dinámico para que EventsSection cargue datos en vivo de la DB
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const [quickNavItems, galleryImages] = await Promise.all([

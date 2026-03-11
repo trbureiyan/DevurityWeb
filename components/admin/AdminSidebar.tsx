@@ -5,13 +5,13 @@ import Image from "next/image";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { ComponentType, SVGProps } from "react";
 import {
-  AdjustmentsHorizontalIcon,
   ArrowLeftOnRectangleIcon,
   CalendarDaysIcon,
   ClipboardDocumentListIcon,
   DocumentTextIcon,
   FolderIcon,
   PencilSquareIcon,
+  QrCodeIcon,
   Squares2X2Icon,
   UserCircleIcon,
   UsersIcon,
@@ -81,6 +81,12 @@ const menuItems: MenuItem[] = [
     href: "/gallery",
     icon: DocumentTextIcon,
     isActive: (pathname) => pathname.startsWith("/gallery"),
+  },
+  {
+    label: "Asistencias",
+    href: "/admin/attendances",
+    icon: QrCodeIcon,
+    isActive: (pathname) => pathname.startsWith("/admin/attendances"),
   },
 ];
 

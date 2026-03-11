@@ -34,7 +34,9 @@ export function isProtectedPath(path: string): boolean {
   );
 
   const isPublic = authConfig.publicPaths.some((publicPath) =>
-    path.startsWith(publicPath),
+    publicPath === "/"
+      ? path === "/"
+      : path.startsWith(publicPath),
   );
 
   return (isProtectedPage || isProtectedApi) && !isPublic;

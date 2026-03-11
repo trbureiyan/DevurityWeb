@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { getLatestNewsForLanding } from "@/lib/data/updates";
+import type { NewsEvent } from "@/lib/data/updates";
 
 const CTA_HREF = "/updates";
 
@@ -14,7 +15,13 @@ const isExternalHref = (href: string): boolean => href.startsWith("http");
 
 export default async function EventsSection() {
   // Carga los 3 ítems más recientes desde la DB (Server Component)
-  const latestNews = await getLatestNewsForLanding(3);
+  let latestNews: NewsEvent[];
+  try {
+    latestNews = await getLatestNewsForLanding(3);
+  } catch (error) {
+    console.error("[EventsSection] Failed to load latest news:", error);
+    latestNews = [];
+  }
 
   return (
     <section id="eventos" className="relative w-full py-10 md:py-16 overflow-hidden">
