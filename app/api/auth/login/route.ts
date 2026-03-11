@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     };
 
     const token = await generateToken(tokenPayload, 14400);
-    logger.info(token);
+    logger.info("Token generated successfully for user %s", user.id);
     let redirectTo = "/profile";
 
     if (user.roles.name === "admin") {
