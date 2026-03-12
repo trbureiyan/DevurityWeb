@@ -66,7 +66,7 @@ export async function POST(
   } catch (error) {
     return NextResponse.json(
       { error: "Invalid file encoding" },
-      { status: 500 },
+      { status: 400 },
     );
   }
 
