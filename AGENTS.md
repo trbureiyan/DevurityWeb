@@ -22,3 +22,14 @@ ode:assert/strict).
 efactor:).
 - Verify changes with 
 pm run build before pushing.
+
+## Communication, Tone & Formatting
+- **NO EMOJIS:** Never use standard Unicode emojis (e.g., 🚀, 👍, 🤖, etc.) in your explanations, code comments, pull request descriptions, or commit messages.
+- **Use GitHub Markdown Alerts:** When you need to emphasize something, use GitHub's standard markdown blockquotes instead of emojis:
+  - `> [!NOTE]`
+  - `> [!TIP]`
+  - `> [!IMPORTANT]`
+  - `> [!WARNING]`
+  - `> [!CAUTION]`
+- **Text-based Emojis:** If a specific placeholder or reaction is strictly necessary, use GitHub-flavored shortcodes (e.g., `:shipit:`, `:tada:`) or simple ASCII art/kaomoji.
+- **Professionalism:** Keep communication highly technical, concise, and straight to the point.
