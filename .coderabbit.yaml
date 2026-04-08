@@ -29,6 +29,7 @@ reviews:
     Crea notas de versión concisas y estructuradas.
     NO uses emojis bajo ninguna circunstancia.
     Mantén un tono técnico, profesional y directo.
+    IMPORTANTE: Envuelve absoluta y estrictamente TODO tu resumen dentro de una etiqueta HTML colapsable `<details><summary>Análisis automático de CodeRabbit</summary> ... </details>` para que no sea intrusivo en la descripción principal del PR.
 
   # Walkthrough colapsado, con diagrama de secuencias y archivos cambiados
   collapse_walkthrough: true
