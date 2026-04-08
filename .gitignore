@@ -60,6 +60,7 @@ test-results/
 src/test-models.js
 
 # ─── Documentation (generated/output only) ───────────────────────────────────
+.docs/
 /docs/site/
 /docs/out/
 /documentation/out/

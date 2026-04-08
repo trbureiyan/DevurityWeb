@@ -38,19 +38,22 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
-      # Cache antes de npm ci para que el postinstall (prisma generate) lo aproveche
+      # Cache para el cliente de Prisma generado
       - name: Cache Prisma generated client
         uses: actions/cache@v4
         with:
           path: lib/generated/prisma
           key: prisma-${{ hashFiles('prisma/schema.prisma') }}
 
-      # postinstall en package.json ya ejecuta prisma generate — no se necesita step explícito
       - name: Install dependencies
         run: npm ci
+
+      # Generar el cliente manualmente ya que ignore-scripts de .npmrc bloquea el postinstall
+      - name: Generate Prisma Client
+        run: npx prisma generate
 
       - name: Apply DB migrations
         run: npm run db:migrate
