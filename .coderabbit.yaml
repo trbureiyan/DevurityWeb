@@ -1,0 +1,58 @@
+# CodeRabbit configuration — DevurityWeb
+# Docs: https://docs.coderabbit.ai/configure-coderabbit
+
+language: "es-ES"
+
+reviews:
+  profile: "chill"
+
+  # Habilitar auto-review en PRs hacia main y dev
+  auto_review:
+    enabled: true
+    base_branches:
+      - "main"
+      - "dev"
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+      - "wip"
+      - "DO NOT MERGE"
+
+  # Sin comentarios invasivos línea por línea
+  request_changes_workflow: false
+
+  # Resumen de alto nivel activado
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+
+  # Walkthrough colapsado, con diagrama de secuencias y archivos cambiados
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: true
+
+  # Sin generación de tests unitarios
+  poem: false
+
+  # Métricas de revisión
+  review_status: true
+  commit_status: true
+  fail_commit_status: false
+
+  # Estimaciones de esfuerzo y evaluación de issues vinculados
+  estimate_effort_to_review: true
+  labeling_instructions: []
+  auto_apply_labels: false
+  auto_assign_reviewers: false
+
+  # Anti-Slop activo
+  finishing_touches:
+    docstrings:
+      enabled: false
+
+chat:
+  auto_reply: true
+
+# No generar sugerencias de tests unitarios
+tools:
+  shellcheck:
+    enabled: false

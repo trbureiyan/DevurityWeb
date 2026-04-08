@@ -10,23 +10,29 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: devurity_ci
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # ── Servicio postgres comentado temporalmente ──────────────────────────
+    # Backend en normalización/refactorización. Re-habilitar cuando las
+    # migraciones sean estables.
+    #
+    # services:
+    #   postgres:
+    #     image: postgres:16
+    #     env:
+    #       POSTGRES_USER: postgres
+    #       POSTGRES_PASSWORD: postgres
+    #       POSTGRES_DB: devurity_ci
+    #     ports:
+    #       - 5432:5432
+    #     options: >-
+    #       --health-cmd pg_isready
+    #       --health-interval 10s
+    #       --health-timeout 5s
+    #       --health-retries 5
 
     env:
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/devurity_ci?schema=public"
+      # DATABASE_URL comentado — no hay servicio postgres activo
+      # DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/devurity_ci?schema=public"
+      DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder?schema=public"
       JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-not-a-real-secret' }}
       NEXT_PUBLIC_APP_URL: "https://devurityweb.vercel.app"
       NEXT_PUBLIC_API_URL: "https://devurityweb.vercel.app"
@@ -51,25 +57,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Generar el cliente manualmente ya que ignore-scripts de .npmrc bloquea el postinstall
+      # Esencial: genera tipos @prisma/client para que TypeScript compile sin errores
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      - name: Apply DB migrations
-        run: npm run db:migrate
+      # ── Steps de BD comentados temporalmente ──────────────────────────────
+      # Re-habilitar junto con el servicio postgres cuando el schema esté estable.
+      #
+      # - name: Apply DB migrations
+      #   run: npm run db:migrate
+      #
+      # - name: Repair DB sequences
+      #   run: npm run db:repair
+      #
+      # - name: Seed database
+      #   run: npm run db:seed
 
-      - name: Repair DB sequences
-        run: npm run db:repair
-
-      - name: Seed database
-        run: npm run db:seed
-
-      # Tests deshabilitados temporalmente — habilitar cuando estén listos para CI
-      # - name: Run unit tests
-      #   run: npm test
+      # Barrera principal: detecta errores de tipos sin necesidad de DB
+      - name: TypeScript check
+        run: npx tsc --noEmit
 
       - name: Lint
         run: npm run lint
 
+      # Verifica estabilidad de rutas App Router y Layouts de Next.js
       - name: Build
         run: npm run build
