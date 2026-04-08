@@ -24,14 +24,22 @@ reviews:
   # Resumen de alto nivel activado
   high_level_summary: true
   high_level_summary_placeholder: "@coderabbitai summary"
+  high_level_summary_in_walkthrough: false
+  high_level_summary_instructions: |
+    Crea notas de versión concisas y estructuradas.
+    NO uses emojis bajo ninguna circunstancia.
+    Mantén un tono técnico, profesional y directo.
 
   # Walkthrough colapsado, con diagrama de secuencias y archivos cambiados
   collapse_walkthrough: true
   changed_files_summary: true
   sequence_diagrams: true
+  review_details: false
 
   # Sin generación de tests unitarios
   poem: false
+  in_progress_fortune: true
+  enable_prompt_for_ai_agents: true
 
   # Métricas de revisión
   review_status: true
@@ -39,12 +47,19 @@ reviews:
   fail_commit_status: false
 
   # Estimaciones de esfuerzo y evaluación de issues vinculados
-  estimate_effort_to_review: true
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_reviewers: true
   labeling_instructions: []
   auto_apply_labels: false
   auto_assign_reviewers: false
 
   # Anti-Slop activo
+  slop_detection:
+    enabled: true
+
   finishing_touches:
     docstrings:
       enabled: false
