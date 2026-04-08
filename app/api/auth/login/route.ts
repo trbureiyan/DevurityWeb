@@ -3,6 +3,7 @@ import { generateToken } from "@/lib/jwt";
 import { bcryptAdapter } from "@/lib/bcrypt";
 import { emailUniversity } from "@/lib/regex";
 import { findByEmailWithRole } from "@/repositories/users/users.repositories";
+import logger from "@/lib/logger";
 
 const loginAttempts = new Map<string, { count: number; lastAttempt: number }>();
 const MAX_ATTEMPTS = 5;
@@ -112,7 +113,7 @@ export async function POST(request: Request) {
     };
 
     const token = await generateToken(tokenPayload, 14400);
-
+    logger.info("Token generated successfully for user %s", user.id);
     let redirectTo = "/profile";
 
     if (user.roles.name === "admin") {
