@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import NavbarConditional from "@/components/layouts/NavbarConditional";
 import Footer from "@/components/layouts/Footer";
 import { siteIcons } from "@/lib/constants/metadata";
+import { Analytics } from "@vercel/analytics/next";
 
 // Config de fuentes
 const orbitron = Orbitron({
@@ -71,6 +72,7 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
         </AuthProvider>
         <Footer />
+        <Analytics />
       </body>
     </html>
   );
