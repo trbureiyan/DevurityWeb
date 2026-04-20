@@ -30,7 +30,7 @@
     "framer-motion": "^12.23.25",
     "html5-qrcode": "^2.3.8",
     "jsonwebtoken": "^9.0.2",
-    "next": "^15.5.14",
+    "next": "^15.5.15",
     "nodemailer": "^7.0.9",
     "qrcode": "^1.5.4",
     "react": "19.1.2",
