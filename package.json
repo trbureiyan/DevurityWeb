@@ -31,7 +31,7 @@
     "html5-qrcode": "^2.3.8",
     "jsonwebtoken": "^9.0.2",
     "next": "^15.5.14",
-    "nodemailer": "^7.0.9",
+    "nodemailer": "^8.0.5",
     "qrcode": "^1.5.4",
     "react": "19.1.2",
     "react-dom": "19.1.2"
