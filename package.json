@@ -5,6 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@11.4.0",
   "scripts": {
+    "migrate": "node scripts/migrate.mjs",
     "preinstall": "npx only-allow pnpm",
     "prepare": "husky",
     "secure-install": "pnpm install --ignore-scripts",
