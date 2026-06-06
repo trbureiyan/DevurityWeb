@@ -170,13 +170,14 @@ Diseñada para permitir modularidad y contribución incremental.
 ```bash
 git clone https://github.com/trbureiyan/DevurityWeb
 cd DevurityWeb
-npm install
+corepack enable
+pnpm install
 cp .env.example .env
-npx prisma db push
-npm run dev
+pnpm exec prisma db push
+pnpm run dev
 ````
 
-> ⚠️ Se requiere Node 18+ y PostgreSQL
+> ⚠️ Se requiere Node 18+, pnpm >=11.1.0 y PostgreSQL. NPM esta prohibido.
 
 ---
 
