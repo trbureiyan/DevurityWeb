@@ -9,7 +9,7 @@
  * Commands:
  *   migrate   — run prisma migrate deploy
  *   repair    — run sequence repair SQL
- *   seed      — run prisma db seed (calls npm run db:seed)
+ *   seed      — run prisma db seed (calls pnpm run db:seed)
  *   deploy    — migrate + repair + seed  (default full deployment)
  *   status    — prisma migrate status
  *
@@ -44,7 +44,7 @@ function run(label: string, cmd: string): void {
   }
   try {
     execSync(cmd, { cwd: ROOT, stdio: "inherit" });
-  } catch (err) {
+  } catch {
     console.error(`\n❌ Step failed: ${label}`);
     process.exit(1);
   }
@@ -60,7 +60,7 @@ function assertEnv(): void {
 // ── Commands ─────────────────────────────────────────────────────────────────
 
 async function cmdMigrate(): Promise<void> {
-  run("Run Prisma migrations", "npx prisma migrate deploy");
+  run("Run Prisma migrations", "pnpm exec prisma migrate deploy");
 }
 
 async function cmdRepair(): Promise<void> {
@@ -71,16 +71,16 @@ async function cmdRepair(): Promise<void> {
   }
   run(
     "Repair DB sequences",
-    `npx prisma db execute --file prisma/repair-sequences.sql --schema prisma/schema.prisma`,
+    `pnpm exec prisma db execute --file prisma/repair-sequences.sql --schema prisma/schema.prisma`,
   );
 }
 
 async function cmdSeed(): Promise<void> {
-  run("Seed database", "npm run db:seed");
+  run("Seed database", "pnpm run db:seed");
 }
 
 async function cmdStatus(): Promise<void> {
-  run("Migration status", "npx prisma migrate status");
+  run("Migration status", "pnpm exec prisma migrate status");
 }
 
 async function cmdDeploy(): Promise<void> {
@@ -119,7 +119,7 @@ if (!COMMANDS[cmd]) {
 
 assertEnv();
 
-COMMANDS[cmd]().catch((err) => {
-  console.error("❌ Unexpected error:", err);
+COMMANDS[cmd]().catch((_err) => {
+  console.error("❌ Unexpected error:", _err);
   process.exit(1);
 });
