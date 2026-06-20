@@ -1,35 +1,33 @@
 # AGENTS
 
-## Supply Chain Security & Dependencies
-- **Never use ^ or ~** in dependency versions. Pin exact versions.
-- **Always commit the lockfile** (pnpm-lock.yaml).
-- **Use deterministic installs**: prefer pnpm install --frozen-lockfile.
+## Supply Chain and dependencies
 
-## Tech Stack & Architecture (DevurityWeb)
-- **Framework**: Next.js (App Router, prefer Server Components).
-- **Database**: Prisma ORM with PostgreSQL.
-- **Security**: Validate inputs, use custom JWT tokens, and CSRF protection.
-- **Code Style**: TypeScript Strict Mode. Clear, single-responsibility modules.
+Pin exact dependency versions — no `^` or `~`. Commit `pnpm-lock.yaml` with every change that touches `package.json`. Use `pnpm install --frozen-lockfile` for deterministic installs in CI and scripts.
+
+## Tech stack and architecture
+
+DevurityWeb runs on Next.js with the App Router. Prefer Server Components by default; add `"use client"` only when hooks, browser APIs, or client state are strictly required. The database layer uses Prisma ORM with PostgreSQL. Authentication is handled via custom JWT tokens (`lib/jwt.ts`) with CSRF protection on all state-changing requests (`hooks/useCsrf.ts`). TypeScript strict mode is non-negotiable. Keep modules focused and single-responsibility.
 
 ## Testing
-- Use Node.js built-in test runner (
-ode:test) and 
-ode:assert/strict).
-- **Always destructure** specific assert functions (e.g., import { ok, strictEqual } from "node:assert/strict";). 
+
+Use Node's built-in test runner (`node:test`) and `node:assert/strict`. Always destructure specific assert functions:
+
+```ts
+import { ok, strictEqual } from "node:assert/strict";
+```
+
+Do not import the default `assert` object.
 
 ## Workflow
-- Follow conventional commits (feature:, fix:, 
-efactor:).
-- Verify changes with 
-pm run build before pushing.
 
-## Communication, Tone & Formatting
-- **NO EMOJIS:** Never use standard Unicode emojis (e.g., 🚀, 👍, 🤖, etc.) in your explanations, code comments, pull request descriptions, or commit messages.
-- **Use GitHub Markdown Alerts:** When you need to emphasize something, use GitHub's standard markdown blockquotes instead of emojis:
-  - `> [!NOTE]`
-  - `> [!TIP]`
-  - `> [!IMPORTANT]`
-  - `> [!WARNING]`
-  - `> [!CAUTION]`
-- **Text-based Emojis:** If a specific placeholder or reaction is strictly necessary, use GitHub-flavored shortcodes (e.g., `:shipit:`, `:tada:`) or simple ASCII art/kaomoji.
-- **Professionalism:** Keep communication highly technical, concise, and straight to the point.
+Follow conventional commits: `feature:`, `fix:`, `refactor:`. Run `pnpm run build` before pushing. Verify all relevant checks pass before considering work complete.
+
+## Writing, comments, and documentation
+
+Text produced in this repository — code comments, documentation, PR descriptions, commit messages — follows the standard in `github-instructions.md`. The short version: no emojis, no filler, no corporate vocabulary. Prose by default; lists only for ordered sequences or technical enumerations where prose would be harder to scan.
+
+Code comments explain the *why* and the *non-obvious what* — never the *how*, which the code already shows. A comment that paraphrases a well-named function gets deleted. Use ASCII markers in inline comments for urgency or type: `[!]` for dangerous mutations, `[?]` for uncertain approaches, `[x]` for deprecated paths, `-->` for redirecting the reader to the relevant code.
+
+GitHub Markdown alerts (`> [!NOTE]`, `> [!WARNING]`, `> [!CAUTION]`, etc.) are for genuinely differentiated information — use them when severity or urgency warrants it, not as decoration. If the content is ordinary, it goes in prose.
+
+JSDoc documents the function contract: what it does, what it expects, what it returns, what it can throw. Not the implementation. No `@author` or `@version` tags.

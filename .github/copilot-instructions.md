@@ -1,34 +1,27 @@
-# DevurityWeb - GitHub Copilot Instructions
+# DevurityWeb — Copilot Instructions
 
-You are an expert AI programming assistant working on **DevurityWeb**, the official portal for the **Devurity Research Seedbed** at Universidad Surcolombiana.
+DevurityWeb is the official portal for the Devurity Cybersecurity and Engineering Research Seedbed at Universidad Surcolombiana. It is a fullstack Next.js application with a Prisma/PostgreSQL backend, custom JWT authentication, and CSRF protection.
 
-## Tech Stack
-- **Framework**: Next.js (Fullstack, App Router)
-- **Styling**: Tailwind CSS
-- **Backend/DB**: Node.js, Prisma ORM, PostgreSQL
-- **Languages**: TypeScript (strict mode)
+## Stack
 
-## Architecture & Conventions
-1. **Next.js App Router**: 
-   - Prefer Server Components by default.
-   - Use `"use client"` only when necessary (e.g., hooks, event listeners, state management).
-   - Follow Next.js best practices for server actions, API routes, and data fetching.
-2. **Authentication & Security**:
-   - Authentication is handled via custom JWT tokens (`lib/jwt.ts`).
-   - Secure POST/PUT/DELETE requests with CSRF protection (`hooks/useCsrf.ts`).
-   - Always validate and sanitize user inputs to prevent vulnerabilities.
-3. **Database (Prisma)**:
-   - Handle database logic via the Prisma client.
-   - Ensure proper relational updates and transactions for data integrity.
-4. **Testing**:
-   - Use Node.js built-in test runner (`node:test`) and `node:assert/strict`.
-   - **Always destructure** specific assert functions (e.g., `import { ok, strictEqual } from "node:assert/strict";`). Do not use the default `assert` object.
-5. **Dependencies & Supply Chain**:
-   - **Never use `^` or `~`** in dependency version specifiers. Always pin exact versions.
-   - **Always commit the lockfile** (`pnpm-lock.yaml`).
-   - Use deterministic installs: `pnpm install --frozen-lockfile` over `pnpm install` in CI/scripts.
+Next.js 15 (App Router) with React 19, TypeScript in strict mode, Tailwind CSS v4, Prisma ORM with PostgreSQL, and JWT + CSRF + role-based auth. Deploy targets are Vercel and AWS.
 
-## Code Style
-- Use clear, descriptive variable and function names.
-- Keep components modular and single-responsibility.
-- Document complex business rules directly in the code or associated Markdown docs.
+## Architecture and conventions
+
+Prefer Server Components by default. Add `"use client"` only when the component strictly requires hooks, browser APIs, or client-managed state. Authentication flows through `lib/jwt.ts`; CSRF protection is applied via `hooks/useCsrf.ts` to all state-changing requests. Database logic goes through the Prisma client — use relational updates and transactions where data integrity requires it. Reuse existing utilities under `lib/` and `hooks/` before introducing new patterns.
+
+Supply chain: never use `^` or `~` in version specifiers; pin exact versions. Commit `pnpm-lock.yaml` on every change that modifies `package.json`. Use `pnpm install --frozen-lockfile` in CI and scripts.
+
+Testing uses Node's built-in `node:test` runner and destructured imports from `node:assert/strict`. Do not import the default `assert` object.
+
+## Code style
+
+Variable and function names should be descriptive without being verbose. Components stay modular and single-responsibility. Document complex business rules where the behavior isn't derivable from the code alone — in inline comments or associated Markdown docs in `/docs`. Document public API contracts (functions, route handlers) with JSDoc covering what the function does, its parameters, return value, and any exceptions it throws. Do not document implementation internals in the docstring.
+
+## Writing standard
+
+All text in this repository — comments, documentation, PR descriptions, commit messages — follows the standard in `github-instructions.md`. No emojis. No filler phrases or corporate vocabulary. Prose by default; lists only for ordered sequences or technical enumerations where prose would genuinely be harder to scan.
+
+Code comments explain the *why* and the *non-obvious what*. A comment that restates what a well-named function does is noise and gets deleted. Use ASCII markers for urgency: `[!]` for dangerous side effects, `[?]` for uncertain approaches, `[x]` for deprecated paths.
+
+GitHub Markdown alerts (`> [!NOTE]`, `> [!WARNING]`, `> [!CAUTION]`) carry weight only when used for genuinely differentiated information. Overuse turns them into decoration and strips the signal.
