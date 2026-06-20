@@ -79,7 +79,8 @@ class ProgressTracker {
       case 'pending': return COLORS.dim;
       case 'running': return COLORS.cyan;
       case 'success': return COLORS.green;
-      case 'error': return COLORS.red;
+      case 'error':
+      case 'failed': return COLORS.red;
       case 'warning': return COLORS.yellow;
       default: return COLORS.reset;
     }
@@ -90,7 +91,8 @@ class ProgressTracker {
       case 'pending': return SYMBOLS.pending;
       case 'running': return SYMBOLS.running;
       case 'success': return SYMBOLS.success;
-      case 'error': return SYMBOLS.error;
+      case 'error':
+      case 'failed': return SYMBOLS.error;
       case 'warning': return SYMBOLS.warning;
       default: return ' ';
     }
@@ -194,21 +196,37 @@ async function main() {
 
   // STAGE 2: Corepack
   try {
-    tracker.updateTask('corepack', 'running', 'Enabling corepack...');
-    await runCommand('corepack', ['enable']);
-    
-    // Check pnpm version
-    const version = await runCommand('pnpm', ['--version']).catch(() => 'unknown');
-    tracker.updateTask('corepack', 'success', `pnpm v${version} active`);
-  } catch (err) {
-    tracker.updateTask('corepack', 'warning', 'Corepack failed. Trying direct pnpm check...');
+    tracker.updateTask('corepack', 'running', `Activating Corepack (pnpm@${CONFIG.pnpmVersion})...`);
+    await runCommand('corepack', ['prepare', `pnpm@${CONFIG.pnpmVersion}`, '--activate']);
+
+    let version;
     try {
-      await runCommand('pnpm', ['--version']);
-      tracker.updateTask('corepack', 'success', 'pnpm already present');
+      version = (await runCommand('pnpm', ['--version'])).trim();
     } catch {
-      tracker.updateTask('corepack', 'error', 'pnpm not found. Please install Node.js >= 16.17 or run "npm install -g pnpm"');
-      process.exit(1);
+      version = null;
     }
+
+    if (version !== CONFIG.pnpmVersion) {
+      tracker.updateTask('corepack', 'running', `Version mismatch (${version}), retrying...`);
+      try {
+        await runCommand('corepack', ['prepare', `pnpm@${CONFIG.pnpmVersion}`, '--activate']);
+        version = (await runCommand('pnpm', ['--version'])).trim();
+      } catch {
+        version = null;
+      }
+
+      if (version !== CONFIG.pnpmVersion) {
+        tracker.updateTask('corepack', 'failed', `Expected pnpm@${CONFIG.pnpmVersion}, got ${version}`);
+        console.error(`\n${COLORS.red}Error: pnpm version mismatch — expected ${CONFIG.pnpmVersion}, got ${version}${COLORS.reset}`);
+        process.exit(1);
+      }
+    }
+
+    tracker.updateTask('corepack', 'success', `pnpm v${version} active (expected ${CONFIG.pnpmVersion})`);
+  } catch (err) {
+    tracker.updateTask('corepack', 'failed', `Corepack activation failed: ${err.message} (expected pnpm@${CONFIG.pnpmVersion})`);
+    console.error(`\n${COLORS.red}Error: ${err.message}${COLORS.reset}`);
+    process.exit(1);
   }
 
   // STAGE 3: Install
