@@ -1,10 +1,10 @@
 // Configuración centralizada de rutas protegidas
 export const authConfig = {
   // Rutas de páginas que requieren autenticación
-  protectedPages: ["/admin", "/projects", "/profile", "/attendance"],
+  protectedPages: ["/admin", "/profile", "/attendance"],
 
   // Rutas de API que requieren autenticación
-  protectedApis: ["/api/admin", "/api/projects", "/api/attendance", "/api/users"],
+  protectedApis: ["/api/admin", "/api/attendance", "/api/users"],
 
   // Rutas públicas que NO requieren autenticación
   publicPaths: [
@@ -13,6 +13,7 @@ export const authConfig = {
     "/register",
     "/about",
     "/updates",
+    "/projects",
     "/api/auth/login",
     "/api/auth/register",
     "/api/auth/me",
@@ -21,7 +22,7 @@ export const authConfig = {
 
   // Rutas de PÁGINAS que redirigen a /login cuando no autenticado
   // (Las APIs devuelven error 401 en lugar de redirigir)
-  redirectToLogin: ["/admin", "/projects", "/profile", "/attendance"],
+  redirectToLogin: ["/admin", "/profile", "/attendance"],
 };
 
 export function isProtectedPath(path: string): boolean {

@@ -6,6 +6,18 @@ import {
 } from "@/repositories/users/users.repositories";
 import { EmailOptions, sendEmail } from "@/lib/email";
 import { errorRequest } from "@/lib/error";
+import { extractTokenFromCookies } from "@/lib/auth/utils";
+import { verifyJwtPayload } from "@/lib/auth/jwt-edge";
+
+async function requireAdmin(request: NextRequest): Promise<NextResponse | null> {
+  const token = extractTokenFromCookies(request);
+  if (!token) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  const decoded = await verifyJwtPayload(token);
+  if (!decoded || decoded.role !== "admin") {
+    return NextResponse.json({ error: "Acceso restringido" }, { status: 403 });
+  }
+  return null;
+}
 
 // Helper function to serialize BigInt values
 function serializeBigInt(obj: unknown): unknown {
@@ -36,6 +48,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const adminCheck = await requireAdmin(request);
+  if (adminCheck) return adminCheck;
+
   try {
     const { id: userId } = await params;
 
@@ -112,6 +127,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const adminCheck = await requireAdmin(request);
+  if (adminCheck) return adminCheck;
+
   try {
     const { id: userId } = await params;
 
@@ -158,6 +176,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const adminCheck = await requireAdmin(request);
+  if (adminCheck) return adminCheck;
+
   try {
     const { id: userId } = await params;
 

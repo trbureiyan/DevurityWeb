@@ -26,6 +26,7 @@ interface AdminSidebarProps {
   user: { name: string; last_name?: string | null } | null;
   isLoading: boolean;
   initials: string;
+  role: string | null;
 }
 
 type NavIcon = ComponentType<SVGProps<SVGSVGElement>>;
@@ -35,6 +36,7 @@ type MenuItem = {
   href: string;
   icon: NavIcon;
   isActive: (pathname: string) => boolean;
+  allowedRoles?: string[];
 };
 
 // Sidebar del panel admin: muestra navegación principal, opciones de perfil y logout; controla apertura móvil y resalta la ruta activa.
@@ -44,12 +46,14 @@ const menuItems: MenuItem[] = [
     href: "/admin",
     icon: Squares2X2Icon,
     isActive: (pathname) => pathname === "/admin",
+    allowedRoles: ["admin"],
   },
   {
     label: "Solicitudes de registro",
     href: "/admin/users/confirm",
     icon: ClipboardDocumentListIcon,
     isActive: (pathname) => pathname.startsWith("/admin/solicitudes"),
+    allowedRoles: ["admin"],
   },
   {
     label: "Proyectos",
@@ -57,36 +61,42 @@ const menuItems: MenuItem[] = [
     icon: FolderIcon,
     isActive: (pathname) =>
       pathname.startsWith("/projects") || pathname.startsWith("/admin/proyectos"),
+    allowedRoles: ["admin", "lead_project"],
   },
   {
     label: "Eventos y noticias",
     href: "/updates",
     icon: CalendarDaysIcon,
     isActive: (pathname) => pathname.startsWith("/updates"),
+    allowedRoles: ["admin", "content_manager"],
   },
   {
     label: "Perfiles",
     href: "/admin/users",
     icon: UsersIcon,
     isActive: (pathname) => pathname.startsWith("/admin/perfiles"),
+    allowedRoles: ["admin"],
   },
   {
     label: "Habilidades",
     href: "/admin/skills",
     icon: BoltIcon,
     isActive: (pathname) => pathname.startsWith("/admin/perfiles"),
+    allowedRoles: ["admin"],
   },
   {
     label: "Galeria",
     href: "/gallery",
     icon: DocumentTextIcon,
     isActive: (pathname) => pathname.startsWith("/gallery"),
+    allowedRoles: ["admin", "content_manager"],
   },
   {
     label: "Asistencias",
     href: "/admin/attendances",
     icon: QrCodeIcon,
     isActive: (pathname) => pathname.startsWith("/admin/attendances"),
+    allowedRoles: ["admin"],
   },
 ];
 
@@ -103,6 +113,7 @@ export default function AdminSidebar({
   user,
   isLoading,
   initials,
+  role,
 }: AdminSidebarProps) {
   // Cierra el menú lateral cuando se navega a otra ruta (especialmente en móvil)
   const handleNavigation = () => {
@@ -147,7 +158,7 @@ export default function AdminSidebar({
       </div>
 
       <nav className="flex-1 overflow-y-auto">
-        {menuItems.map((item) => {
+        {menuItems.filter((item) => !item.allowedRoles || (role && item.allowedRoles.includes(role))).map((item) => {
           const active = item.isActive(pathname);
           return (
             <Link

@@ -1,7 +1,7 @@
 import type { PrismaClient } from "../../lib/generated/prisma";
 
 export async function seedRoles(prisma: PrismaClient) {
-  const roleNames = ["admin", "user"];
+  const roleNames = ["admin", "user", "lead_project", "content_manager"];
 
   const results = await Promise.all(
     roleNames.map((name) =>
