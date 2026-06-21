@@ -8,7 +8,8 @@ export type ProjectStage =
   | "desarrollo"
   | "validacion"
   | "produccion"
-  | "experimentacion";
+  | "experimentacion"
+  | "pausa";
 
 export interface ProjectItem {
   id: string;
@@ -39,6 +40,7 @@ export const STAGE_LABELS: Record<ProjectStage, string> = {
   validacion: "Validación",
   produccion: "Producción",
   experimentacion: "Experimentación",
+  pausa: "En Pausa",
 };
 
 // ============ COLORES DE ETAPA ============
@@ -48,124 +50,44 @@ export const STAGE_COLORS: Record<ProjectStage, string> = {
   validacion: "text-purple-400 border-purple-400/30 bg-purple-400/10",
   produccion: "text-green-400 border-green-400/30 bg-green-400/10",
   experimentacion: "text-orange-400 border-orange-400/30 bg-orange-400/10",
+  pausa: "text-zinc-400 border-zinc-400/30 bg-zinc-400/10",
 };
 
-// ============ DATOS MOCK ============
-export const PROJECTS_CATALOG: ProjectItem[] = [
-  {
-    id: "secops-honeynet",
-    title: "SecOps Honeynet",
-    summary:
-      "Infraestructura contenida de honeypots para observar tácticas reales y ajustar la postura defensiva con datos verificables.",
-    stage: "incubacion",
-    focusAreas: ["Ciberseguridad"],
-    stack: ["Python"],
-    updatedAt: "2025-09-04",
-    heroImage: null,
-  },
-  {
-    id: "maqagr-app",
-    title: "Desarrollo de Aplicación Agrícola (MaqAgr)",
-    summary:
-      "Aplicativo web que aborda la baja mecanización del campo colombiano. Integra cálculos para verificar la compatibilidad tractor-implemento.",
-    stage: "desarrollo",
-    focusAreas: ["Agrotech", "Productividad"],
-    stack: ["Node.js", "React", "Tailwind", "MongoDB"],
-    updatedAt: "2025-09-26",
-    heroImage: null,
-    callToAction: {
-      label: "Poster en AmiTIC 2025",
-      href: "https://www.linkedin.com/feed/update/urn:li:activity:7386808584354971648",
-    },
-  },
-  {
-    id: "devurity-web",
-    title: "Pagina Oficial del Semillero Devurity",
-    summary:
-      "Plataforma web informativa y de gestión para el semillero, destacando proyectos, eventos y facilitando la colaboración entre miembros.",
-    stage: "produccion",
-    focusAreas: ["Desarrollo Web", "Comunidad", "Diseño UI/UX", "Branding"],
-    stack: ["Next.js", "React", "Typescript", "TailwindCSS", "Prisma", "PostgreSQL"],
-    updatedAt: "2025-11-06",
-    heroImage: null,
-    callToAction: {
-      label: "Repositorio público",
-      href: "https://www.github.com/trbureiyan/DevurityWeb",
-    },
-  },
-  {
-    id: "granja-hrm",
-    title: "Sistema de Gestión de Personal (Granja)",
-    summary:
-      "Plataforma operativa para turnos, bases de datos y control documental del talento en granjas tecnificadas.",
-    stage: "incubacion",
-    focusAreas: ["Operaciones", "RRHH"],
-    stack: [],
-    updatedAt: "2025-10-16",
-    heroImage: null,
-  },
-  {
-    id: "cancer-temprano",
-    title: "Detección de Cáncer en Etapas Tempranas",
-    summary:
-      "Flujo de trabajo para analizar información y destacar registros con características de interés.",
-    stage: "experimentacion",
-    focusAreas: ["Salud"],
-    stack: [],
-    updatedAt: "2025-08-28",
-    heroImage: null,
-  },
-  {
-    id: "enterprise-cyber-lab",
-    title: "Entorno de Ciberseguridad Empresarial",
-    summary:
-      "Laboratorio controlado para evaluar amenazas internas, ejercicios de respuesta y cumplimiento basado en escenarios de negocio.",
-    stage: "incubacion",
-    focusAreas: ["Ciberseguridad", "Compliance"],
-    stack: ["Linux"],
-    updatedAt: "2025-09-04",
-    heroImage: null,
-  },
-  {
-    id: "modalidad-grado",
-    title: "Proyecto Modalidad de Grado",
-    summary:
-      "Iniciativa transversal que consolida entregables académicos, investigación aplicada y transferencia de conocimiento.",
-    stage: "incubacion",
-    focusAreas: ["Investigacion", "Educacion"],
-    stack: [],
-    updatedAt: "2025-10-09",
-    heroImage: null,
-  },
-];
+// Mantenido para compatibilidad con imports existentes — datos reales provienen de la DB
+export const PROJECTS_CATALOG: ProjectItem[] = [];
 
 const STORAGE_KEY = "devurity-local-projects";
 
 /**
  * Hook compartido — fuente de verdad para proyectos.
+ *
+ * @param initialData - Datos precargados desde la DB por el Server Component padre.
+ *
  * Úsalo en projects/page.tsx y en ProjectsPreviewSection del landing.
  */
-export function useProjects() {
-  const [allProjects, setAllProjects] = useState<ProjectItem[]>(PROJECTS_CATALOG);
+export function useProjects(initialData: ProjectItem[] = []) {
+  const [allProjects, setAllProjects] = useState<ProjectItem[]>(initialData);
 
   // Carga local al montar
   useEffect(() => {
     const load = () => {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
+        if (!raw) {
+          setAllProjects(initialData);
+          return;
+        }
         const parsed: ProjectItem[] = JSON.parse(raw);
-        const existingIds = new Set(PROJECTS_CATALOG.map((p) => p.id));
-        const onlyNew = parsed.filter((p) => !existingIds.has(p.id));
-        // Los items editados del catálogo reemplazan el original
-        const edited = parsed.filter((p) => existingIds.has(p.id));
-        const merged = PROJECTS_CATALOG.map((p) => {
-          const override = edited.find((e) => e.id === p.id);
-          return override ? { ...p, ...override } : p;
-        });
-        setAllProjects([...onlyNew, ...merged]);
+        // Solo los items marcados como locales se persisten en localStorage
+        const localItems = parsed.filter((p) => p.isLocal);
+        if (localItems.length > 0) {
+          setAllProjects([...localItems, ...initialData]);
+        } else {
+          setAllProjects(initialData);
+        }
       } catch {
         // localStorage corrupto, ignorar
+        setAllProjects(initialData);
       }
     };
 
@@ -184,17 +106,12 @@ export function useProjects() {
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("devurity-projects-changed", handleCustom);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const persist = (projects: ProjectItem[]) => {
-    // Guarda nuevos Y ediciones de los del catálogo
-    const toSave = projects.filter(
-      (p) =>
-        p.isLocal ||
-        // Si difiere del original, guardar la versión editada
-        JSON.stringify(p) !==
-          JSON.stringify(PROJECTS_CATALOG.find((o) => o.id === p.id))
-    );
+    // Solo guardar items locales (los de DB son la fuente de verdad)
+    const toSave = projects.filter((p) => p.isLocal);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
     window.dispatchEvent(new Event("devurity-projects-changed"));
   };
@@ -212,11 +129,9 @@ export function useProjects() {
   };
 
   const deleteProject = (id: string) => {
-    // Los proyectos del catálogo no se eliminan de verdad, se marcan
-    // Los locales sí se eliminan
     const updated = allProjects.filter((p) => p.id !== id);
     setAllProjects(updated);
-    // Remover del storage
+    // Remover del storage si era local
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const saved: ProjectItem[] = raw ? JSON.parse(raw) : [];
@@ -230,7 +145,7 @@ export function useProjects() {
 
   // Filtros computados dinámicamente
   const filters: ProjectFilters = {
-    stages: ["incubacion", "experimentacion", "validacion", "produccion", "desarrollo"],
+    stages: ["incubacion", "desarrollo", "validacion", "produccion", "experimentacion", "pausa"],
     focusAreas: Array.from(new Set(allProjects.flatMap((p) => p.focusAreas))).sort(),
     stack: Array.from(
       new Set(allProjects.flatMap((p) => p.stack).filter(Boolean))

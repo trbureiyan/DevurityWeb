@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { authMiddleware } from "./lib/auth/middleware";
 import { csrfAdapter } from "./lib/csrf";
 import { verifyJwtPayload } from "./lib/auth/jwt-edge";
+import { validateAuthToken } from "./lib/auth/utils";
 
 const redirectMap: Record<string, string> = {
   "/auth": "/auth/login",
@@ -103,9 +104,8 @@ export async function middleware(
     return NextResponse.redirect(loginUrl);
   }
 
-  // Verificar roles para rutas de admin — decodifica el JWT directamente
-  // sin verificación criptográfica (Edge-compatible)
-  if (currentPath.startsWith("/admin")) {
+  // Verificar roles para rutas de admin y sus endpoints de API
+  if (currentPath.startsWith("/admin") || currentPath.startsWith("/api/admin")) {
     const roleCheck = await checkUserRole(request, token);
     if (roleCheck) {
       return roleCheck;
@@ -142,8 +142,8 @@ function denyAccess(request: NextRequest): NextResponse {
   }
 }
 
-// Función para verificar roles de usuario — consulta la BD en vivo para evitar
-// que un JWT emitido con un rol anterior bloquee el acceso después de un cambio de rol.
+// Función para verificar roles de usuario — usa JWT Edge-compatible directamente
+// para evitar self-fetch que es inestable en Vercel Edge Runtime.
 async function checkUserRole(
   request: NextRequest,
   token: string | undefined,
@@ -152,25 +152,10 @@ async function checkUserRole(
     return denyAccess(request);
   }
 
-  // Verificar rol contra la BD
-  try {
-    const isAdminUrl = new URL("/api/auth/is-admin", request.url);
-    const isAdminRes = await fetch(isAdminUrl, {
-      headers: { cookie: request.headers.get("cookie") ?? "" },
-      cache: "no-store",
-    });
-    if (isAdminRes.ok) {
-      const data = (await isAdminRes.json()) as { isAdmin: boolean };
-      return data.isAdmin === true ? null : denyAccess(request);
-    }
-  } catch (err) {
-    console.error("[Admin middleware] Error verificando rol en BD:", err);
-  }
-
-  // Fallback: usar el rol del JWT si el endpoint no responde
+  // Verificar rol directamente desde el JWT (Edge-compatible)
   const decoded = await verifyJwtPayload(token);
   if (!decoded) {
-    console.error("JWT inválido o expirado en middleware de admin");
+    console.error("[Admin middleware] JWT inválido o expirado");
     return denyAccess(request);
   }
   if (decoded.role !== "admin") {

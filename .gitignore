@@ -60,6 +60,7 @@ test-results/
 src/test-models.js
 
 # ─── Documentation (generated/output only) ───────────────────────────────────
+.docs/
 /docs/site/
 /docs/out/
 /documentation/out/
@@ -109,6 +110,12 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
+
+# ─── Backups ─────────────────────────────────────────────────────────────────
+backup/
+backups/
+*.bak
+*.backup
 
 # ─── Agent / Skills ──────────────────────────────────────────────────────────
 skills-lock.json

@@ -2,7 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import prisma from "@/lib/postgresDriver";
 
-export type ProjectStage = "incubacion" | "desarrollo" | "validacion" | "produccion" | "experimentacion";
+export type ProjectStage = "incubacion" | "desarrollo" | "validacion" | "produccion" | "experimentacion" | "pausa";
 
 export interface ProjectItem {
   id: string;
@@ -27,7 +27,7 @@ export interface ProjectFilters {
 
 const unique = (values: string[]): string[] => Array.from(new Set(values)).sort();
 
-const VALID_STAGES: ProjectStage[] = ["incubacion", "desarrollo", "validacion", "produccion", "experimentacion"];
+const VALID_STAGES: ProjectStage[] = ["incubacion", "desarrollo", "validacion", "produccion", "experimentacion", "pausa"];
 
 // Incrementar este identificador cuando se requiera forzar la revalidación manual.
 const PROJECTS_CACHE_KEY: string[] = ["projects-catalog", "rev-2026030201"];

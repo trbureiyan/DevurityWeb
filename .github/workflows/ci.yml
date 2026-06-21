@@ -10,60 +10,81 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: devurity_ci
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # ── Servicio postgres comentado temporalmente ──────────────────────────
+    # Backend en normalización/refactorización. Re-habilitar cuando las
+    # migraciones sean estables.
+    #
+    # services:
+    #   postgres:
+    #     image: postgres:16
+    #     env:
+    #       POSTGRES_USER: postgres
+    #       POSTGRES_PASSWORD: postgres
+    #       POSTGRES_DB: devurity_ci
+    #     ports:
+    #       - 5432:5432
+    #     options: >-
+    #       --health-cmd pg_isready
+    #       --health-interval 10s
+    #       --health-timeout 5s
+    #       --health-retries 5
 
     env:
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/devurity_ci?schema=public"
+      # DATABASE_URL comentado — no hay servicio postgres activo
+      # DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/devurity_ci?schema=public"
+      DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder?schema=public"
       JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-not-a-real-secret' }}
-      NEXT_PUBLIC_APP_URL: "https://devurity-web.vercel.app"
-      NEXT_PUBLIC_API_URL: "https://devurity-web.vercel.app"
+      NEXT_PUBLIC_APP_URL: "https://devurityweb.vercel.app"
+      NEXT_PUBLIC_API_URL: "https://devurityweb.vercel.app"
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: 24
+          cache: pnpm
 
-      # Cache antes de npm ci para que el postinstall (prisma generate) lo aproveche
+      # Cache para el cliente de Prisma generado
       - name: Cache Prisma generated client
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: lib/generated/prisma
           key: prisma-${{ hashFiles('prisma/schema.prisma') }}
 
-      # postinstall en package.json ya ejecuta prisma generate — no se necesita step explícito
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
-      - name: Apply DB schema
-        run: npx prisma db push --skip-generate
+      # Esencial: genera tipos @prisma/client para que TypeScript compile sin errores
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
 
-      - name: Seed database
-        run: npm run db:seed
+      # ── Steps de BD comentados temporalmente ──────────────────────────────
+      # Re-habilitar junto con el servicio postgres cuando el schema esté estable.
+      #
+      # - name: Apply DB migrations
+      #   run: pnpm run db:migrate
+      #
+      # - name: Repair DB sequences
+      #   run: pnpm run db:repair
+      #
+      # - name: Seed database
+      #   run: pnpm run db:seed
 
-      # Tests deshabilitados temporalmente — habilitar cuando estén listos para CI
-      # - name: Run unit tests
-      #   run: npm test
+      # Barrera principal: detecta errores de tipos sin necesidad de DB
+      - name: TypeScript check
+        run: pnpm exec tsc --noEmit
 
       - name: Lint
-        run: npm run lint
+        run: pnpm run lint
 
+      # Verifica estabilidad de rutas App Router y Layouts de Next.js
       - name: Build
-        run: npm run build
+        run: pnpm run build

@@ -1,11 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "next build",
-  "installCommand": "npm ci",
+  "buildCommand": "prisma generate && prisma migrate deploy && pnpm exec tsx prisma/seed.ts && next build",
+  "installCommand": "pnpm install --frozen-lockfile",
   "framework": "nextjs",
-  "regions": ["gru1"],
-  "env": {
-    "NEXT_PUBLIC_APP_URL": "https://devurity-web.vercel.app",
-    "NEXT_PUBLIC_API_URL": "https://devurity-web.vercel.app"
-  }
+  "regions": ["gru1"]
 }
