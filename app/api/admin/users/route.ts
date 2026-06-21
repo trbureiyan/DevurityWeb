@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
         const result = await getAdminUsersPaginated({
             page: isNaN(page) ? 1 : page,
-            limit: isNaN(limit) ? 10 : limit,
+            limit: Math.min(isNaN(limit) ? 10 : limit, 100),
             search, role, status, program
         });
 
