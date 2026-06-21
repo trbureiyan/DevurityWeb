@@ -765,7 +765,8 @@ export async function updateUserProfile(
               .replace(/[^a-z0-9-]/g, "")
               .replace(/-+/g, "-")
               .substring(0, 60);
-            const suffix = crypto.randomBytes(3).toString("hex");
+            // 6 bytes = 12 hex chars = 2^48 ≈ 281T valores. Colision estadisticamente imposible.
+            const suffix = crypto.randomBytes(6).toString("hex");
             project = await tx.projects.create({
               data: {
                 slug: `${rawSlug || "project"}-${suffix}`,
