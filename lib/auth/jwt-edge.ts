@@ -13,12 +13,15 @@ export interface JwtPayload {
 
 /**
  * Decode a base64url-encoded string, restoring padding and normalizing
- * URL-safe characters before calling atob().
+ * URL-safe characters before decoding via atob() + TextDecoder for
+ * proper multi-byte UTF-8 handling (accents, emojis, etc.).
  */
 function base64UrlDecode(str: string): string {
   const padded = str.replace(/-/g, "+").replace(/_/g, "/")
     + "=".repeat((4 - (str.length % 4)) % 4);
-  return atob(padded);
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  return new TextDecoder("utf-8").decode(bytes);
 }
 
 /**
