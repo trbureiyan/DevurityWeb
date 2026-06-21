@@ -2,7 +2,7 @@
   <code>$ ./devurity --serve</code>
 </p>
 
-<h3 align="center">DevurityWeb</h3>
+<img width="1890" height="945" alt="DevurityWeb Banner" src="https://github.com/user-attachments/assets/02ac7968-2d0f-49ec-8810-f61286732464" />
 
 <p align="center">
   Plataforma web del Semillero de Ciberseguridad e Ingeniería Devurity<br/>
