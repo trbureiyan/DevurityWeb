@@ -320,7 +320,6 @@ export default function GalleryClient({ images }: GalleryClientProps) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [galleryImages, setGalleryImages] = useState(images);
   const [visibleCount, setVisibleCount] = useState(8);
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleAddImages = (newImages: string[]) => {
     setGalleryImages([...galleryImages, ...newImages]);
@@ -335,19 +334,11 @@ export default function GalleryClient({ images }: GalleryClientProps) {
   };
 
   const handleViewMore = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setVisibleCount(prev => Math.min(prev + 8, galleryImages.length));
-      setIsLoading(false);
-    }, 500);
+    setVisibleCount(prev => Math.min(prev + 8, galleryImages.length));
   };
 
   const handleLoadAll = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setVisibleCount(galleryImages.length);
-      setIsLoading(false);
-    }, 500);
+    setVisibleCount(galleryImages.length);
   };
 
   const hasMoreImages = visibleCount < galleryImages.length;
@@ -553,28 +544,14 @@ export default function GalleryClient({ images }: GalleryClientProps) {
                   <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                     <button
                       onClick={handleViewMore}
-                      disabled={isLoading}
-                      className="group inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(178,4,3,0.5)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                      className="group inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(178,4,3,0.5)]"
                     >
-                      {isLoading ? (
-                        <>
-                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
-                          <span>Cargando...</span>
-                        </>
-                      ) : (
-                        <>
-                          <PhotoIcon className="w-5 h-5" />
-                          <span>Ver más imágenes</span>
-                        </>
-                      )}
+                      <PhotoIcon className="w-5 h-5" />
+                      <span>Ver más imágenes</span>
                     </button>
                     <button
                       onClick={handleLoadAll}
-                      disabled={isLoading}
-                      className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:bg-white/5"
                     >
                       Ver todas ({galleryImages.length - visibleCount} restantes)
                     </button>

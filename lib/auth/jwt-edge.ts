@@ -12,6 +12,19 @@ export interface JwtPayload {
 }
 
 /**
+ * Decode a base64url-encoded string, restoring padding and normalizing
+ * URL-safe characters before decoding via atob() + TextDecoder for
+ * proper multi-byte UTF-8 handling (accents, emojis, etc.).
+ */
+function base64UrlDecode(str: string): string {
+  const padded = str.replace(/-/g, "+").replace(/_/g, "/")
+    + "=".repeat((4 - (str.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  return new TextDecoder("utf-8").decode(bytes);
+}
+
+/**
  * Verify a HS256 JWT signature and return the decoded payload.
  * Returns null if the signature is invalid, the token is expired,
  * JWT_SECRET is not set, or the token is malformed.
@@ -38,7 +51,7 @@ export async function verifyJwtPayload(
 
     // Decode Base64url signature
     const sigBytes = Uint8Array.from(
-      atob(signature.replace(/-/g, "+").replace(/_/g, "/")),
+      base64UrlDecode(signature),
       (c) => c.charCodeAt(0),
     );
 
@@ -54,7 +67,7 @@ export async function verifyJwtPayload(
 
     // Decode payload only after signature is confirmed valid
     const decoded = JSON.parse(
-      atob(payload.replace(/-/g, "+").replace(/_/g, "/")),
+      base64UrlDecode(payload),
     ) as JwtPayload;
 
     // Reject expired tokens

@@ -15,8 +15,6 @@ export type UpdateItem = {
   imageUrl?: string;
 };
 
-const ACCENT_COLOR = "#b20403";
-
 // Mantenido para compatibilidad con imports existentes — datos reales provienen de la DB
 export const MOCK_UPDATES: UpdateItem[] = [];
 
@@ -84,7 +82,8 @@ export function useUpdates(initialData: UpdateItem[] = []) {
   };
 
   const editUpdate = (edited: UpdateItem) => {
-    const updated = allUpdates.map((u) => (u.id === edited.id ? edited : u));
+    const marked = { ...edited, isLocal: true };
+    const updated = allUpdates.map((u) => (u.id === edited.id ? marked : u));
     setAllUpdates(updated);
     persistLocal(updated);
   };
