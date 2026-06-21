@@ -1,171 +1,87 @@
-# Devurity Web
+<p align="center">
+  <code>$ ./devurity --serve</code>
+</p>
 
-> Plataforma oficial del Semillero de Ciberseguridad y Desarrollo e ingenieria Devurity  
-> Construida por y para estudiantes, investigadores y profesionales de la USCO
+<h3 align="center">DevurityWeb</h3>
 
-![Status](https://img.shields.io/badge/status-active-brightgreen)
-![License](https://img.shields.io/badge/license-GPL--3.0-blue)
-![Next.js](https://img.shields.io/badge/Next.js-15-black)
-![Prisma](https://img.shields.io/badge/ORM-Prisma-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)
-![OpenSource](https://img.shields.io/badge/open--source-collaborative-success)
+<p align="center">
+  Plataforma web del Semillero de Ciberseguridad e Ingeniería Devurity<br/>
+  Universidad Surcolombiana, Colombia.
+</p>
 
----
-
-## About
-
-DevurityWeb es la plataforma oficial del semillero Devurity, diseñada como un sistema modular, escalable, extensible y util para:
-
-- Difusión científica y tecnológica
-- Gestión de miembros y proyectos
-- Anuncios y noticias desde el ecosistema Devurity
-- Plataforma pública con contenido estructurado
-- Panel administrativo funcional
-
-La arquitectura busca equilibrio entre **rigor técnico y accesibilidad educativa**, permitiendo participación de nuevos miembros con estándares profesionales.
+<p align="center">
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="Licencia"></a>
+  <img src="https://img.shields.io/badge/status-active-brightgreen" alt="Estado">
+  <img src="https://img.shields.io/badge/Next.js-15-black" alt="Next.js">
+  <img src="https://img.shields.io/badge/TypeScript-strict-blue" alt="TypeScript">
+</p>
 
 ---
 
-## Nuestra filosofia como proyecto
+## ¶ Qué es
 
-- **Código abierto y comunitario**
-- **Construcción colaborativa**
-- **Aprendizaje avanzado aplicable**
-- **Documentación técnica**
-- **Escalabilidad y modularidad**
-- **Ética y responsabilidad tecnológica**
-- **Seguridad primero**
+DevurityWeb es la plataforma web de Devurity, semillero de investigación en ciberseguridad e ingeniería de la Universidad Surcolombiana. Cubre dos frentes desde una misma base de código: la cara pública, que comunica quién es el semillero y qué construye, y la operación interna, que gestiona membresías, asistencia, proyectos y contenido.
 
-> *Este proyecto es de la comunidad Devurity. Su crecimiento pertenece al semillero.*
+Nació para resolver un problema concreto, el semillero coordinaba todo por hojas de cálculo y WhatsApp, sin presencia digital propia. Llegó a producción, tras meses de desarrollo y más de 130 pull requests.
 
 ---
 
-## T-Stack
+## ⬡ Qué hace
 
-| Área | Tecnología |
-|---|---|
-Framework | Next.js 15 (App Router) & React 19
-Lenguaje | TypeScript estricto
-UI | Tailwind CSS v4 + componentes custom
-ORM | Prisma
-BD | PostgreSQL (cloud)
-Auth | JWT + CSRF + Roles
-Infra | Vercel & AWS (deploy final)
-Docs | MarkDown + Jira (interno)
-Licencia | GPL-3.0
-
----
-
-## Lista de Features
-
-### Público
-- Landing institucional
-- Perfiles de miembros
-- Proyectos y actividades
-- Eventos y logros
-- Contacto y onboarding
-
-### Admin
-- Validación de usuarios
-- Roles y permisos
-- Registro de asistencia (QR dinámico)
-- Gestión de contenido (futuro)
-
----
-
-## Estructura principal y descriptiva del Proyecto
+**Público. cualquier visitante:**
 
 ```
-app/                                 — # rutas Next.js (App Router)
-├─ (public)/                         — ## páginas públicas
-│  │
-│  ├─ about/                         — sección “Sobre nosotros”
-│  ├─ access-denied/                 — acceso denegado
-│  ├─ auth/                          — autenticación
-│  │  │
-│  │  ├─ login/                      — inicio de sesión
-│  │  └─ register/                   — registro de usuarios
-│  │     │
-│  │     └─ [tokenRegister]/         — confirmación de registro por token
-│  │
-│  ├─ gallery/                       — galería pública
-│  ├─ projects/                      — listado de proyectos
-│  │  │
-│  │  └─ project/                    — detalle de proyecto
-│  │
-│  └─ updates/                       — noticias/eventos
-│     └─ update/                     — detalle de noticia/evento
-│
-├─ (protected)/                      — ## páginas protegidas por auth
-│  ├─ admin/                         — panel administrativo
-│  │  │
-│  │  ├─ attendances/                — registro de asistencias (QR)
-│  │  ├─ skills/                     — gestión de habilidades
-│  │  └─ users/                      — gestión de usuarios
-│  │     │
-│  │     └─ confirm/                 — aprobación de registros
-│  │        └─ [id]/                 — detalle de solicitud
-│  │
-│  └─ profile/                       — perfil de usuario
-│     └─ [id]/                       — perfil por ID
-│
-├─ api/                              — ## endpoints (route handlers)
-│  ├─ admin/
-│  │  └─ attendances/                — API asistencias admin
-│  ├─ asistencia/                    — API asistencias pública
-│  │
-│  ├─ auth/                          — APIs de autenticación
-│  │  ├─ admin/
-│  │  │  └─ users/                   — tool usuarios
-│  │  │     └─ [id]/                 
-│  │  ├─ csrf-token/                 — emisión de token CSRF
-│  │  ├─ is-admin/                   — verificación rol admin
-│  │  ├─ login/                      — login
-│  │  ├─ logout/                     — logout
-│  │  ├─ me/                         — sesión actual
-│  │  ├─ profile/                    — perfil básico
-│  │  ├─ refresh/                    — refresh de JWT
-│  │  ├─ register/                   — registro
-│  │  ├─ skills/                     — skills del usuario
-│  │  ├─ users/                      
-│  │  │  ├─ me/                      — info del usuario actual
-│  │  │  └─ [id]/                    — info por ID
-│  │  └─ verify-role/                — verificación de rol
-│  │
-│  ├─ contact/                       — form de contacto
-│  ├─ qr-dinamico/                   — generación de QR dinámico
-│  └─ skills/                        — CRUD de habilidades
-│     │
-│     └─ [id]/                       — recurso habilidad por ID
-│
-components/                          — # componentes UI reutilizables
-├─ admin/                            — UI panel admin
-├─ gallery/                          — UI galería
-├─ icons/                            — íconos
-├─ landing/                          — secciones de la landing
-├─ layouts/                          — Navbar/Footer/Layout
-└─ ui/                               — primitivas de UI (botón, avatar)
-│
-lib/                                 — # utilidades y core
-├─ auth/                             — config/middleware/utils de auth
-├─ constants/                        — constantes (landing, roles, galería)
-├─ generated/                        — cliente Prisma generado
-└─ types/                            — tipos compartidos
-│
-repositories/                        — # capa de acceso a datos (Prisma)
-├─ projects/                         
-├─ skills/                           
-└─ users/                            
-│
-docs/                                — # documentación del proyecto
-tests/                               — # base para pruebas automatizadas
-````
+├── landing institucional: misión, equipo, eventos
+├── perfiles públicos de miembros en /@usuario, con habilidades y enlaces sociales
+├── catálogo de proyectos del semillero, con página propia por proyecto
+├── noticias y eventos vía sistema de gestión de contenido
+├── galería de imágenes
+└── registro con validación de correo institucional (@usco.edu.co)
+```
 
-Diseñada para permitir modularidad y contribución incremental.
+**Semillero. miembros autenticados y administradores:**
+
+```
+├── control de acceso por rol: administrador, gestor de contenido, líder de proyecto, miembro
+├── panel administrativo: usuarios, roles, aprobación de registros
+├── gestión, trazabilidad y seguimiento de proyectos: estado, hitos, equipo asignado
+├── asistencias por código QR dinámico: genera, escanea, registra
+├── gestión de contenido: noticias, eventos, destacados
+├── edición de perfil: habilidades, plataformas, biografía
+└── recuperación de contraseña por correo, con token de un solo uso
+```
+
+**Bajo el capó** `>_`
+
+```
+├── JWT con verificación de firma criptográfica en el edge
+├── CSRF mediante patrón de doble token en cada mutación
+├── rate limiting en intentos de login
+├── patrón Repository entre lógica de negocio y acceso a datos
+├── ISR en páginas públicas
+└── middleware que aplica RBAC antes de que la solicitud llegue a la página
+```
 
 ---
 
-## 🛠️ Instalación y Uso
+## ⬡ Cómo está construido
+
+| Capa | Elección |
+|---|---|
+| Framework | Next.js 15, App Router, React 19 |
+| Lenguaje | TypeScript (modo estricto) |
+| Base de datos | PostgreSQL |
+| ORM | Prisma |
+| Estilos | Tailwind CSS v4 |
+| Auth | JWT propio + CSRF + RBAC |
+| Despliegue | Vercel (serverless, edge middleware) |
+| Gestor de paquetes | pnpm |
+
+Un stack bien pensado. SSR para un SEO vital. App Router sin necesidad de un backend separado. Prisma ofrece acceso tipado a la base de datos sin escribir SQL a mano. Vercel permitió desplegar a producción con un sano mantenimiento.
+
+---
+
+## ⬡ Primeros pasos
 
 ```bash
 git clone https://github.com/trbureiyan/DevurityWeb
@@ -175,133 +91,64 @@ pnpm install
 cp .env.example .env
 pnpm exec prisma db push
 pnpm run dev
-````
+```
 
-> ⚠️ Se requiere Node 18+, pnpm >=11.1.0 y PostgreSQL. NPM esta prohibido.
+Requiere Node 18+, pnpm y una instancia de PostgreSQL. El proyecto usa pnpm con lockfile versionado para builds deterministas; npm no es compatible.
 
-> [!IMPORTANT]
-> **Migración npm -> pnpm (Actualización Crítica)**
->
-> Si estás actualizando desde una versión anterior (`npm`), ejecuta el script de sincronización automática para evitar conflictos de dependencias y limpiar artefactos legacy:
->
-> ```bash
-> node scripts/migrate.mjs
-> ```
-> El script se encargará de:
-> 1. Eliminar `node_modules` y `package-lock.json`.
-> 2. Activar Corepack y pnpm conforme a los nuevos estándares.
-> 3. Sincronizar dependencias usando el nuevo `pnpm-lock.yaml`.
-> 4. Regenerar el cliente de Prisma.
+> [!NOTE]
+> Si vienes de una configuración con npm, ejecuta `node scripts/migrate.mjs` para limpiar artefactos antiguos y sincronizar con pnpm.
 
 ---
 
-## Roadmap Técnico
-````
-      ┌───────────────────────────────────┐
-      │      Base del sistema y Auth      │
-      │            FULL-STACK             │
-      └───────────────────────────────────┘
-                       │
-                       ▼
-      ┌───────────────────────────────────┐
-      │     CI para linting y build       │
-      └───────────────────────────────────┘
-                       │
-                       ▼
-      ┌───────────────────────────────────┐
-      │  Módulo de proyectos en progreso  │
-      └───────────────────────────────────┘
-                       │
-                       ▼
-      ┌───────────────────────────────────┐
-      │    Portal de perfiles completo    │
-      └───────────────────────────────────┘
-                       │
-                       ▼
-        ┌────────────────────────────────┐
-        │ Markdown editor + SEO dinámico |
-        └────────────────────────────────┘
-                       │
-                       ▼
-        ┌─────────────────────────────┐
-        │            Pruebas          │
-        └─────────────────────────────┘
-                       │
-                       ▼
-        ┌────────────────────────────────┐
-        │  CDN para assets del semillero |
-        └────────────────────────────────┘
-````
+## ⬡ Estructura del proyecto
+
+```
+app/                  Rutas (App Router)
+  (public)/           Páginas públicas: landing, sobre nosotros, galería, auth, proyectos
+  (protected)/        Páginas autenticadas: perfil, panel de administración
+  api/                Manejadores de rutas (API)
+components/           UI reutilizable
+  landing/            Secciones de la landing page
+  admin/              Componentes del panel de administración
+  ui/                 Primitivas base
+lib/                  Lógica de negocio, configuración de auth, utilidades
+repositories/         Capa de acceso a datos (Prisma)
+prisma/               Esquema, migraciones, datos semilla
+middleware.ts         Autenticación, RBAC, seguridad
+```
+
+La base de código sigue una arquitectura en capas: los componentes consumen repositorios, los repositorios hablan con Prisma, Prisma habla con Postgres. Middleware intercepta cada solicitud antes de que llegue a la página.
+
+```
+  req ─→ middleware ─→ route ─→ component ─→ repository ─→ prisma ─→ pg
+```
 
 ---
 
-## 🤝 Contribución
+## ⬡ Contribución
 
-> El proyecto está abierto a miembros del semillero y colaboradores externos autorizados.
+Abierto a miembros del semillero y colaboradores externos autorizados.
 
-Guía rápida:
+1. Rama nueva desde `dev`
+2. Changes
+3. Pull request con descripción clara
+4. Si aplica, actualiza `/docs`
 
-1. Crear branch desde `dev`
-2. Pushear commits
-3. PR con descripción clara y checklist
-4. Documentar cambios en `/docs`
-
-Convenciones:
-
-* Conventional Commits
-* Estandar ESLint + TS strict
-* Tests cuando aplique
+Convenciones: conventional commits, ESLint + TypeScript estricto, pruebas donde tengan sentido. Ejecuta `pnpm run build` antes de subir cambios.
 
 ---
 
-## Ética & Comunidad
+## ⬡ El equipo
 
-Este proyecto fomenta:
-
-* Colaboración real
-* Comunidad técnica responsable
-* Investigación abierta
-* Construcción sin ego y con propósito
-* Practicar y aplicar la seguridad robusta
-
-Uso indebido o propietario de aportes está prohibido bajo GPL-3.0.
+- **[Brayan Toro Bustos](https://github.com/trbureiyan)**
+- **[Alexander Lozada Caviedes](https://github.com/Arekkazu)**
+- **Manuel Felipe Rojas Yasno**
+- **[Juan Camilo Mora Castañeda](https://github.com/JucaMora7)**
 
 ---
 
-## 📄 Licencia
+## ⬡ Licencia
 
-Este proyecto está bajo licencia **GNU GPL-3.0**
-Ver archivo [`LICENSE`](./LICENSE) para detalles.
+[GNU GPL-3.0](./LICENSE). El proyecto pertenece a la comunidad Devurity: úsalo, modifícalo, y mantenlo abierto.
 
----
-
-## 👥 Autores y Mantenimiento
-
-Liderazgo actual:
-
-* **Brayan Toro Bustos** - Product Owner & Lider General
-* **Alexander Lozada Caviedes** - Líder Técnico Backend
-* **Manuel Felipe Rojas Yasno** - Backend dev & SCRUM Master 
-* **Juan Camilo Mora Castañeda** - Frontend dev & support
-* **Pablo Trujillo Artunduaga** - T-Stack dev & support
-* **Equipo Devurity** - Contribuidores activos
-
-Mentoría institucional:
-
-* Prof. Jorge E. Martínez
-* Prof. Eduardo Martínez
-* Semillero Devurity — Universidad Surcolombiana
-
----
-
-## Nota Final
-
-Este repositorio no es solo code random; es un **laboratorio de formación avanzada**, y un puente entre la universidad, la industria y la comunidad de investigación.
-
-> "De la universidad al impacto real — Devurity."
-
----
-
-## ✨ Invitación
-
-Si deseas colaborar, aprender o aportar ideas: 👉 Contáctanos vía correo o redes internas del semillero.
+<p align="center">╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌</p>
