@@ -52,7 +52,7 @@ const menuItems: MenuItem[] = [
     label: "Solicitudes de registro",
     href: "/admin/users/confirm",
     icon: ClipboardDocumentListIcon,
-    isActive: (pathname) => pathname.startsWith("/admin/solicitudes"),
+    isActive: (pathname) => pathname.startsWith("/admin/users/confirm"),
     allowedRoles: ["admin"],
   },
   {
@@ -74,14 +74,14 @@ const menuItems: MenuItem[] = [
     label: "Perfiles",
     href: "/admin/users",
     icon: UsersIcon,
-    isActive: (pathname) => pathname.startsWith("/admin/perfiles"),
+    isActive: (pathname) => pathname.startsWith("/admin/users") && !pathname.startsWith("/admin/users/confirm"),
     allowedRoles: ["admin"],
   },
   {
     label: "Habilidades",
     href: "/admin/skills",
     icon: BoltIcon,
-    isActive: (pathname) => pathname.startsWith("/admin/perfiles"),
+    isActive: (pathname) => pathname.startsWith("/admin/skills"),
     allowedRoles: ["admin"],
   },
   {

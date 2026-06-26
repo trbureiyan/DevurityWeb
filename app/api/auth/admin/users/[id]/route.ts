@@ -13,7 +13,10 @@ async function requireAdmin(request: NextRequest): Promise<NextResponse | null> 
   const token = extractTokenFromCookies(request);
   if (!token) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const decoded = await verifyJwtPayload(token);
-  if (!decoded || decoded.role !== "admin") {
+  if (!decoded) {
+    return NextResponse.json({ error: "Token inválido o expirado" }, { status: 401 });
+  }
+  if (decoded.role !== "admin") {
     return NextResponse.json({ error: "Acceso restringido" }, { status: 403 });
   }
   return null;
