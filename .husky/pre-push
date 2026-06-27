@@ -1,1 +1,17 @@
-pnpm exec tsc --noEmit
+node -e "
+const fs = require('fs');
+const path = 'lib/generated/prisma/query_engine-windows.dll.node';
+if (fs.existsSync(path)) {
+  try {
+    const fd = fs.openSync(path, 'r+');
+    fs.closeSync(fd);
+  } catch (err) {
+    if (err.code === 'EBUSY' || err.code === 'EPERM') {
+      console.error('\n\x1b[31m[!] ERROR DE HUSKY: El motor de Prisma (query_engine) está bloqueado.\x1b[0m');
+      console.error('\x1b[33m    Esto suele ocurrir porque el servidor de desarrollo (next dev) está activo.\x1b[0m');
+      console.error('\x1b[33m    Por favor, detén el servidor de desarrollo y vuelve a intentar el push.\x1b[0m\n');
+      process.exit(1);
+    }
+  }
+}
+" && pnpm exec tsc --noEmit
