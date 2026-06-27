@@ -113,12 +113,14 @@ export async function POST(request: Request) {
 
     const token = await generateToken(tokenPayload, 14400);
 
-    let redirectTo = "/profile";
+    let redirectTo = `/profile/${user.id}`;
 
     if (user.roles.name === "admin") {
       redirectTo = "/admin";
-    } else if (user.roles.name === "user") {
-      redirectTo = `/profile/${user.id}`;
+    } else if (user.roles.name === "content_manager") {
+      redirectTo = "/content_manager";
+    } else if (user.roles.name === "lead_project") {
+      redirectTo = "/leader_proyect";
     }
 
     const cookie = `auth_token=${token}; HttpOnly; Path=/; SameSite=Strict; Max-Age=14400${

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { IMAGES } from "@/public/images";
 import { useUpdates, type UpdateItem } from "@/hooks/useUpdates";
 
@@ -430,6 +431,8 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
   const { allUpdates, addUpdate, editUpdate, deleteUpdate } = useUpdates(initialData);
   const [visibleCount, setVisibleCount] = useState(6);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const { user } = useAuthContext();
+  const canEdit = user?.role === "admin" || user?.role === "content_manager";
 
   const highlight = allUpdates[0];
   const timeline = allUpdates.slice(1);
@@ -684,15 +687,17 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
 
           {/* Barra herramientas */}
           <div className="flex flex-wrap gap-4 justify-between items-center mb-8">
-            <button
-              onClick={() => setIsPanelOpen(true)}
-              className="group inline-flex items-center gap-2 border border-white/20 hover:border-red-500/50 text-white/80 hover:text-white px-6 py-3 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:bg-red-600/10 hover:shadow-[0_0_20px_rgba(178,4,3,0.2)]"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-              <span>Editar noticias</span>
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => setIsPanelOpen(true)}
+                className="group inline-flex items-center gap-2 border border-white/20 hover:border-red-500/50 text-white/80 hover:text-white px-6 py-3 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:bg-red-600/10 hover:shadow-[0_0_20px_rgba(178,4,3,0.2)]"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                <span>Editar noticias</span>
+              </button>
+            )}
             <div className="text-white/60 font-ubuntu text-sm">
               Total: <span className="text-white font-bold">{totalUpdates}</span> actualizaciones
             </div>
@@ -813,14 +818,16 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
       </section>
 
       {/* ═══ Panel de edición lateral ═══ */}
-      <EditPanel
-        isOpen={isPanelOpen}
-        onClose={() => setIsPanelOpen(false)}
-        updates={allUpdates}
-        onAdd={addUpdate}
-        onEdit={editUpdate}
-        onDelete={deleteUpdate}
-      />
+      {canEdit && (
+        <EditPanel
+          isOpen={isPanelOpen}
+          onClose={() => setIsPanelOpen(false)}
+          updates={allUpdates}
+          onAdd={addUpdate}
+          onEdit={editUpdate}
+          onDelete={deleteUpdate}
+        />
+      )}
     </main>
   );
 }

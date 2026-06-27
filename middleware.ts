@@ -86,6 +86,16 @@ export async function middleware(
     }
   }
 
+  if (currentPath.startsWith("/content_manager") || currentPath.startsWith("/api/content_manager")) {
+    const roleCheck = await checkUserRoleAllowed(request, token, ["admin", "content_manager"]);
+    if (roleCheck) return roleCheck;
+  }
+
+  if (currentPath.startsWith("/leader_proyect") || currentPath.startsWith("/api/leader_proyect")) {
+    const roleCheck = await checkUserRoleAllowed(request, token, ["admin", "lead_project"]);
+    if (roleCheck) return roleCheck;
+  }
+
   // Verificar CSRF para requests que lo requieran
   const csrfResult = await verifyCsrf(request);
   if (csrfResult) {
@@ -97,7 +107,7 @@ export async function middleware(
 
 // Función helper para verificar rutas protegidas
 function isProtectedPath(path: string): boolean {
-  const protectedPaths = ["/admin", "/profile", "/attendance"];
+  const protectedPaths = ["/admin", "/content_manager", "/leader_proyect", "/profile", "/attendance"];
 
   return protectedPaths.some((protectedPath) => path.startsWith(protectedPath));
 }
@@ -136,6 +146,18 @@ async function checkUserRole(
     return denyAccess(request);
   }
 
+  return null;
+}
+
+async function checkUserRoleAllowed(
+  request: NextRequest,
+  token: string | undefined,
+  allowedRoles: string[],
+): Promise<NextResponse | null> {
+  if (!token) return denyAccess(request);
+  const decoded = await verifyJwtPayload(token);
+  if (!decoded) return denyAccess(request);
+  if (!allowedRoles.includes(decoded.role ?? "")) return denyAccess(request);
   return null;
 }
 

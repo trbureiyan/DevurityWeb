@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import { useAuthContext } from "@/contexts/AuthContext";
 import {
   useProjects,
   STAGE_LABELS,
@@ -402,6 +403,8 @@ export default function ProjectsPageClient({ initialData }: ProjectsPageClientPr
   const [visibleCount, setVisibleCount] = useState(6);
   const [isLoading, setIsLoading] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const { user } = useAuthContext();
+  const canEdit = user?.role === "admin" || user?.role === "lead_project";
 
   const sortedProjects = [...allProjects].sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -411,8 +414,8 @@ export default function ProjectsPageClient({ initialData }: ProjectsPageClientPr
   const timeline = sortedProjects.slice(1);
   const quickPanelProjects = sortedProjects.slice(0, 12);
   const totalProjects = sortedProjects.length;
-  const totalFocusAreas = filters.focusAreas.length;
-  const totalStacks = filters.stack.length;
+  const _totalFocusAreas = filters.focusAreas.length;
+  const _totalStacks = filters.stack.length;
   const currentYear = new Date().getFullYear();
 
   const hasMore = visibleCount < timeline.length;
@@ -683,15 +686,17 @@ export default function ProjectsPageClient({ initialData }: ProjectsPageClientPr
 
           {/* Barra herramientas */}
           <div className="flex flex-wrap gap-4 justify-between items-center mb-8">
-            <button
-              onClick={() => setIsPanelOpen(true)}
-              className="group inline-flex items-center gap-2 border border-white/20 hover:border-red-500/50 text-white/80 hover:text-white px-6 py-3 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:bg-red-600/10 hover:shadow-[0_0_20px_rgba(178,4,3,0.2)]"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-              <span>Gestionar proyectos</span>
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => setIsPanelOpen(true)}
+                className="group inline-flex items-center gap-2 border border-white/20 hover:border-red-500/50 text-white/80 hover:text-white px-6 py-3 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:bg-red-600/10 hover:shadow-[0_0_20px_rgba(178,4,3,0.2)]"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                <span>Gestionar proyectos</span>
+              </button>
+            )}
             <div className="text-white/60 font-ubuntu text-sm">
               Total: <span className="text-white font-bold">{totalProjects}</span> proyectos
             </div>
@@ -839,14 +844,16 @@ export default function ProjectsPageClient({ initialData }: ProjectsPageClientPr
       </section>
 
       {/* ═══ Panel de edición lateral ═══ */}
-      <EditPanel
-        isOpen={isPanelOpen}
-        onClose={() => setIsPanelOpen(false)}
-        projects={allProjects}
-        onAdd={addProject}
-        onEdit={editProject}
-        onDelete={deleteProject}
-      />
+      {canEdit && (
+        <EditPanel
+          isOpen={isPanelOpen}
+          onClose={() => setIsPanelOpen(false)}
+          projects={allProjects}
+          onAdd={addProject}
+          onEdit={editProject}
+          onDelete={deleteProject}
+        />
+      )}
     </main>
   );
 }

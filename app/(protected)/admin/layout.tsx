@@ -80,6 +80,7 @@ export default function AdminLayout({
         user={user ?? null}
         isLoading={isLoading}
         initials={initials}
+        role={user?.role ?? null}
       />
 
       {/* Main Content */}
