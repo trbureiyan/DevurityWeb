@@ -1,6 +1,6 @@
 import type { PrismaClient } from "../../lib/generated/prisma";
 
-const PLATFORM_NAMES = [
+export const PLATFORM_NAMES = [
   "GitHub",
   "ORCID",
   "Bento.me",

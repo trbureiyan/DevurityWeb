@@ -1,10 +1,10 @@
 import type { PrismaClient } from "../../lib/generated/prisma";
 
-export async function seedRoles(prisma: PrismaClient) {
-  const roleNames = ["admin", "user", "lead_project", "content_manager"];
+export const ROLE_NAMES = ["admin", "user", "lead_project", "content_manager"];
 
+export async function seedRoles(prisma: PrismaClient) {
   const results = await Promise.all(
-    roleNames.map((name) =>
+    ROLE_NAMES.map((name) =>
       prisma.roles.upsert({
         where: { name },
         update: {},

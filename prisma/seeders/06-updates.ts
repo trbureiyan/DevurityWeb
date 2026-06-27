@@ -12,7 +12,7 @@ interface UpdateSeed {
   is_featured: boolean;
 }
 
-const UPDATES: UpdateSeed[] = [
+export const UPDATES: UpdateSeed[] = [
   {
     slug: "certificacion-lean-six-sigma-white-belt",
     title: "Certificación Lean Six Sigma White Belt",
