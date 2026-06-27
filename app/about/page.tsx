@@ -1,89 +1,51 @@
 import Image from "next/image";
 import { IMAGES } from "@/public/images";
 import logger from "@/lib/logger";
-import TeamMemberCard from "@/components/about/TeamMemberCard";
 import { findActiveUsersForTeam } from "@/repositories/users/users.repositories";
+import TeamSection, { TeamMember } from "@/components/about/TeamSection";
+import FoundersSection from "@/components/about/FoundersSection";
 
-type SocialLink = {
-  icon: string;
-  url: string;
-  label: string;
-};
+// Revalidar en background cada 1 hora
+export const revalidate = 3600;
 
-type TeamMember = {
-  id: string;
-  name: string;
-  username?: string;
-  role: string;
-  tagline?: string;
-  bio?: string;
-  avatar?: string;
-  socialLinks?: SocialLink[];
-};
-
-/**
- * Obtiene y transforma los miembros activos del equipo desde la base de datos
- * 
- * Esta función consulta los usuarios activos del equipo y los transforma al formato
- * requerido por el componente TeamMemberCard, procesando sus enlaces sociales,
- * habilidades y datos personales.
- * 
- * @returns {Promise<TeamMember[]>} Array de miembros del equipo con sus datos formateados
- * @returns {Promise<TeamMember[]>} Array vacío si ocurre un error en la consulta
- * 
- * @example
- * const members = await getTeamMembers();
- * // [{ id: "1", name: "Juan Pérez", role: "Developer", ... }]
- */
 async function getTeamMembers(): Promise<TeamMember[]> {
   try {
-    // Consulta usuarios activos del equipo desde el repositorio
     const users = await findActiveUsersForTeam();
     
-    // Transforma cada usuario al formato TeamMember
     return users.map((user) => {
-      // Construye array de enlaces sociales desde las plataformas del usuario
-      const socialLinks: SocialLink[] = [];
-      if (user.platforms && user.platforms.length > 0) {
-        user.platforms.forEach((platform) => {
-          socialLinks.push({
-            icon: platform.name.toLowerCase(), // Nombre en minúsculas para iconos
-            url: platform.link,
-            label: platform.name,
-          });
-        });
-      }
+      const socialLinks = user.platforms.map((p) => ({
+        icon: p.name.toLowerCase(),
+        url: p.link,
+        label: p.name,
+      }));
       
-      // Retorna objeto TeamMember con datos formateados
       return {
         id: user.id,
-        name: `${user.name} ${user.last_name}`, // Concatena nombre y apellido
+        name: `${user.name} ${user.last_name}`,
         username: user.username ?? undefined,
         role: user.role,
-        bio: user.motivation || "Miembro del equipo Devurity", // Fallback si no hay motivación
-        avatar: undefined, // Por definir en futuras implementaciones
+        bio: user.motivation || "Miembro del equipo Devurity",
+        avatar: undefined,
         tagline:
           user.skills.length > 0
-            ? user.skills.slice(0, 3).join(" \u2022 ") // Muestra máximo 3 habilidades separadas por bullet
+            ? user.skills.slice(0, 3).join(" \u2022 ")
             : undefined,
-        socialLinks: socialLinks.slice(0, 3), // Limita a 3 enlaces sociales
+        socialLinks: socialLinks.slice(0, 3),
       };
     });
   } catch (error) {
-    // Registra el error y retorna array vacío para no romper la UI
     logger.error("Error fetching team members:", { error });
     return [];
   }
 }
 
-// Página "Sobre nosotros": presenta misión, visión y grid dinámico de integrantes.
 export default async function AboutPage() {
-  const teamMembers = await getTeamMembers();
+  logger.info("AboutPage: Iniciando renderizado");
+  const mappedMembers = await getTeamMembers();
 
   return (
     <main className="min-h-screen bg-black text-white overflow-hidden">
-
-            {/* Hero Section - Mejorado */}
+      {/* Hero Section */}
       <section className="relative h-screen w-full overflow-hidden">
         {/* Fondo con imagen y efectos */}
         <div className="absolute inset-0">
@@ -92,7 +54,7 @@ export default async function AboutPage() {
             alt="About background"
             fill
             priority
-            className="object-cover scale-110 animate-zoom-in"
+            className="object-cover scale-110"
             sizes="100vw"
           />
           
@@ -111,7 +73,6 @@ export default async function AboutPage() {
 
         {/* Contenido central del Hero */}
         <div className="relative h-full flex flex-col items-center justify-center px-6 pt-20">
-          
           {/* Elementos decorativos laterales */}
           <div className="absolute left-10 top-1/2 -translate-y-1/2 hidden lg:block">
             <div className="space-y-4">
@@ -124,14 +85,10 @@ export default async function AboutPage() {
 
           {/* Título principal con efectos */}
           <div className="text-center space-y-6">
-
-            <h1 className="font-orbitron font-bold text-6xl md:text-8xl lg:text-9xl text-white tracking-wider text-center animate-fade-in relative">
-              <span className="bg-gradient-to-r from-white via-gray-300 to-white bg-clip-text text-transparent animate-gradient-x">
+            <h1 className="font-orbitron font-bold text-6xl md:text-8xl lg:text-9xl text-white tracking-wider text-center relative">
+              <span className="bg-gradient-to-r from-white via-gray-300 to-white bg-clip-text text-transparent">
                 SOBRE NOSOTROS
               </span>
-              
-              {/* Efecto de brillo */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 animate-shine"></div>
             </h1>
 
             {/* Líneas decorativas inferiores */}
@@ -142,7 +99,7 @@ export default async function AboutPage() {
             </div>
 
             {/* Subtítulo */}
-            <p className="text-xl md:text-2xl text-white/80 font-light tracking-widest animate-fade-up delay-300 mt-6">
+            <p className="text-xl md:text-2xl text-white/80 font-light tracking-widest mt-6">
               CONOCIENDO A <span className="text-red-500 font-semibold">DEVURITY</span>
             </p>
           </div>
@@ -168,15 +125,12 @@ export default async function AboutPage() {
             </div>
           </div>
         </div>
-
-        
       </section>
 
       {/* Mission Section */}
       <section className="relative bg-black py-24 -mt-px">
         <div className="container mx-auto px-6 md:px-12">
           <div className="grid md:grid-cols-2 gap-16 items-center">
-            
             {/* Left side - Device Image */}
             <div className="relative order-2 md:order-1">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 blur-3xl"></div>
@@ -212,11 +166,10 @@ export default async function AboutPage() {
               <h2 className="text-6xl font-bold tracking-wider mb-12">
                 <span className="text-white">MIS</span>
                 <span className="text-white">IÓN</span>
-                <div className="h-1 w-24 bg-[#b20403] mt-2"></div>
-
+                <div className="h-1 w-24 bg-[#ca2b26] mt-2"></div>
               </h2>
 
-              <div className="border-l-4 pl-6 space-y-6 text-gray-300 leading-relaxed" style={{borderColor: '#b20403'}}>
+              <div className="border-l-4 pl-6 space-y-6 text-gray-300 leading-relaxed border-[#ca2b26]">
                 <p className="text-lg">
                   <strong>Devurity</strong> es el semillero de investigación y práctica tecnológica del Programa de Ingeniería de Software de la Universidad Surcolombiana. Impulsamos formación y producción de conocimiento aplicado en <strong>desarrollo de software, ciencia de datos y ciberseguridad</strong>, combinando investigación formativa con proyectos reales que aportan valor a la Universidad y su entorno.
                 </p>
@@ -245,7 +198,6 @@ export default async function AboutPage() {
       <section className="relative bg-black py-24">
         <div className="container mx-auto px-6 md:px-12">
           <div className="grid md:grid-cols-2 gap-16 items-center">
-            
             {/* Left side - Content */}
             <div className="space-y-8">
               {/* Decorative lines top */}
@@ -259,7 +211,11 @@ export default async function AboutPage() {
                 </div>
               </div>
 
-              <h2 className="text-6xl font-bold tracking-wider">VISIÓN</h2>
+              <h2 className="text-6xl font-bold tracking-wider mb-12">
+                <span className="text-white">VIS</span>
+                <span className="text-white">IÓN</span>
+                <div className="h-1 w-24 bg-[#ca2b26] mt-2"></div>
+              </h2>
               
               <div className="space-y-6 text-gray-300 text-lg leading-relaxed">
                 <p>
@@ -274,7 +230,7 @@ export default async function AboutPage() {
                   Nos proyectamos más allá del campus mediante <strong>colaboraciones, retos, ponencias y contribuciones open source</strong> que posicionen a la USCO y a sus estudiantes en el ecosistema tecnológico regional y nacional.
                 </p>
 
-                <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 p-6 rounded-lg border border-purple-500/30">
+                <div className="bg-gradient-to-r from-red-950/30 to-zinc-900/30 p-6 rounded-lg border border-[#ca2b26]/30">
                   <p className="text-white font-semibold italic">
                     Investigamos para construir, construimos para aprender y compartimos para trascender, con ética y seguridad como principios.
                   </p>
@@ -294,7 +250,7 @@ export default async function AboutPage() {
 
             {/* Right side - Image */}
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-l from-purple-600/10 to-transparent blur-3xl"></div>
+              <div className="absolute inset-0 bg-gradient-to-l from-red-900/10 to-transparent blur-3xl"></div>
               <div className="relative flex items-center justify-center">
                 <div className="relative w-full max-w-lg">
                   <Image
@@ -306,54 +262,19 @@ export default async function AboutPage() {
                     sizes="(max-width: 768px) 100vw, 50vw"
                   />
                   {/* Glow effect */}
-                  <div className="absolute bottom-0 right-0 w-32 h-32 bg-purple-600/20 rounded-full blur-3xl"></div>
+                  <div className="absolute bottom-0 right-0 w-32 h-32 bg-red-900/20 rounded-full blur-3xl"></div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </section>
-      <section className="relative bg-black py-24">
-        <div className="container mx-auto px-6 md:px-12">
-          {/* Section Title */}
-          <div className="text-center mb-16">
-            <h2 className="text-6xl md:text-7xl font-bold tracking-wider mb-6">NUESTRO EQUIPO</h2>
-            {/* Decorative lines */}
-            <div className="flex items-center justify-center gap-2">
-              <div className="flex gap-1">
-                <div className="w-12 h-1 bg-white"></div>
-                <div className="w-12 h-1 bg-white"></div>
-                <div className="w-12 h-1 bg-white"></div>
-                <div className="w-6 h-1 bg-white/40"></div>
-                <div className="w-6 h-1 bg-white/40"></div>
-              </div>
-            </div>
-          </div>
 
-          {/* Team Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
-            {teamMembers.length > 0 ? (
-              teamMembers.map((member) => (
-                <TeamMemberCard
-                  key={member.id}
-                  id={member.id}
-                  name={member.name}
-                  username={member.username}
-                  role={member.role}
-                  bio={member.bio || "Miembro del equipo Devurity"}
-                  avatar={member.avatar}
-                  socialLinks={member.socialLinks}
-                  tagline={member.tagline}
-                />
-              ))
-            ) : (
-              <div className="col-span-full text-center text-gray-400 py-12">
-                <p className="text-lg">No hay miembros del equipo disponibles en este momento</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+      {/* Main Content Sections */}
+      <div className="relative z-10">
+        <TeamSection members={mappedMembers} />
+        <FoundersSection />
+      </div>
     </main>
   );
 }
