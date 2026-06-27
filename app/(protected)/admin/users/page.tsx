@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import { useDebounce } from "@/hooks/useDebounce"
 
 // ─── Inline SVG Icons ────────────────────────────────────────────────────────
 const SearchIcon = ({ size = 16, className = "" }: { size?: number; className?: string }) => (
@@ -58,11 +59,17 @@ export default function AdminUsersClientPage() {
     const [error, setError] = useState<string | null>(null)
 
     const [search, setSearch] = useState("")
-    const [debouncedSearch, setDebouncedSearch] = useState("")
     const [roleFilter, setRoleFilter] = useState("")
     const [statusFilter, setStatusFilter] = useState("")
     const [currentPage, setCurrentPage] = useState(1)
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+
+    const debouncedSearch = useDebounce(search, 500)
+
+    // Resetear pagina al cambiar busqueda debounced
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [debouncedSearch])
 
     useEffect(() => {
         fetch('/api/auth/is-admin')
@@ -70,14 +77,6 @@ export default function AdminUsersClientPage() {
             .then(data => { if (data.userId) setCurrentUserId(data.userId) })
             .catch(console.error)
     }, [])
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(search)
-            setCurrentPage(1)
-        }, 500)
-        return () => clearTimeout(timer)
-    }, [search])
 
     const fetchUsers = useCallback(async () => {
         try {
@@ -95,8 +94,8 @@ export default function AdminUsersClientPage() {
             const json = await res.json()
             setData(json)
             setError(null)
-        } catch (err: any) {
-            setError(err.message)
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Error cargando usuarios")
         } finally {
             setLoading(false)
         }
@@ -116,7 +115,7 @@ export default function AdminUsersClientPage() {
                 ...prev,
                 users: prev.users.map(u => u.id === userId ? { ...u, roles: { ...u.roles, name: newRole } } : u)
             } : null)
-        } catch (err: any) { alert(err.message) }
+        } catch (err: unknown) { alert(err instanceof Error ? err.message : "Error desconocido") }
     }
 
     const handleStatusToggle = async (userId: string, currentStatus: boolean) => {
@@ -132,7 +131,7 @@ export default function AdminUsersClientPage() {
                 ...prev,
                 users: prev.users.map(u => u.id === userId ? { ...u, is_active: !currentStatus } : u)
             } : null)
-        } catch (err: any) { alert(err.message) }
+        } catch (err: unknown) { alert(err instanceof Error ? err.message : "Error desconocido") }
     }
 
     const handleDelete = async (userId: string) => {
@@ -142,7 +141,7 @@ export default function AdminUsersClientPage() {
             const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' })
             if (!res.ok) throw new Error("Error al eliminar el usuario")
             fetchUsers()
-        } catch (err: any) { alert(err.message) }
+        } catch (err: unknown) { alert(err instanceof Error ? err.message : "Error desconocido") }
     }
 
     return (

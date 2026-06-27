@@ -1,5 +1,6 @@
 import prisma from "../../lib/postgresDriver";
 import logger from "../../lib/logger";
+import crypto from "node:crypto";
 import type { CreateUserDTO, PaginatedUsersResponse } from "../../lib/types/user.types";
 
 function toBigInt(id: string | number): bigint {
@@ -764,15 +765,18 @@ export async function updateUserProfile(
           });
 
           if (!project) {
+            const rawSlug = proj.title
+              .toLowerCase()
+              .trim()
+              .replace(/\s+/g, "-")
+              .replace(/[^a-z0-9-]/g, "")
+              .replace(/-+/g, "-")
+              .substring(0, 60);
+            // 6 bytes = 12 hex chars = 2^48 ≈ 281T valores. Colision estadisticamente imposible.
+            const suffix = crypto.randomBytes(6).toString("hex");
             project = await tx.projects.create({
               data: {
-                slug: proj.title
-                  .toLowerCase()
-                  .trim()
-                  .replace(/\s+/g, "-")
-                  .replace(/[^a-z0-9-]/g, "")
-                  .replace(/-+/g, "-")
-                  .substring(0, 60) + `-${Date.now()}`,
+                slug: `${rawSlug || "project"}-${suffix}`,
                 title: proj.title,
                 description: projectLink !== '#' ? projectLink : "Created from profile",
                 focus_areas: [],
