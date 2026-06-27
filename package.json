@@ -19,6 +19,9 @@
     "postinstall": "prisma generate",
     "vercel-build": "prisma migrate deploy && next build",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:sql-sync": "tsx scripts/generate-sql-seed.ts",
+    "db:fixture": "tsx scripts/fixtures/index.ts",
+    "db:fixture:dry": "tsx scripts/fixtures/index.ts -- --dry-run",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
@@ -28,9 +31,10 @@
     "db:status": "tsx scripts/deploy-db.ts status"
   },
   "dependencies": {
+    "@clack/prompts": "1.6.0",
     "@heroicons/react": "2.2.0",
     "@prisma/client": "6.19.3",
-    "@vercel/analytics": "^2.0.1",
+    "@vercel/analytics": "2.0.1",
     "bcryptjs": "3.0.3",
     "framer-motion": "12.38.0",
     "html5-qrcode": "2.3.8",
