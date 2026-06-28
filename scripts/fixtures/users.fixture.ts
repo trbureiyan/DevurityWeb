@@ -65,9 +65,15 @@ export async function seedUsers(
         },
       });
       created++;
-    } catch {
-      // Unique constraint on email or username — expected in repeated runs
-      skipped++;
+    } catch (err) {
+      // Only swallow unique-constraint violations (P2002) on email or username.
+      // Any other error — FK, connection, schema mismatch — is a real failure.
+      const code = (err as { code?: string }).code;
+      if (code === "P2002") {
+        skipped++;
+      } else {
+        throw err;
+      }
     }
 
     onProgress?.(i + 1, count);
@@ -86,12 +92,15 @@ export async function resetUsers(
   prisma: PrismaClient,
   options: UsersFixtureOptions = {}
 ): Promise<SeedResult> {
-  // [!] Delete dependents first to satisfy FK constraints
-  await prisma.attendances.deleteMany({});
-  await prisma.user_skills.deleteMany({});
-  await prisma.user_platforms.deleteMany({});
-  await prisma.user_projects.deleteMany({});
-  await prisma.users.deleteMany({});
+  // [!] Wrap dependent deletes in a transaction so the reset is atomic.
+  // A failure at any step rolls back rather than leaving the DB half-cleared.
+  await prisma.$transaction([
+    prisma.attendances.deleteMany({}),
+    prisma.user_skills.deleteMany({}),
+    prisma.user_platforms.deleteMany({}),
+    prisma.user_projects.deleteMany({}),
+    prisma.users.deleteMany({}),
+  ]);
 
   return seedUsers(prisma, options);
 }

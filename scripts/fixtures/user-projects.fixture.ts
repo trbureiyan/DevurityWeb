@@ -91,6 +91,9 @@ export async function resetUserProjects(
   prisma: PrismaClient,
   options: UserProjectsFixtureOptions = {}
 ): Promise<SeedResult> {
+  if (options.dryRun) {
+    return seedUserProjects(prisma, options);
+  }
   await prisma.user_projects.deleteMany({});
   return seedUserProjects(prisma, options);
 }

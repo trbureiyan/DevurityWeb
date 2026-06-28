@@ -47,8 +47,14 @@ export async function seedAttendances(
         data: { user_id: userId, attendance_date: date },
       });
       created++;
-    } catch {
-      skipped++;
+    } catch (err) {
+      // Only skip expected duplicate-entry errors (same user + same date unique constraint).
+      const code = (err as { code?: string }).code;
+      if (code === "P2002") {
+        skipped++;
+      } else {
+        throw err;
+      }
     }
 
     onProgress?.(i + 1, count);

@@ -116,7 +116,13 @@ export async function listBackups(): Promise<string[]> {
   const files = await fs.readdir(BACKUP_DIR);
   return files
     .filter((f) => f.endsWith(".json"))
-    .sort((a, b) => b.localeCompare(a));
+    .sort((a, b) => {
+      // Extract the trailing ISO timestamp from snapshot_<label>_<timestamp>.json
+      // e.g. "snapshot_auto_2025-07-24T12-30-00-000Z.json" → "2025-07-24T12-30-00-000Z"
+      const tsA = a.replace(/^snapshot_.*_(\d{4}-.+)\.json$/, "$1");
+      const tsB = b.replace(/^snapshot_.*_(\d{4}-.+)\.json$/, "$1");
+      return tsB.localeCompare(tsA);
+    });
 }
 
 /** Restore database dynamic tables from a JSON backup. */

@@ -433,6 +433,8 @@ async function main(): Promise<void> {
 main().catch(async (err) => {
   if (err instanceof Error && err.message !== "cancelled") {
     renderError("Error inesperado.", err.message);
+    await prisma.$disconnect();
+    process.exit(1);
   }
   await prisma.$disconnect();
   process.exit(0);

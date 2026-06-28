@@ -20,11 +20,11 @@ function formatArray(arr: string[] | null | undefined): string {
   return `ARRAY[${items.join(", ")}]`;
 }
 
-// Helper to format Date objects for SQL
+// Helper to format Date objects for SQL — emits full ISO timestamp to preserve
+// the time component for fields like published_at and start_date.
 function formatDate(date: Date | null | undefined): string {
   if (!date) return "NULL";
-  const iso = date.toISOString().split("T")[0];
-  return `'${iso}'`;
+  return `'${date.toISOString()}'`;
 }
 
 function generateSql(): string {
@@ -150,6 +150,7 @@ function generateSql(): string {
       `hero_image   = EXCLUDED.hero_image`,
       `cta_label    = EXCLUDED.cta_label`,
       `cta_href     = EXCLUDED.cta_href`,
+      `start_date   = EXCLUDED.start_date`,
       `is_archived  = EXCLUDED.is_archived`,
       `updated_at   = NOW()`,
     ].join(",\n  ");

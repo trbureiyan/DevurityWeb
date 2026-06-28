@@ -15,16 +15,22 @@ export function assertDevelopmentOnly(): void {
   const env = process.env.NODE_ENV;
   const url = process.env.DATABASE_URL ?? "";
 
-  // [!] Detect production cloud DB hostnames — extend this list as needed
-  const isProd =
-    env === "production" ||
-    (url.includes("supabase.co") && !url.includes("localhost")) ||
-    (url.includes("neon.tech") && !url.includes("localhost"));
+  // Allow only when NODE_ENV is exactly "development" AND the URL points to a
+  // local host. Any other combination — staging, preview, production, missing
+  // env — is treated as unsafe. This inverts the default stance so that a
+  // misconfigured environment fails closed rather than open.
+  const isLocalUrl =
+    url.includes("localhost") ||
+    url.includes("127.0.0.1") ||
+    url.includes("host.docker.internal");
 
-  if (isProd) {
+  const isSafe = env === "development" && isLocalUrl;
+
+  if (!isSafe) {
     process.stderr.write(
-      "\n[!] ABORTING: fixture scripts must not run against a production database.\n" +
-      "    NODE_ENV=" + JSON.stringify(env) + "  DATABASE_URL looks like production.\n\n"
+      "\n[!] ABORTING: fixture scripts must not run outside a local development database.\n" +
+      "    NODE_ENV=" + JSON.stringify(env) + "\n" +
+      "    DATABASE_URL must point to localhost. Current URL does not qualify.\n\n"
     );
     process.exit(1);
   }
@@ -56,6 +62,9 @@ const MOTIVATIONS = [
 ];
 
 export function pick<T>(arr: T[]): T {
+  if (arr.length === 0) {
+    throw new Error("pick() called with an empty array");
+  }
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
