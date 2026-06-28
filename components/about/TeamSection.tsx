@@ -1,46 +1,15 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { m, LazyMotion, domAnimation } from "framer-motion";
 import TeamMemberCard from "./TeamMemberCard";
 
-export type SocialLink = {
-  icon: string;
-  url: string;
-  label: string;
-};
-
-export type TeamMember = {
-  id: string;
-  name: string;
-  username?: string;
-  role: string;
-  tagline?: string;
-  bio?: string;
-  avatar?: string;
-  socialLinks?: SocialLink[];
-};
+import type { TeamMember, RoleGroup } from "./team.types";
+import { ROLE_LABELS, ROLE_SINGULAR_LABELS } from "./team.types";
+import { groupTeamMembers, getPaginatedMembers, getTotalPages } from "@/lib/utils/teamUtils";
 
 interface TeamSectionProps {
   members: TeamMember[];
 }
-
-export type RoleGroup = "admin" | "lead_project" | "content_manager" | "user";
-
-const ROLE_LABELS: Record<RoleGroup, string> = {
-  admin: "Administradores del Semillero",
-  lead_project: "Líderes de proyectos",
-  content_manager: "Content Managers",
-  user: "Integrantes del semillero",
-};
-
-export const ROLE_SINGULAR_LABELS: Record<RoleGroup, string> = {
-  admin: "Administrador",
-  lead_project: "Líder de Proyecto",
-  content_manager: "Content Manager",
-  user: "Integrante",
-};
-
-import { groupTeamMembers, getPaginatedMembers, getTotalPages } from "@/lib/utils/teamUtils";
 
 export default function TeamSection({ members }: TeamSectionProps) {
   const [activeTab, setActiveTab] = useState<RoleGroup>("admin");
@@ -49,13 +18,17 @@ export default function TeamSection({ members }: TeamSectionProps) {
   // Agrupar miembros por rol
   const groupedMembers = useMemo(() => groupTeamMembers(members), [members]);
 
-  // Si el grupo inicial (admin) está vacío, intentar seleccionar otro
-  useMemo(() => {
+  // When the active tab becomes empty (e.g. after data changes), fall back to
+  // the first non-empty group and reset pagination to avoid a blank page.
+  useEffect(() => {
     if (groupedMembers[activeTab].length === 0) {
       const firstNonEmpty = (Object.keys(groupedMembers) as RoleGroup[]).find(
         (key) => groupedMembers[key].length > 0
       );
-      if (firstNonEmpty) setActiveTab(firstNonEmpty);
+      if (firstNonEmpty) {
+        setActiveTab(firstNonEmpty);
+        setPage(1);
+      }
     }
   }, [activeTab, groupedMembers]);
 
@@ -97,22 +70,24 @@ export default function TeamSection({ members }: TeamSectionProps) {
               const isActive = activeTab === roleKey;
 
               return (
-                <div 
+                <button
                   key={roleKey}
-                  className="flex flex-col items-center flex-1 cursor-pointer group"
+                  type="button"
+                  className="flex flex-col items-center flex-1 cursor-pointer group bg-transparent border-0 p-0"
                   onClick={() => handleTabChange(roleKey)}
+                  aria-pressed={isActive}
                 >
                   <span className={`text-2xl md:text-3xl font-bold mb-3 text-center transition-colors ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`}>
                     {ROLE_LABELS[roleKey]}
                   </span>
-                  <div 
+                  <div
                     className={`w-full rounded-full transition-all duration-300 ${
-                      isActive 
-                        ? 'h-2 bg-[#ca2b26] opacity-100 shadow-[0_0_15px_rgba(202,43,38,0.5)]' 
+                      isActive
+                        ? 'h-2 bg-[#ca2b26] opacity-100 shadow-[0_0_15px_rgba(202,43,38,0.5)]'
                         : 'h-1.5 bg-gray-600 opacity-40 group-hover:opacity-70 group-hover:bg-gray-500'
                     }`}
                   />
-                </div>
+                </button>
               );
             })}
           </div>

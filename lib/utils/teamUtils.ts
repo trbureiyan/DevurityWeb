@@ -1,4 +1,4 @@
-import { TeamMember, RoleGroup } from "@/components/about/TeamSection";
+import type { TeamMember, RoleGroup } from "@/components/about/team.types";
 
 export const ITEMS_PER_PAGE = 8;
 
