@@ -133,8 +133,25 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const token = request.cookies.get("auth_token")?.value;
+    if (!token) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+
+    const { validateToken } = await import("@/lib/jwt");
+    let decoded;
+    try {
+      decoded = (await validateToken(token)) as { sub: string; role?: string };
+    } catch {
+      return NextResponse.json({ error: "Token inválido" }, { status: 401 });
+    }
+
+    if (decoded.role !== "admin") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
+
     const asistencias = await prisma.attendances.findMany({
       include: {
         users: {
@@ -148,7 +165,17 @@ export async function GET() {
       orderBy: { attendance_date: "desc" },
     });
 
-    return NextResponse.json(asistencias);
+    const serializedAsistencias = asistencias.map(a => ({
+      ...a,
+      id: a.id.toString(),
+      user_id: a.user_id ? a.user_id.toString() : null,
+      users: a.users ? {
+        ...a.users,
+        id: a.users.id.toString()
+      } : null
+    }));
+
+    return NextResponse.json(serializedAsistencias);
   } catch (error) {
     console.error("Error al obtener asistencias:", error);
     return NextResponse.json(

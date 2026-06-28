@@ -65,10 +65,8 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const expirationTime = timestamp + QR_EXPIRATION_MINUTES * 60 * 1000;
 
-    // Crear un token simple usando Math.random
-    const token =
-      Math.random().toString(36).substring(2, 15) +
-      Math.random().toString(36).substring(2, 15);
+    // Crear un token criptográficamente seguro
+    const token = crypto.randomUUID();
 
     // Datos que irán en el QR: userId + timestamp + token
     const qrData = JSON.stringify({

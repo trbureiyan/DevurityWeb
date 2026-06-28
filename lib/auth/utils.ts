@@ -9,14 +9,14 @@ export function extractTokenFromCookies(request: NextRequest): string | null {
 //Validar token y extraer datos (Edge-compatible, usa Web Crypto API)
 export async function validateAuthToken(
   token: string,
-): Promise<{ sub: string }> {
+): Promise<{ sub: string; role?: string }> {
   const decoded = await verifyJwtPayload(token);
 
   if (!decoded?.sub) {
     throw new Error("Token inválido: falta subject");
   }
 
-  return { sub: decoded.sub };
+  return { sub: decoded.sub, role: decoded.role };
 }
 
 //Crear respuesta de error para APIs
