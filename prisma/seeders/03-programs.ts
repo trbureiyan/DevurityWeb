@@ -1,6 +1,6 @@
 import type { PrismaClient } from "../../lib/generated/prisma";
 
-const PROGRAMS = [
+export const PROGRAMS = [
   "Física",
   "Matemática Aplicada",
   "Biología Aplicada",

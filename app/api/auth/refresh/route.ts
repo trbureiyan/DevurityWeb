@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
     // Generar nuevo token con los mismos datos
     const newTokenPayload = {
       sub: user.id.toString(),
+      role: user.roles.name,
     };
 
     const newToken = await generateToken(newTokenPayload, 4 * 60 * 60); // 4 horas

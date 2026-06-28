@@ -85,6 +85,8 @@ postman-cloud-agent.log
 *.sqlite
 *.sqlite3
 database/backups/
+scripts/fixtures/backups/
+
 
 # ─── Cache ───────────────────────────────────────────────────────────────────
 .cache/

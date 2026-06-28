@@ -26,7 +26,7 @@ interface ProjectSeed {
   is_archived?: boolean;
 }
 
-const PROJECTS: ProjectSeed[] = [
+export const PROJECTS: ProjectSeed[] = [
   // ── En Continuidad ─────────────────────────────────────────────────────────
 
   {

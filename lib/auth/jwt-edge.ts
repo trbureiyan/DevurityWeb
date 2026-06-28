@@ -12,16 +12,27 @@ export interface JwtPayload {
 }
 
 /**
- * Decode a base64url-encoded string, restoring padding and normalizing
- * URL-safe characters before decoding via atob() + TextDecoder for
- * proper multi-byte UTF-8 handling (accents, emojis, etc.).
+ * Decode a base64url-encoded string to its raw bytes.
+ * Used for binary fields like the JWT signature where UTF-8 re-encoding
+ * would corrupt bytes >= 128.
  */
-function base64UrlDecode(str: string): string {
+function base64UrlToBytes(str: string): Uint8Array {
   const padded = str.replace(/-/g, "+").replace(/_/g, "/")
     + "=".repeat((4 - (str.length % 4)) % 4);
   const binary = atob(padded);
-  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-  return new TextDecoder("utf-8").decode(bytes);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+/**
+ * Decode a base64url-encoded string to a UTF-8 text string.
+ * Used for JWT header and payload segments which are JSON.
+ */
+function base64UrlDecodeText(str: string): string {
+  return new TextDecoder("utf-8").decode(base64UrlToBytes(str));
 }
 
 /**
@@ -49,25 +60,25 @@ export async function verifyJwtPayload(
       ["verify"],
     );
 
-    // Decode Base64url signature
-    const sigBytes = Uint8Array.from(
-      base64UrlDecode(signature),
-      (c) => c.charCodeAt(0),
-    );
+    // Decode Base64url signature directly to bytes — must not pass through
+    // TextDecoder because the 32-byte HMAC-SHA256 digest is arbitrary binary,
+    // not valid UTF-8. Using base64UrlToBytes avoids byte corruption.
+    const sigBytes = base64UrlToBytes(signature);
 
     // Verify signature over "header.payload"
     const isValid = await crypto.subtle.verify(
       "HMAC",
       cryptoKey,
-      sigBytes,
+      sigBytes as unknown as BufferSource,
       new TextEncoder().encode(`${header}.${payload}`),
     );
 
     if (!isValid) return null;
 
-    // Decode payload only after signature is confirmed valid
+    // Decode payload only after signature is confirmed valid.
+    // Payload is JSON — use the UTF-8 text path.
     const decoded = JSON.parse(
-      base64UrlDecode(payload),
+      base64UrlDecodeText(payload),
     ) as JwtPayload;
 
     // Reject expired tokens

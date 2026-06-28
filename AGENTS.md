@@ -18,6 +18,12 @@ import { ok, strictEqual } from "node:assert/strict";
 
 Do not import the default `assert` object.
 
+## Database fixtures
+
+For development, use `pnpm run db:fixture` to populate test data. This launches an interactive CLI that seeds `users`, `attendances`, and `user_projects` as base. Source lives in `scripts/fixtures/`. Each module exposes `seed`, `reset`, and `status`. Reset operations require typing `CONFIRMAR` in the terminal and abort automatically outside `NODE_ENV=development`.
+
+Never seed fixture data directly in production. The guard in `scripts/fixtures/factory.ts` (function `assertDevelopmentOnly`) enforces this at runtime.
+
 ## Workflow
 
 Follow conventional commits: `feature:`, `fix:`, `refactor:`. Run `pnpm run build` before pushing. Verify all relevant checks pass before considering work complete.
