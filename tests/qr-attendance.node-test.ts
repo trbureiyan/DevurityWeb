@@ -36,6 +36,17 @@ const mockPrisma = {
           users: { id: 1n, name: "Test User", email: "testuser@usco.edu.co" }
         }
       ];
+    },
+    findFirst: async () => {
+      return null; // Simulate no previous attendance today
+    },
+    create: async ({ data }: { data: { user_id: bigint, attendance_date: Date } }) => {
+      return {
+        id: 99n,
+        user_id: data.user_id,
+        attendance_date: data.attendance_date,
+        users: { id: data.user_id, name: "Test User", email: "testuser@usco.edu.co" }
+      };
     }
   }
 };
@@ -154,5 +165,121 @@ test("Attendance GET Route - Authentication and Authorization security", async (
     strictEqual(data.length, 1);
     strictEqual(data[0].users.name, "Test User");
     strictEqual(data[0].users.email, "testuser@usco.edu.co");
+  });
+});
+
+test("Attendance POST Route - Cryptographic Signature and Expiration checks", async (t) => {
+  const { POST: postAttendanceHandler } = await import("../app/api/asistencia/route");
+  const crypto = await import("crypto");
+  const secret = process.env.JWT_SECRET || "supersecretkeyfortestingpurposesonly";
+
+  await t.test("Succeeds when QR is valid and correctly signed", async () => {
+    const timestamp = Date.now();
+    const expiresAt = timestamp + 120 * 1000;
+    const token = "some-secure-uuid";
+    const userId = "1";
+
+    const signature = crypto.default
+      .createHmac("sha256", secret)
+      .update(`${userId}:${timestamp}:${token}:${expiresAt}`)
+      .digest("hex");
+
+    const req = new NextRequest("http://localhost/api/asistencia", {
+      method: "POST",
+      body: JSON.stringify({
+        qrData: {
+          userId,
+          timestamp,
+          token,
+          expiresAt,
+          signature,
+        },
+      }),
+    });
+
+    const res = await postAttendanceHandler(req);
+    strictEqual(res.status, 200);
+    const data = await res.json();
+    strictEqual(data.message, "Asistencia registrada exitosamente");
+    strictEqual(data.usuario.nombre, "Test User");
+  });
+
+  await t.test("Fails when signature is missing", async () => {
+    const timestamp = Date.now();
+    const expiresAt = timestamp + 120 * 1000;
+    const token = "some-secure-uuid";
+    const userId = "1";
+
+    const req = new NextRequest("http://localhost/api/asistencia", {
+      method: "POST",
+      body: JSON.stringify({
+        qrData: {
+          userId,
+          timestamp,
+          token,
+          expiresAt,
+        },
+      }),
+    });
+
+    const res = await postAttendanceHandler(req);
+    strictEqual(res.status, 400);
+    const data = await res.json();
+    ok(data.error.includes("firma de seguridad"));
+  });
+
+  await t.test("Fails when signature is invalid/forged", async () => {
+    const timestamp = Date.now();
+    const expiresAt = timestamp + 120 * 1000;
+    const token = "some-secure-uuid";
+    const userId = "1";
+
+    const req = new NextRequest("http://localhost/api/asistencia", {
+      method: "POST",
+      body: JSON.stringify({
+        qrData: {
+          userId,
+          timestamp,
+          token,
+          expiresAt,
+          signature: "wrongsignaturehere",
+        },
+      }),
+    });
+
+    const res = await postAttendanceHandler(req);
+    strictEqual(res.status, 400);
+    const data = await res.json();
+    ok(data.error.includes("firma corrupta o no autorizada"));
+  });
+
+  await t.test("Fails when QR code is expired", async () => {
+    const timestamp = Date.now() - 300 * 1000; // 5 mins ago
+    const expiresAt = timestamp + 120 * 1000; // expired 3 mins ago
+    const token = "some-secure-uuid";
+    const userId = "1";
+
+    const signature = crypto.default
+      .createHmac("sha256", secret)
+      .update(`${userId}:${timestamp}:${token}:${expiresAt}`)
+      .digest("hex");
+
+    const req = new NextRequest("http://localhost/api/asistencia", {
+      method: "POST",
+      body: JSON.stringify({
+        qrData: {
+          userId,
+          timestamp,
+          token,
+          expiresAt,
+          signature,
+        },
+      }),
+    });
+
+    const res = await postAttendanceHandler(req);
+    strictEqual(res.status, 410);
+    const data = await res.json();
+    ok(data.error.includes("QR expirado"));
   });
 });
