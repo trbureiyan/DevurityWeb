@@ -14,4 +14,4 @@ if (fs.existsSync(path)) {
     }
   }
 }
-" && pnpm exec tsc --noEmit
+" && pnpm exec tsc --noEmit && pnpm run test
