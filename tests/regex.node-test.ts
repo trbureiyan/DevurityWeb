@@ -124,11 +124,12 @@ test("email — rejects malformed addresses", async (t) => {
 
 test("isValidPassword — accepts passwords meeting all requirements", async (t) => {
   await t.test("typical strong password", () => {
-    ok(isValidPassword("Secure#1"));
+    // Uppercase + lowercase + digit + special, exactly 8 chars
+    ok(isValidPassword("Zzz#0aaa"));
   });
 
   await t.test("long password with all character classes", () => {
-    ok(isValidPassword("MyV3ryStr0ng!Pass"));
+    ok(isValidPassword("Xxxxxx99!yyyyyy"));
   });
 
   await t.test("exactly 8 characters, all classes present", () => {
@@ -136,7 +137,7 @@ test("isValidPassword — accepts passwords meeting all requirements", async (t)
   });
 
   await t.test("special characters from the allowed set", () => {
-    ok(isValidPassword("P@ssw0rd!"));
+    ok(isValidPassword("Qqqq0@qq"));
   });
 });
 

@@ -68,12 +68,20 @@ export async function POST(request: NextRequest) {
     // Crear un token criptográficamente seguro
     const token = crypto.randomUUID();
 
-    // Datos que irán en el QR: userId + timestamp + token
+    // Generar firma criptográfica para el QR usando el JWT_SECRET existente
+    const cryptoMod = await import("crypto");
+    const signature = cryptoMod.default
+      .createHmac("sha256", process.env.JWT_SECRET || "fallback-qr-secret")
+      .update(`${usuario.id.toString()}:${timestamp}:${token}:${expirationTime}`)
+      .digest("hex");
+
+    // Datos que irán en el QR: userId + timestamp + token + signature
     const qrData = JSON.stringify({
       userId: usuario.id.toString(),
       timestamp: timestamp,
       token: token,
       expiresAt: expirationTime,
+      signature: signature,
     });
 
     // Generar QR con los datos dinámicos

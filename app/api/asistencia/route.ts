@@ -28,10 +28,25 @@ export async function POST(request: NextRequest) {
       !qrData.userId ||
       !qrData.timestamp ||
       !qrData.token ||
-      !qrData.expiresAt
+      !qrData.expiresAt ||
+      !qrData.signature
     ) {
       return NextResponse.json(
-        { error: "QR inválido - faltan datos requeridos" },
+        { error: "QR inválido - faltan datos requeridos o firma de seguridad" },
+        { status: 400 },
+      );
+    }
+
+    // Verificar firma criptográfica del QR para evitar alteraciones o falsificaciones
+    const cryptoMod = await import("crypto");
+    const expectedSignature = cryptoMod.default
+      .createHmac("sha256", process.env.JWT_SECRET || "fallback-qr-secret")
+      .update(`${qrData.userId}:${qrData.timestamp}:${qrData.token}:${qrData.expiresAt}`)
+      .digest("hex");
+
+    if (qrData.signature !== expectedSignature) {
+      return NextResponse.json(
+        { error: "QR inválido - firma corrupta o no autorizada" },
         { status: 400 },
       );
     }
