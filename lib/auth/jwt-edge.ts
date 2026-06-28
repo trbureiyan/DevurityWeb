@@ -20,7 +20,11 @@ function base64UrlToBytes(str: string): Uint8Array {
   const padded = str.replace(/-/g, "+").replace(/_/g, "/")
     + "=".repeat((4 - (str.length % 4)) % 4);
   const binary = atob(padded);
-  return Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
 }
 
 /**
@@ -65,7 +69,7 @@ export async function verifyJwtPayload(
     const isValid = await crypto.subtle.verify(
       "HMAC",
       cryptoKey,
-      sigBytes,
+      sigBytes as unknown as BufferSource,
       new TextEncoder().encode(`${header}.${payload}`),
     );
 
