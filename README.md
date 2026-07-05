@@ -2,7 +2,9 @@
   <code>$ ./devurity --serve</code>
 </p>
 
-<img width="1890" height="945" alt="DevurityWeb Banner" src="https://github.com/user-attachments/assets/02ac7968-2d0f-49ec-8810-f61286732464" />
+<a href="https://devurityweb.vercel.app" target="_blank" rel="noopener noreferrer">
+  <img width="1890" height="945" alt="DevurityWeb Banner" src="https://github.com/user-attachments/assets/02ac7968-2d0f-49ec-8810-f61286732464" />
+</a>
 
 <p align="center">
   Plataforma web del Semillero de Ciberseguridad e Ingeniería Devurity<br/>
@@ -141,7 +143,7 @@ Convenciones: conventional commits, ESLint + TypeScript estricto, pruebas donde 
 ## ⬡ El equipo
 
 - **[Brayan Toro Bustos](https://github.com/trbureiyan)**
-- **[Alexander Lozada Caviedes](https://github.com/Arekkazu)**
+- **[Alexander Lozada Caviedes](https://www.arekkazu.top/)**
 - **Manuel Felipe Rojas Yasno**
 - **[Juan Camilo Mora Castañeda](https://github.com/JucaMora7)**
 
