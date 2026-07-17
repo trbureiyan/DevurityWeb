@@ -15,6 +15,7 @@ export interface JwtPayload {
  * Decode a base64url-encoded string, restoring padding and normalizing
  * URL-safe characters before decoding via atob() + TextDecoder for
  * proper multi-byte UTF-8 handling (accents, emojis, etc.).
+ * Use only for JSON payloads (valid UTF-8), NOT for binary data like signatures.
  */
 function base64UrlDecode(str: string): string {
   const padded = str.replace(/-/g, "+").replace(/_/g, "/")
@@ -22,6 +23,20 @@ function base64UrlDecode(str: string): string {
   const binary = atob(padded);
   const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
   return new TextDecoder("utf-8").decode(bytes);
+}
+
+/**
+ * Decode a base64url-encoded string directly to raw bytes.
+ * Use for binary data (e.g. HMAC signatures) where TextDecoder would corrupt bytes ≥ 0x80.
+ */
+function base64UrlToBytes(str: string): Uint8Array<ArrayBuffer> {
+  const padded = str.replace(/-/g, "+").replace(/_/g, "/")
+    + "=".repeat((4 - (str.length % 4)) % 4);
+  const binary = atob(padded);
+  const buf = new ArrayBuffer(binary.length);
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
 }
 
 /**
@@ -49,11 +64,8 @@ export async function verifyJwtPayload(
       ["verify"],
     );
 
-    // Decode Base64url signature
-    const sigBytes = Uint8Array.from(
-      base64UrlDecode(signature),
-      (c) => c.charCodeAt(0),
-    );
+    // Decode Base64url signature to raw bytes (must not go through TextDecoder)
+    const sigBytes = base64UrlToBytes(signature);
 
     // Verify signature over "header.payload"
     const isValid = await crypto.subtle.verify(

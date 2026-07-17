@@ -1,5 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/postgresDriver";
+import { getAttendancesPaginated } from "@/repositories/admin/attendances.repositories";
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "20");
+    const dateFrom = searchParams.get("dateFrom") || undefined;
+    const dateTo = searchParams.get("dateTo") || undefined;
+    const search = searchParams.get("search") || undefined;
+    const program = searchParams.get("program") || undefined;
+
+    const result = await getAttendancesPaginated({
+      page: isNaN(page) ? 1 : page,
+      limit: Math.max(1, Math.min(isNaN(limit) ? 20 : limit, 100)),
+      dateFrom,
+      dateTo,
+      search,
+      program,
+    });
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("Error fetching attendances:", error);
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+  }
+}
 
 interface _QRData {
   userId: string;
