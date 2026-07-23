@@ -221,6 +221,13 @@ When a change introduces a non-obvious design choice, add a one-line decision co
 Format: `// [DECISION] <choice> — <why>. <tradeoff or future action>.`
 
 Do not write ADR documents. The decision lives with the code.
+## Database fixtures
+
+For development, use `pnpm run db:fixture` to populate test data. This launches an interactive CLI that seeds `users`, `attendances`, and `user_projects` as base. Source lives in `scripts/fixtures/`. Each module exposes `seed`, `reset`, and `status`. Reset operations require typing `CONFIRMAR` in the terminal and abort automatically outside `NODE_ENV=development`.
+
+Never seed fixture data directly in production. The guard in `scripts/fixtures/factory.ts` (function `assertDevelopmentOnly`) enforces this at runtime.
+
+## Workflow
 
 ### PRs
 
