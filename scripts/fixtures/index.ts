@@ -24,6 +24,7 @@ import {
 import { seedUsers, resetUsers, statusUsers } from "./users.fixture";
 import { seedAttendances, resetAttendances, statusAttendances } from "./attendances.fixture";
 import { seedUserProjects, resetUserProjects, statusUserProjects } from "./user-projects.fixture";
+import { seedProjects, resetProjects, statusProjects } from "./projects.fixture";
 import { createBackup, listBackups, restoreBackup } from "./backup";
 
 // ─────────────────────────────────────────────────────────────
@@ -84,22 +85,29 @@ async function showStatusAll(): Promise<void> {
   const s = p.spinner();
   s.start("Consultando estado de las tablas...");
 
-  const [users, att, up] = await Promise.all([
+  const [users, att, up, proj] = await Promise.all([
     statusUsers(prisma),
     statusAttendances(prisma),
     statusUserProjects(prisma),
+    statusProjects(prisma),
   ]);
 
   s.stop("Consulta completada.");
 
   renderStatusBox([
-    { label: "users  — total",        value: String(users.total) },
-    { label: "users  — activos",      value: String(users.active) },
+    { label: "users  — total",         value: String(users.total) },
+    { label: "users  — activos",       value: String(users.active) },
     ...users.byRole.map((r) => ({
       label: `  └ ${r.role}`,
       value: String(r.count),
     })),
-    { label: "attendances — total",   value: String(att.total) },
+    { label: "projects — total",       value: String(proj.total) },
+    { label: "  └ archivados",         value: String(proj.archived) },
+    ...proj.byStage.map((r) => ({
+      label: `  └ ${r.stage}`,
+      value: String(r.count),
+    })),
+    { label: "attendances — total",    value: String(att.total) },
     { label: "  └ usuarios distintos", value: String(att.uniqueUsers) },
     { label: "user_projects — total",  value: String(up.total) },
     { label: "  └ proyectos activos",  value: String(up.activeProjects) },
@@ -218,6 +226,54 @@ async function menuAttendances(): Promise<void> {
   renderResultBox({ attendances: result });
 }
 
+async function menuProjects(): Promise<void> {
+  const operation = await p.select({
+    message: "Operación para projects:",
+    options: [
+      { value: "seed",   label: "seed    — insertar N proyectos nuevos" },
+      { value: "reset",  label: "reset   — limpiar tabla e insertar N proyectos nuevos" },
+      { value: "status", label: "status  — mostrar conteo actual" },
+    ],
+  });
+  handleCancel(operation);
+
+  if (operation === "status") {
+    const s = p.spinner();
+    s.start("Consultando...");
+    const st = await statusProjects(prisma);
+    s.stop("Listo.");
+    renderStatusBox([
+      { label: "total",     value: String(st.total) },
+      { label: "archivados", value: String(st.archived) },
+      ...st.byStage.map((r) => ({ label: `  └ ${r.stage}`, value: String(r.count) })),
+    ]);
+    return;
+  }
+
+  const count = await askCount("¿Cuántos proyectos?", 5);
+
+  if (operation === "reset") {
+    await requireConfirm("projects (y sus user_projects dependientes)");
+  }
+
+  if (DRY_RUN) {
+    p.log.info(`[dry-run] Insertaría ${count} proyecto(s).`);
+    return;
+  }
+
+  const s = p.spinner();
+  s.start(`Procesando projects... (0 / ${count})`);
+
+  const fn = operation === "reset" ? resetProjects : seedProjects;
+  const result: SeedResult = await fn(prisma, {
+    count,
+    onProgress: (cur, total) => s.message(`Procesando projects... (${cur} / ${total})`),
+  });
+
+  s.stop("projects completado.");
+  renderResultBox({ projects: result });
+}
+
 async function menuUserProjects(): Promise<void> {
   const operation = await p.select({
     message: "Operación para user_projects:",
@@ -267,14 +323,17 @@ async function menuUserProjects(): Promise<void> {
 }
 
 async function menuAll(): Promise<void> {
-  p.log.step("Seed all — poblará users → attendances → user_projects en orden.");
+  p.log.step("Seed all — poblará users → projects → attendances → user_projects en orden.");
 
   const usersCount = await askCount("¿Cuántos usuarios?", 10);
+  const projCount  = await askCount("¿Cuántos proyectos?", 5);
   const attCount   = await askCount("¿Cuántos registros de asistencia?", 30);
   const upCount    = await askCount("¿Cuántas asignaciones usuario-proyecto?", 15);
 
   if (DRY_RUN) {
-    p.log.info(`[dry-run] ${usersCount} usuarios, ${attCount} asistencias, ${upCount} asignaciones.`);
+    p.log.info(
+      `[dry-run] ${usersCount} usuarios, ${projCount} proyectos, ${attCount} asistencias, ${upCount} asignaciones.`
+    );
     return;
   }
 
@@ -287,14 +346,20 @@ async function menuAll(): Promise<void> {
     count: usersCount,
     onProgress: (cur, total) => s.message(`Procesando users... (${cur} / ${total})`),
   });
-  s.message(`Procesando attendances... (0 / ${attCount})`);
 
+  s.message(`Procesando projects... (0 / ${projCount})`);
+  results.projects = await seedProjects(prisma, {
+    count: projCount,
+    onProgress: (cur, total) => s.message(`Procesando projects... (${cur} / ${total})`),
+  });
+
+  s.message(`Procesando attendances... (0 / ${attCount})`);
   results.attendances = await seedAttendances(prisma, {
     count: attCount,
     onProgress: (cur, total) => s.message(`Procesando attendances... (${cur} / ${total})`),
   });
-  s.message(`Procesando user_projects... (0 / ${upCount})`);
 
+  s.message(`Procesando user_projects... (0 / ${upCount})`);
   results.user_projects = await seedUserProjects(prisma, {
     count: upCount,
     onProgress: (cur, total) => s.message(`Procesando user_projects... (${cur} / ${total})`),
@@ -398,6 +463,7 @@ async function main(): Promise<void> {
       message: "¿Qué tabla quieres gestionar?",
       options: [
         { value: "users",         label: "users" },
+        { value: "projects",      label: "projects" },
         { value: "attendances",   label: "attendances" },
         { value: "user_projects", label: "user_projects" },
         { value: "all",           label: "seed all   — poblar todas las tablas a la vez" },
@@ -412,6 +478,7 @@ async function main(): Promise<void> {
 
     try {
       if (table === "users")              await menuUsers();
+      else if (table === "projects")      await menuProjects();
       else if (table === "attendances")   await menuAttendances();
       else if (table === "user_projects") await menuUserProjects();
       else if (table === "all")           await menuAll();
