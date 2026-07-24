@@ -1,5 +1,10 @@
 # AGENTS
 
+DevurityWeb — Plataforma oficial del Semillero de Investigación Devurity (Universidad Surcolombiana).
+Next.js 15 (App Router), React 19, TypeScript strict, Tailwind v4, Prisma ORM 6 (PostgreSQL), JWT + CSRF + RBAC, Vercel (`gru1`).
+
+---
+
 ## Repository Map
 
 ```text
@@ -44,7 +49,7 @@ DevurityWeb/
 │   │   ├── config.ts             # Auth config
 │   │   └── utils.ts              # Auth utilities
 │   ├── csrf.ts                   # CSRF adapter (double-submit cookie)
-│   ├── bcrypt.ts                 # Password hashing
+│   ├── bcrypt.ts                 # bcryptjs wrapper (NOT bcrypt — Edge Runtime incompatibility)
 │   ├── postgresDriver.ts         # Prisma client singleton
 │   ├── email.ts                  # Nodemailer setup
 │   ├── error.ts                  # Error response helpers
@@ -67,20 +72,15 @@ DevurityWeb/
 │   ├── seed.ts                   # Seed orchestrator
 │   └── seeders/                  # Seed data by domain (roles, platforms, programs, skills, projects, updates)
 ├── middleware.ts                  # Global middleware: auth guard, RBAC, CSRF, path traversal protection
-├── scripts/                      # Utility scripts (deploy-db.ts, migrate.mjs)
+├── scripts/                      # Utility scripts (deploy-db.ts, migrate.mjs, fixtures/)
 ├── tests/                        # Tests con node:test — *.node-test.ts (jwt, csrf, qr-attendance, regex)
-├── public/                       # Static assets (favicons, placeholders)
-├── styles/                       # [EMPTY] — Tailwind lives in globals.css
-├── docs/                         # [EMPTY]
-├── backup/                       # [EMPTY]
-└── .github/
-    ├── workflows/ci.yml          # CI: lint + typecheck + build (no tests, no DB)
-    ├── pull_request_template.md  # PR template (full + compact)
-    ├── copilot-instructions.md   # AI agent instructions
-    └── ISSUE_TEMPLATE/custom.md  # Issue template with Gherkin criteria
+├── public/                       # Static assets
+└── .github/                      # CI workflows, templates, PR instructions
 ```
 
 **Layer architecture:** Route handler → `lib/data/` (business logic) → `repositories/` (Prisma queries) → PostgreSQL. Components consume hooks or context for client state. Server Components access `lib/data/` directly.
+
+---
 
 ## Commands
 
@@ -94,6 +94,7 @@ DevurityWeb/
 | `pnpm test:watch` | node:test watch mode | TDD workflow |
 | `pnpm test:coverage` | node:test con coverage | Cubre `lib/` y `repositories/` |
 | `npx tsc --noEmit` | Type-check | Pre-push hook runs this |
+| `pnpm db:fixture` | TUI interactiva de datos | `scripts/fixtures/index.ts` |
 
 ### Prisma commands
 
@@ -103,41 +104,31 @@ DevurityWeb/
 | Command | Purpose | Risk |
 |---|---|---|
 | `npx prisma generate` | Regenerate client from schema | Safe — codegen only |
-| `npx prisma migrate dev` | Create + apply migration in dev | **Requires human approval** |
-| `npx prisma migrate deploy` | Apply pending migrations (production) | **Requires human approval** |
-| `npx prisma db push` | Push schema changes without migration | **Dangerous** — skips migration history |
-| `npx prisma studio` | Database GUI | Safe — read/write browser |
-| `pnpm db:seed` | Run seeders | **Requires human approval** — mutates data |
-| `pnpm db:repair` | Repair sequences | **Requires human approval** |
-| `pnpm db:status` | Check deploy status | Safe — read only |
+| `npx prisma studio` | Database GUI | Safe — read/write in local dev |
+| `pnpm db:status` | Check deploy status | Safe — read-only query |
 
-**Prisma workflow before any schema change:**
-1. Edit `prisma/schema.prisma`
-2. Ask user to confirm: `npx prisma migrate dev --name <description>`
-3. Verify migration SQL in `prisma/migrations/`
-4. Run `npx prisma generate` to update the client
-5. Never edit `lib/generated/prisma/` — it is regenerated
+---
 
 ## Task Intake and Research
 
-Before writing code, investigate in this order:
+When assigned a task:
 
-1. **Route handler** in `app/api/` — understand the endpoint contract
-2. **Page/layout** in `app/` — understand the UI contract
-3. **Data layer** in `lib/data/` — business logic
-4. **Repository** in `repositories/` — Prisma queries
-5. **Schema** in `prisma/schema.prisma` — data model
-6. **Shared utilities** in `lib/` and `hooks/`
-7. **Components** in `components/` — UI patterns
-8. **Middleware** in `middleware.ts` — auth/CSRF/RBAC behavior
+1. Read `AGENTS.md` first.
+2. Read the prompt carefully. Identify the goal, constraints, and scope before touching files.
+3. Inspect relevant files using exact, targeted reads. Do not perform wide directory scans when specific paths are known.
+4. Verify current implementation before writing code. Never assume code structure — inspect it.
+5. Identify edge cases (Edge Runtime compatibility, BigInt serialization, CSRF, RBAC) before drafting a plan.
 
-**Investigation rules:**
+### Rules of Engagement
+
 - Start with the smallest plausible file set. Targeted search over repo-wide scans.
 - Ignore `node_modules/`, `.next/`, `lib/generated/`, `backup/`.
 - If a task touches auth, check `middleware.ts`, `lib/jwt.ts`, `lib/auth/jwt-edge.ts`, and `hooks/useCsrf.ts` together — they form a unit.
 - If a task touches admin, check RBAC in `middleware.ts` plus the admin layout and route guards.
 
 **Audit before acting:** Verify each finding against current code. Fix only still-valid issues. Skip the rest with a brief reason. Keep changes minimal. Validate after.
+
+---
 
 ## Current Risk Areas
 
@@ -148,7 +139,9 @@ Before writing code, investigate in this order:
 - **App Router boundaries**: `"use client"` placement determines what ships to the browser. Server-only code (DB queries, JWT verification, `lib/email.ts`, `lib/bcrypt.ts`) must never leak into client components.
 - **Middleware scope**: `middleware.ts` runs on every request (matcher excludes static assets). It handles auth redirect, RBAC, CSRF, path traversal protection, and forbidden fragment blocking. Changes here affect the entire app.
 - **Rate limiting**: Login endpoint uses in-memory `Map` for attempt tracking. This resets on server restart and does not work across Vercel serverless instances.
-- **Environment variables**: `.env.local` is never committed. Validate required vars at startup. See `.env.example` for the canonical list.
+- **Environment variables**: `.env` es el archivo principal local. Validar variables requeridas al inicio. Ver `.env.example` para la lista canónica.
+
+---
 
 ## Design Patterns and Component Reuse
 
@@ -182,6 +175,8 @@ Fonts: `font-orbitron` for headings/brand, `font-ubuntu` for body/paragraphs.
 - Utilities: camelCase (`postgresDriver.ts`, `rateLimit.ts`)
 - Types: PascalCase interfaces, camelCase files (`user.types.ts`)
 - Routes: lowercase with hyphens (`forgot-password/`, `qr-dinamico/`)
+
+---
 
 ## Commits and PRs
 
@@ -221,11 +216,16 @@ When a change introduces a non-obvious design choice, add a one-line decision co
 Format: `// [DECISION] <choice> — <why>. <tradeoff or future action>.`
 
 Do not write ADR documents. The decision lives with the code.
+
+---
+
 ## Database fixtures
 
-For development, use `pnpm run db:fixture` to populate test data. This launches an interactive CLI that seeds `users`, `attendances`, and `user_projects` as base. Source lives in `scripts/fixtures/`. Each module exposes `seed`, `reset`, and `status`. Reset operations require typing `CONFIRMAR` in the terminal and abort automatically outside `NODE_ENV=development`.
+For development, use `pnpm run db:fixture` to populate test data. This launches an interactive CLI that seeds `users`, `attendances`, `projects` y `user_projects` como base. Source lives in `scripts/fixtures/`. Each module exposes `seed`, `reset`, and `status`. Reset operations require typing `CONFIRMAR` in the terminal and abort automatically outside `NODE_ENV=development`.
 
 Never seed fixture data directly in production. The guard in `scripts/fixtures/factory.ts` (function `assertDevelopmentOnly`) enforces this at runtime.
+
+---
 
 ## Workflow
 
@@ -236,6 +236,8 @@ Use the existing PR template. Two versions available:
 - **Compact version**: for fixes, typos, small changes
 
 Every PR must pass: `pnpm lint` + `pnpm test` + `npx tsc --noEmit` + `pnpm build`.
+
+---
 
 ## Manual Actions — Do Not Touch
 
@@ -248,7 +250,7 @@ The agent must not execute these actions. Describe what needs to happen and ask 
 | `npx prisma db push` | Pushes schema without migration history |
 | `pnpm db:seed` | Mutates database data |
 | `pnpm db:repair` | Repairs DB sequences |
-| Editing `.env`, `.env.local`, `.env.example` | Contains secrets and config |
+| Editing `.env`, `.env.example` | Contains secrets and config |
 | Editing `middleware.ts` CSRF public paths | Security-sensitive exemptions |
 | Editing `lib/jwt.ts` or `lib/auth/jwt-edge.ts` | Auth core — token logic |
 | Editing `lib/csrf.ts` | CSRF protection core |
@@ -264,6 +266,8 @@ MANUAL ACTION REQUIRED:
 2. Verify the generated SQL in prisma/migrations/
 3. Confirm before I continue with the next step
 ```
+
+---
 
 ## TDD and Validation
 
@@ -293,10 +297,10 @@ Naming: `<module>.node-test.ts` — e.g., `jwt.node-test.ts`, `csrf.node-test.ts
 
 ### Test conventions
 
-- Framework: node:test (built-in Node.js runner, no external dependency)
+- Framework: `node:test` (built-in Node.js runner)
 - Assertions: `assert` module nativo
-- Mocking: `mock` de node:test para Prisma y deps externas
-- Coverage target: `lib/` and `repositories/`
+- Mocking: `mock` de `node:test` para Prisma y deps externas
+- Coverage target: `lib/` y `repositories/`
 - Every test must be independent — no shared state between tests
 - Use `before`/`after` for setup and teardown
 
@@ -311,6 +315,8 @@ Before stating work is complete:
 
 If any of these fail, fix before reporting.
 
+---
+
 ## Verify Before Fixing
 
 Before implementing any plan or fix:
@@ -324,19 +330,13 @@ Before implementing any plan or fix:
 
 This applies to every task: bug fixes, features, refactors, audits. No exceptions.
 
+---
+
 ## Supply Chain and Dependencies
 
 Pin exact dependency versions — no `^` or `~`. Commit `pnpm-lock.yaml` with every change that touches `package.json`. Use `pnpm install --frozen-lockfile` for deterministic installs in CI and scripts.
 
-## Tech Stack
-
-Next.js 15 (App Router) with React 19, TypeScript strict mode, Tailwind CSS v4, Prisma ORM with PostgreSQL. JWT + CSRF + RBAC auth. Deployed on Vercel (region `gru1`).
-
-Prefer Server Components by default. Add `"use client"` only when hooks, browser APIs, or client state are strictly required.
-
-## Testing
-
-Vitest with `vite-tsconfig-paths`. Tests in `tests/**/*.test.ts`. Coverage on `lib/` and `repositories/`.
+---
 
 ## Writing and Documentation
 
