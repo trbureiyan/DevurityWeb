@@ -14,7 +14,8 @@ DevurityWeb/
 │   ├── api/                      # Route handlers (REST endpoints)
 │   │   ├── admin/                # Admin-only endpoints (users, attendances, dashboard)
 │   │   ├── auth/                 # Auth flows (login, register, refresh, forgot/reset password, csrf-token, me, profile, skills, users, programs)
-│   │   ├── contact/              # Contact form
+│   │   ├── altcha/               # ALTCHA anti-bot challenge endpoint
+│   │   ├── contact/              # Contact form (ALTCHA verified)
 │   │   ├── qr-dinamico/          # QR generation
 │   │   ├── skills/               # Skills CRUD
 │   │   └── team/                 # Team listing
@@ -54,11 +55,12 @@ DevurityWeb/
 │   ├── email.ts                  # Nodemailer setup
 │   ├── error.ts                  # Error response helpers
 │   ├── logger.ts                 # Logging utility
+│   ├── altcha.ts                 # ALTCHA challenge/verify (stateless HMAC PoW)
 │   ├── rateLimit.ts              # Rate limiting
 │   ├── regex.ts                  # Validation patterns (email, etc.)
 │   ├── constants/                # Static data (gallery, landing, metadata, validation)
 │   ├── data/                     # Server data fetchers (admin, landing, projects, updates)
-│   ├── types/                    # TypeScript types (landing, update.types, user.types)
+│   ├── types/                    # TypeScript types (landing, update.types, user.types, altcha-widget.d)
 │   └── generated/prisma/         # [GENERATED] Prisma client — never edit
 ├── repositories/                 # Data access layer (Prisma queries)
 │   ├── admin/users.repositories.ts
@@ -138,9 +140,10 @@ When assigned a task:
 - **BigInt serialization**: Prisma uses `BigInt` IDs. JSON cannot serialize BigInt — always convert with `.toString()` before returning from route handlers or repositories. This is a recurring source of runtime crashes.
 - **App Router boundaries**: `"use client"` placement determines what ships to the browser. Server-only code (DB queries, JWT verification, `lib/email.ts`, `lib/bcrypt.ts`) must never leak into client components.
 - **Middleware scope**: `middleware.ts` runs on every request (matcher excludes static assets). It handles auth redirect, RBAC, CSRF, path traversal protection, and forbidden fragment blocking. Changes here affect the entire app.
+- **ALTCHA anti-bot**: `lib/altcha.ts` + `app/api/altcha/challenge/route.ts` + `components/landing/ContactSection.tsx`. Stateless HMAC proof-of-work usando `altcha-lib`. El widget se carga desde CDN (jsdelivr) — los orígenes `cdn.jsdelivr.net` y `blob:` están permitidos en CSP (`next.config.ts:37-38`). El challenge expira a los 10 min. La env var `ALTCHA_HMAC_SECRET` es requerida en producción; en desarrollo hay fallback hardcodeado. Si se agrega ALTCHA a más formularios, actualizar CSP y verificar que el endpoint `GET /api/altcha/challenge` tenga `Cache-Control: no-store`.
 - **Rate limiting**: Login endpoint uses in-memory `Map` for attempt tracking. This resets on server restart and does not work across Vercel serverless instances.
-- **Environment variables**: `.env` es el archivo principal local. Validar variables requeridas al inicio. Ver `.env.example` para la lista canónica.
-- **CSP en `next.config.ts`**: La política `Content-Security-Policy` en `next.config.ts:33-48` define los orígenes permitidos (scripts, estilos, fuentes, conexiones, etc.). Cualquier dependencia externa nueva se registra actualizando las directivas correspondientes.
+- **Environment variables**: `.env` es el archivo principal local. Validar variables requeridas al inicio. Ver `.env.example` para la lista canónica. `ALTCHA_HMAC_SECRET` es requerida en producción; en desarrollo hay fallback hardcodeado en `lib/altcha.ts:9`.
+- **CSP en `next.config.ts`**: La política `Content-Security-Policy` en `next.config.ts:33-48` define los orígenes permitidos (scripts, estilos, fuentes, conexiones, etc.). Cualquier dependencia externa nueva se registra actualizando las directivas correspondientes. ALTCHA es la razón de que `cdn.jsdelivr.net` y `blob:` estén en las directivas `script-src`, `style-src` y `worker-src`.
 
 ---
 
@@ -336,6 +339,11 @@ This applies to every task: bug fixes, features, refactors, audits. No exception
 ## Supply Chain and Dependencies
 
 Pin exact dependency versions — no `^` or `~`. Commit `pnpm-lock.yaml` with every change that touches `package.json`. Use `pnpm install --frozen-lockfile` for deterministic installs in CI and scripts.
+
+| Dependency | Purpose | Source |
+|---|---|---|
+| `altcha-lib` | Server-side challenge creation + solution verification (stateless HMAC PoW) | npm |
+| ALTCHA widget (v2.x) | Client-side Web Component (loaded from jsdelivr CDN, not bundled) | CDN — `cdn.jsdelivr.net/npm/altcha@2.3.0/` |
 
 ---
 
