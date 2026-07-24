@@ -73,16 +73,19 @@ export default function AdminLayout({
               aria-expanded={isMobileMenuOpen}
             >
               <span
+                key="span-cm-1"
                 className={`w-6 h-0.5 bg-white transition-all duration-300 ${
                   isMobileMenuOpen ? "rotate-45 translate-y-1.5" : ""
                 }`}
               />
               <span
+                key="span-cm-2"
                 className={`w-6 h-0.5 bg-white transition-all duration-300 my-1.5 ${
                   isMobileMenuOpen ? "opacity-0" : "opacity-100"
                 }`}
               />
               <span
+                key="span-cm-3"
                 className={`w-6 h-0.5 bg-white transition-all duration-300 ${
                   isMobileMenuOpen ? "-rotate-45 -translate-y-1.5" : ""
                 }`}

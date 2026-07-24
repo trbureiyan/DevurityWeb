@@ -60,9 +60,9 @@ export default function LeaderProyectLayout({
               aria-label="Abrir menú"
               aria-expanded={isMobileMenuOpen}
             >
-              <span className={`w-6 h-0.5 bg-white transition-all duration-300 ${isMobileMenuOpen ? "rotate-45 translate-y-1.5" : ""}`} />
-              <span className={`w-6 h-0.5 bg-white transition-all duration-300 my-1.5 ${isMobileMenuOpen ? "opacity-0" : "opacity-100"}`} />
-              <span className={`w-6 h-0.5 bg-white transition-all duration-300 ${isMobileMenuOpen ? "-rotate-45 -translate-y-1.5" : ""}`} />
+              <span key="span-lp-1" className={`w-6 h-0.5 bg-white transition-all duration-300 ${isMobileMenuOpen ? "rotate-45 translate-y-1.5" : ""}`} />
+              <span key="span-lp-2" className={`w-6 h-0.5 bg-white transition-all duration-300 my-1.5 ${isMobileMenuOpen ? "opacity-0" : "opacity-100"}`} />
+              <span key="span-lp-3" className={`w-6 h-0.5 bg-white transition-all duration-300 ${isMobileMenuOpen ? "-rotate-45 -translate-y-1.5" : ""}`} />
             </button>
             <h1 className="text-white font-semibold text-lg">Líder de Proyecto</h1>
             <div className="w-8"></div>

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
-import { m, LazyMotion, domAnimation } from "framer-motion";
+import { m, LazyMotion, domAnimation, useReducedMotion } from "framer-motion";
 import TeamMemberCard from "./TeamMemberCard";
 
 import type { TeamMember, RoleGroup } from "./team.types";
@@ -14,6 +14,8 @@ interface TeamSectionProps {
 export default function TeamSection({ members }: TeamSectionProps) {
   const [activeTab, setActiveTab] = useState<RoleGroup>("admin");
   const [page, setPage] = useState(1);
+  const shouldReduceMotion = useReducedMotion();
+
 
   // Agrupar miembros por rol
   const groupedMembers = useMemo(() => groupTeamMembers(members), [members]);
@@ -98,10 +100,10 @@ export default function TeamSection({ members }: TeamSectionProps) {
           <div className="min-h-[400px]">
             <m.div
               key={activeTab + page}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
+              initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
+              animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
+              transition={shouldReduceMotion ? { duration: 0.05 } : { duration: 0.3 }}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8"
             >
               {currentMembers.length > 0 ? (
