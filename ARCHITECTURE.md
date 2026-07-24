@@ -33,7 +33,7 @@ DevurityWeb also serves as the formal graduation thesis (*modalidad de grado*) f
 | Icons | Heroicons | 2.2.0 | Micro-icons via `components/icons/` |
 | Attendance QR | `html5-qrcode` & `qrcode` | 2.3.8 / 1.5.4 | Camera scanning and QR rendering |
 | Email Service | Nodemailer | 9.0.1 | Verification and password reset emails |
-| Testing | Vitest | 4.1.5 | Vitest runner configured (`vitest.config.ts`) |
+| Testing | node:test | Built-in | Node.js native test runner (`tests/*.node-test.ts`) |
 
 ## High-Level Architecture
 
@@ -112,7 +112,7 @@ Isolated database access layer using the Prisma Client.
 | `programs/programs.repositories.ts` | Academic programs listing |
 | `updates/updates.repositories.ts` | `getPublishedUpdates`, `getLatestUpdates` |
 
-**BigInt Serialization Rule**: Prisma uses native `BigInt` for primary and foreign keys. JavaScript `JSON.stringify` cannot serialize BigInt. All repository and route handler functions **must** convert BigInt values using `.toString()` or `toBigInt()` helper prior to returning response payloads.
+**BigInt Serialization Rule**: Prisma uses native `BigInt` for primary and foreign keys. JavaScript `JSON.stringify` cannot serialize BigInt. All repository and route handler functions **must** convert BigInt values using `.toString()` before returning response payloads. Never use `toBigInt()` for serialization — it converts toward BigInt, not away from it.
 
 ### 5. Database Layer (Prisma + PostgreSQL)
 
@@ -254,12 +254,7 @@ Edge Middleware cannot execute Node.js native modules (`jsonwebtoken`). The proj
 3. Client includes token in `x-csrf-token` header on state-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`).
 4. Middleware validates token header against cookie using `timingSafeEqual` (`lib/csrf.ts`).
 
-Exempt public mutation endpoints (`/api/auth/login`, `/api/auth/register`, `/api/auth/logout`, `/api/auth/refresh`, `/api/auth/is-admin`, `/api/auth/forgot-password`, `/api/auth/reset-password`, `/api/qr-dinamico`, `/api/asistencia`, `/api/admin/attendances`) bypass CSRF checks.
-
-### Role-Based Access Control (RBAC)
-
-Database roles seeded: `admin` and `user`.
-The JWT payload includes `{ sub: string, role: string }`. Middleware extracts and verifies `decoded.role === "admin"` before allowing access to `/admin` or `/api/admin/*`.
+Exempt endpoints bypass CSRF checks: `/api/auth/login`, `/api/auth/register`, `/api/auth/logout`, `/api/auth/refresh`, `/api/auth/is-admin`, `/api/auth/forgot-password`, `/api/auth/reset-password`, `/api/qr-dinamico`, `/api/asistencia`. `/api/admin/attendances` is also exempt as an administrative, server-controlled endpoint (QR scan flow, not a public web mutation).
 
 ## Deployment & CI/CD Pipeline
 
@@ -278,7 +273,7 @@ The JWT payload includes `{ sub: string, role: string }`. Middleware extracts an
 | Area | Issue | Impact | Mitigation / Status |
 |---|---|---|---|
 | Rate Limiting | In-memory `Map` limiter | Resets on Vercel cold starts; stateless across serverless instances | Planned Redis/Upstash migration |
-| Automated Testing | Test suite missing implementation | `vitest` configured but `tests/` directory contains empty stubs | Unit test implementation pending |
+| Automated Testing | Suite operational with node:test | Four test files exist (`jwt`, `csrf`, `qr-attendance`, `regex`); `tests/unit/` and `tests/integration/` remain empty | Extend coverage to `lib/` and `repositories/` |
 | Schema Roles | Admin UI role options vs DB seeds | UI shows `content_manager`/`project_lead` options, but DB only seeds `admin`/`user` | Ensure DB roles match UI selection list |
 | BigInt Serialization | Manual `.toString()` requirement | Unhandled BigInts cause runtime `JSON.stringify` failure | Strict repository conversion convention |
 
@@ -288,5 +283,5 @@ Before committing architectural or code changes:
 
 1. `pnpm lint` — ESLint validation
 2. `npx tsc --noEmit` — TypeScript strict typecheck
-3. `pnpm test` — Vitest runner execution
+3. `pnpm test` — node:test runner execution
 4. `pnpm build` — Production build compilation

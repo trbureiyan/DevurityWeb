@@ -14,7 +14,7 @@ Next.js 15 App Router, React 19, TypeScript strict mode, Tailwind CSS v4, Prisma
 
 ## Repository Map
 
-```
+```text
 app/
   (protected)/          # Auth-gated: admin, profile, content_manager, project_lead
   api/
@@ -70,7 +70,7 @@ prisma/
 
 middleware.ts           # Global: auth guard, RBAC, CSRF, path traversal
 scripts/                # deploy-db.ts, migrate.mjs
-tests/                  # [EMPTY] Vitest configured, no tests written yet
+tests/                  # node:test suite — jwt, csrf, qr-attendance, regex (*.node-test.ts)
 .github/AGENTS.md       # Full agent guide — read this for deeper context
 ```
 
@@ -85,9 +85,9 @@ tests/                  # [EMPTY] Vitest configured, no tests written yet
 | `pnpm dev` | Dev server (Turbopack) |
 | `pnpm build` | Production build — run before every push |
 | `pnpm lint` | ESLint |
-| `pnpm test` | Vitest |
-| `pnpm test:watch` | Vitest watch mode |
-| `pnpm test:coverage` | Coverage (targets `lib/` and `repositories/`) |
+| `pnpm test` | node:test runner (`tests/*.node-test.ts`) |
+| `pnpm test:watch` | node:test watch mode |
+| `pnpm test:coverage` | node:test con coverage experimental |
 | `npx tsc --noEmit` | Type check — pre-push hook runs this |
 | `npx prisma generate` | Regenerate client from schema — safe, codegen only |
 | `npx prisma studio` | Database GUI — safe, read/write |
@@ -131,7 +131,7 @@ Use `LazyMotion` with `domAnimation` features for all animations. Do not import 
 ## Auth and Security
 
 ### CSRF
-Every `POST`, `PUT`, `PATCH`, `DELETE` must carry `x-csrf-token` header matching the `csrf_token` cookie. Client-side: use `fetchWithCsrf()` from `hooks/useCsrf.ts`. Server-side validation runs in `middleware.ts`. Public exemptions (login, register, logout, refresh, forgot/reset password, qr-dinamico, asistencia, admin/attendances) are hardcoded in `middleware.ts` — adding new public mutation routes requires updating that list explicitly.
+Every `POST`, `PUT`, `PATCH`, `DELETE` must carry `x-csrf-token` header matching the `csrf_token` cookie. Client-side: use `fetchWithCsrf()` from `hooks/useCsrf.ts`. Server-side validation runs in `middleware.ts`. Public exemptions (login, register, logout, refresh, forgot/reset password, qr-dinamico, asistencia) are hardcoded in `middleware.ts` — adding new public mutation routes requires updating that list explicitly. `/api/admin/attendances` is also exempt as an administrative, server-controlled exception (QR scan flow).
 
 ### JWT tokens
 Two JWT implementations exist for a reason. `lib/jwt.ts` uses `jsonwebtoken` — Node.js only, for route handlers. `lib/auth/jwt-edge.ts` uses `crypto.subtle` HS256 — Edge-compatible, for middleware. Never use the Node.js version in middleware.
@@ -203,7 +203,7 @@ Commit types: `feature`, `fix`, `refactor`, `test`, `chore`, `docs`, `style`, `p
 
 ## PR Checklist
 
-Before stating work is complete: `pnpm lint` → `npx tsc --noEmit` → `pnpm build`. If any fail, fix before reporting. Use the PR template in `.github/pull_request_template.md`.
+Before stating work is complete: `pnpm lint` → `pnpm test` → `npx tsc --noEmit` → `pnpm build`. If any fail, fix before reporting. Use the PR template in `.github/pull_request_template.md`.
 
 For non-obvious design choices, add a decision comment near the code:
 ```ts
@@ -227,7 +227,7 @@ Never run these. Output a `MANUAL ACTION REQUIRED` block describing what the use
 - Installing new dependencies with `pnpm install`
 
 Format for manual action blocks:
-```
+```text
 MANUAL ACTION REQUIRED:
 1. Run: npx prisma migrate dev --name add_user_bio
 2. Verify the generated SQL in prisma/migrations/
@@ -238,20 +238,22 @@ MANUAL ACTION REQUIRED:
 
 ## Testing
 
-Framework: Vitest. Config: `vitest.config.ts` with `vite-tsconfig-paths` and V8 coverage.
+Framework: node:test (built-in Node.js runner). Config: see `package.json` scripts. Coverage via `--experimental-test-coverage` flag.
 
-```
+```text
 tests/
-  unit/
-    lib/                # Pure utility tests
-    repositories/       # Repository tests with mocked Prisma
-  integration/          # Future
+  jwt.node-test.ts          # JWT generation and verification
+  csrf.node-test.ts         # CSRF token helpers
+  qr-attendance.node-test.ts # QR signature and attendance flow
+  regex.node-test.ts        # Regex validation patterns
+  unit/                     # Future: pure logic, no I/O
+  integration/              # Future: end-to-end flows
 ```
 
-TDD workflow: write failing test → minimal code to pass → refactor → run full suite. Every test must be independent — no shared state.
+TDD workflow: write failing test → minimal code to pass → refactor → run full suite. Every test must be independent — no shared state. Use `before`/`after` for setup, not module-level state.
 
 ---
 
 ## Current State (as of project load)
 
-Production is live. Active workstreams: RBAC/dashboard refactor (EPIC 01), CMS modular (EPIC 02), critical bugs (EPIC 03). EPIC 06 (Projects and Traceability) is Phase 3 — not yet active. The `tests/` directory is empty despite Vitest being configured — the first test written should target `lib/` or `repositories/`. The graduation thesis division: "Plataforma Web del Semillero" (2 authors, informational part) + "Módulo de Trazabilidad de Proyectos" (3 authors, new development).
+Production is live. Active workstreams: RBAC/dashboard refactor (EPIC 01), CMS modular (EPIC 02), critical bugs (EPIC 03). EPIC 06 (Projects and Traceability) is Phase 3 — not yet active. The `tests/` directory has an active node:test suite (`jwt`, `csrf`, `qr-attendance`, `regex`); `tests/unit/` and `tests/integration/` remain empty. The graduation thesis division: "Plataforma Web del Semillero" (2 authors, informational part) + "Módulo de Trazabilidad de Proyectos" (3 authors, new development).

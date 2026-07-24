@@ -93,10 +93,7 @@ idea surfaces, apply the August filter immediately. If it fails, name it, park i
 move on. Do not engage with Category D topics — they are explicitly deferred, not forgotten.
 
 ### On team dynamics
-Alexander's knowledge is not sufficiently distributed. Any backend work should document
-decisions inline with `// [DECISION]` comments. Juan Camilo needs explicit, bounded tasks
-with clear acceptance criteria — open-ended assignments tend to stall. Manuel acts as a
-communication buffer and should not be bypassed for team messages.
+Document technical and architectural decisions inline with `// [DECISION]` comments. Define explicit, bounded tasks with clear acceptance criteria. Establish transparent communication and ownership procedures for all backend and frontend changes.
 
 ### On documentation
 "Escritura seca" standard: concrete verifiable facts, no AI-slop patterns, no vague
@@ -116,8 +113,8 @@ A task without an owner is not a task — it is a risk.
 
 ## Known Technical Debt
 
-- `tests/` is empty. Vitest is configured with V8 coverage, but no tests exist.
-  First test target should be `lib/` utilities or `repositories/`.
+- Tests use node:test. The suite has active coverage on JWT, CSRF, regex, and QR sign.
+  Coverage targets `lib/` and `repositories/`.
 - Rate limiting uses in-memory `Map` — resets on restart, does not scale across serverless
   instances. Known limitation, not to be solved until Category A is complete.
 - `app/page.tsx` landing uses `force-dynamic` after a prerender failure post-deploy.
@@ -130,11 +127,18 @@ A task without an owner is not a task — it is a risk.
 
 ### Fetching data server-side
 ```ts
-// lib/data/example.ts
+// repositories/example.repositories.ts
 import prisma from '@/lib/postgresDriver'
 
+export async function findExamples() {
+  return prisma.example.findMany({ ... })
+}
+
+// lib/data/example.ts
+import { findExamples } from '@/repositories/example.repositories'
+
 export async function getExampleData() {
-  const result = await prisma.example.findMany({ ... })
+  const result = await findExamples()
   return result.map(r => ({ ...r, id: r.id.toString() }))  // BigInt conversion
 }
 ```

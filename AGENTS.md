@@ -2,7 +2,7 @@
 
 ## Repository Map
 
-```
+```text
 DevurityWeb/
 ├── app/                          # Next.js App Router — pages, layouts, API routes
 │   ├── (protected)/              # Auth-gated routes (admin, profile, content_manager, leader_proyect)
@@ -68,7 +68,7 @@ DevurityWeb/
 │   └── seeders/                  # Seed data by domain (roles, platforms, programs, skills, projects, updates)
 ├── middleware.ts                  # Global middleware: auth guard, RBAC, CSRF, path traversal protection
 ├── scripts/                      # Utility scripts (deploy-db.ts, migrate.mjs)
-├── tests/                        # [EMPTY] Test directory — vitest configured but no tests written yet
+├── tests/                        # Tests con node:test — *.node-test.ts (jwt, csrf, qr-attendance, regex)
 ├── public/                       # Static assets (favicons, placeholders)
 ├── styles/                       # [EMPTY] — Tailwind lives in globals.css
 ├── docs/                         # [EMPTY]
@@ -90,15 +90,15 @@ DevurityWeb/
 | `pnpm build` | Production build | Run before every push |
 | `pnpm start` | Serve production build | After build |
 | `pnpm lint` | ESLint | Pre-commit hook runs this on staged files |
-| `pnpm test` | Vitest (run mode) | `tests/**/*.test.ts` |
-| `pnpm test:watch` | Vitest (watch mode) | TDD workflow |
-| `pnpm test:coverage` | Vitest with coverage | Covers `lib/` and `repositories/` |
+| `pnpm test` | node:test runner | `tests/*.node-test.ts` |
+| `pnpm test:watch` | node:test watch mode | TDD workflow |
+| `pnpm test:coverage` | node:test con coverage | Cubre `lib/` y `repositories/` |
 | `npx tsc --noEmit` | Type-check | Pre-push hook runs this |
 
 ### Prisma commands
 
 > [!CAUTION]
-> Prisma commands modify the database schema or data. **Never run Prisma commands agenticically without explicit user confirmation.** Always state what you intend to do and wait for approval. Migrations are irreversible without manual intervention. `db push` bypasses the migration history.
+> Prisma commands modify the database schema or data. **Never run Prisma commands de forma autónoma without explicit user confirmation.** Always state what you intend to do and wait for approval. Migrations are irreversible without manual intervention. `db push` bypasses the migration history.
 
 | Command | Purpose | Risk |
 |---|---|---|
@@ -141,7 +141,7 @@ Before writing code, investigate in this order:
 
 ## Current Risk Areas
 
-- **JWT and auth flow**: `lib/jwt.ts` (main), `lib/auth/jwt-edge.ts` (edge), `lib/auth/middleware.ts` (helpers). Token expiration, refresh flow, and secret management. Changes here affect every authenticated route. The middleware also performs RBAC checks via the JWT `role` claim.
+- **JWT and auth flow**: `lib/jwt.ts` (main), `lib/auth/jwt-edge.ts` (edge), `lib/auth/middleware.ts` (helpers). Token expiration, refresh flow, and secret management. Changes here affect every authenticated route. The middleware also performs RBAC checks via the JWT `role` claim — four active roles: `admin`, `content_manager`, `project_lead`, `user`.
 - **CSRF protection**: `lib/csrf.ts` + `hooks/useCsrf.ts` + `middleware.ts`. Double-submit cookie pattern. Every POST/PUT/DELETE must carry the token. Public exemptions are hardcoded in `middleware.ts` — adding new public routes requires updating that list.
 - **Prisma schema**: 11 models with BigInt PKs, cascade deletes, and junction tables (`user_skills`, `user_platforms`, `user_projects`). Migrations must be tested against a clean DB. Never edit generated files in `lib/generated/prisma/`.
 - **BigInt serialization**: Prisma uses `BigInt` IDs. JSON cannot serialize BigInt — always convert with `.toString()` before returning from route handlers or repositories. This is a recurring source of runtime crashes.
@@ -194,7 +194,7 @@ Format: `<type>: <what changed — max 72 chars>`
 Types: `feature`, `fix`, `hotfix`, `refactor`, `test`, `chore`, `docs`, `style`, `perf`
 
 Good examples:
-```
+```text
 fix: login rate limit reset on success
 feature: profile social links editor
 refactor: extract user query to repository
@@ -203,7 +203,7 @@ chore: pin dependency versions
 ```
 
 Bad examples:
-```
+```text
 feat: add comprehensive user profile management system with social links   ← too long
 fix: resolved an issue where the login endpoint was not properly handling  ← storytelling
 chore: various improvements and cleanup                                    ← vague
@@ -235,7 +235,7 @@ Use the existing PR template. Two versions available:
 - **Full version**: for features, architectural changes, anything >200 lines
 - **Compact version**: for fixes, typos, small changes
 
-Every PR must pass: `pnpm lint` + `npx tsc --noEmit` + `pnpm build`.
+Every PR must pass: `pnpm lint` + `pnpm test` + `npx tsc --noEmit` + `pnpm build`.
 
 ## Manual Actions — Do Not Touch
 
@@ -258,7 +258,7 @@ The agent must not execute these actions. Describe what needs to happen and ask 
 
 When one of these is needed, output a clear instruction block:
 
-```
+```text
 MANUAL ACTION REQUIRED:
 1. Run: npx prisma migrate dev --name add_user_bio
 2. Verify the generated SQL in prisma/migrations/
@@ -279,24 +279,26 @@ MANUAL ACTION REQUIRED:
 
 Tests live in `tests/` with this layout:
 
-```
+```text
 tests/
-├── unit/                    # Pure logic, no I/O
-│   ├── lib/                 # lib/ utilities
-│   └── repositories/        # Repository functions (mocked Prisma)
-└── integration/             # End-to-end flows (future)
+├── jwt.node-test.ts         # JWT generation and verification
+├── csrf.node-test.ts        # CSRF token helpers
+├── qr-attendance.node-test.ts # QR signature and attendance flow
+├── regex.node-test.ts       # Regex validation patterns
+├── unit/                    # Future: pure logic, no I/O
+└── integration/             # Future: end-to-end flows
 ```
 
-Naming: `<module>.test.ts` — e.g., `jwt.test.ts`, `csrf.test.ts`, `users.repositories.test.ts`
+Naming: `<module>.node-test.ts` — e.g., `jwt.node-test.ts`, `csrf.node-test.ts`.
 
 ### Test conventions
 
-- Framework: Vitest (configured in `vitest.config.ts`)
-- Assertions: `expect()` with Vitest matchers
-- Mocking: `vi.mock()` for Prisma and external deps
-- Coverage target: `lib/` and `repositories/` (configured in vitest)
+- Framework: node:test (built-in Node.js runner, no external dependency)
+- Assertions: `assert` module nativo
+- Mocking: `mock` de node:test para Prisma y deps externas
+- Coverage target: `lib/` and `repositories/`
 - Every test must be independent — no shared state between tests
-- Use `beforeEach` for setup, `afterEach` for cleanup
+- Use `before`/`after` for setup and teardown
 
 ### Validation before claiming done
 
