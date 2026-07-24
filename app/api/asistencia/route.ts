@@ -38,9 +38,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar firma criptográfica del QR para evitar alteraciones o falsificaciones
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      return NextResponse.json({ error: "Configuración del servidor incompleta" }, { status: 500 });
+    }
     const cryptoMod = await import("crypto");
     const expectedSignature = cryptoMod.default
-      .createHmac("sha256", process.env.JWT_SECRET || "fallback-qr-secret")
+      .createHmac("sha256", jwtSecret)
       .update(`${qrData.userId}:${qrData.timestamp}:${qrData.token}:${qrData.expiresAt}`)
       .digest("hex");
 

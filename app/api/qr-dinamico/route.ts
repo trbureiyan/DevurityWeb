@@ -69,9 +69,13 @@ export async function POST(request: NextRequest) {
     const token = crypto.randomUUID();
 
     // Generar firma criptográfica para el QR usando el JWT_SECRET existente
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      return NextResponse.json({ error: "Configuración del servidor incompleta" }, { status: 500 });
+    }
     const cryptoMod = await import("crypto");
     const signature = cryptoMod.default
-      .createHmac("sha256", process.env.JWT_SECRET || "fallback-qr-secret")
+      .createHmac("sha256", jwtSecret)
       .update(`${usuario.id.toString()}:${timestamp}:${token}:${expirationTime}`)
       .digest("hex");
 
