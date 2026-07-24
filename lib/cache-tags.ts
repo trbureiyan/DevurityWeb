@@ -14,5 +14,5 @@ export const CACHE_TTL = {
 
 // En desarrollo, cada petición va directo a DB sin esperar expiración.
 // Resuelve el problema de fixtures y seeds que no se reflejan en UI.
-export const activeTTL = (ttl: number): number =>
-  process.env.NODE_ENV === "development" ? 0 : ttl;
+export const activeTTL = (ttl: number): number | false =>
+  process.env.NODE_ENV === "development" ? false : ttl;
