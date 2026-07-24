@@ -274,7 +274,7 @@ Exempt endpoints bypass CSRF checks: `/api/auth/login`, `/api/auth/register`, `/
 |---|---|---|---|
 | Rate Limiting | In-memory `Map` limiter | Resets on Vercel cold starts; stateless across serverless instances | Planned Redis/Upstash migration |
 | Automated Testing | Suite operational with node:test | Four test files exist (`jwt`, `csrf`, `qr-attendance`, `regex`); `tests/unit/` and `tests/integration/` remain empty | Extend coverage to `lib/` and `repositories/` |
-| Schema Roles | Admin UI role options vs DB seeds | UI shows `content_manager`/`project_lead` options, but DB only seeds `admin`/`user` | Ensure DB roles match UI selection list |
+| Schema Roles | Admin UI role options vs DB seeds | UI shows `content_manager`/`lead_project` options, but DB only seeds `admin`/`user` | Ensure DB roles match UI selection list |
 | BigInt Serialization | Manual `.toString()` requirement | Unhandled BigInts cause runtime `JSON.stringify` failure | Strict repository conversion convention |
 
 ## Verification Command Checklist

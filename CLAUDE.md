@@ -16,7 +16,7 @@ Next.js 15 App Router, React 19, TypeScript strict mode, Tailwind CSS v4, Prisma
 
 ```text
 app/
-  (protected)/          # Auth-gated: admin, profile, content_manager, project_lead
+  (protected)/          # Auth-gated: admin, profile, content_manager, leader_proyect
   api/
     admin/              # Admin endpoints (users, attendances, dashboard)
     auth/               # Auth flows (login, register, me, refresh, csrf-token, skills, users, programs, profile)
@@ -137,9 +137,9 @@ Every `POST`, `PUT`, `PATCH`, `DELETE` must carry `x-csrf-token` header matching
 Two JWT implementations exist for a reason. `lib/jwt.ts` uses `jsonwebtoken` — Node.js only, for route handlers. `lib/auth/jwt-edge.ts` uses `crypto.subtle` HS256 — Edge-compatible, for middleware. Never use the Node.js version in middleware.
 
 ### RBAC
-Four roles: `admin`, `content_manager`, `project_lead`, `user`. The role claim lives in the JWT payload and is verified by `verifyJwtPayload()` in middleware. Role changes propagate on the next token refresh without re-login. Route access matrix:
+Four roles: `admin`, `content_manager`, `lead_project`, `user`. The role claim lives in the JWT payload and is verified by `verifyJwtPayload()` in middleware. Role changes propagate on the next token refresh without re-login. Route access matrix:
 
-| Route | admin | content_manager | project_lead | user |
+| Route | admin | content_manager | lead_project | user |
 |---|:---:|:---:|:---:|:---:|
 | `/admin/updates/*` | ✅ | ✅ | ❌ | ❌ |
 | `/admin/gallery/*` | ✅ | ✅ | ❌ | ❌ |
