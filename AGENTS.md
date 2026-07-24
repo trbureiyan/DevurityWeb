@@ -141,7 +141,7 @@ Before writing code, investigate in this order:
 
 ## Current Risk Areas
 
-- **JWT and auth flow**: `lib/jwt.ts` (main), `lib/auth/jwt-edge.ts` (edge), `lib/auth/middleware.ts` (helpers). Token expiration, refresh flow, and secret management. Changes here affect every authenticated route. The middleware also performs RBAC checks via the JWT `role` claim — four active roles: `admin`, `content_manager`, `project_lead`, `user`.
+- **JWT and auth flow**: `lib/jwt.ts` (main), `lib/auth/jwt-edge.ts` (edge), `lib/auth/middleware.ts` (helpers). Token expiration, refresh flow, and secret management. Changes here affect every authenticated route. The middleware also performs RBAC checks via the JWT `role` claim — four active roles: `admin`, `content_manager`, `lead_project`, `user`.
 - **CSRF protection**: `lib/csrf.ts` + `hooks/useCsrf.ts` + `middleware.ts`. Double-submit cookie pattern. Every POST/PUT/DELETE must carry the token. Public exemptions are hardcoded in `middleware.ts` — adding new public routes requires updating that list.
 - **Prisma schema**: 11 models with BigInt PKs, cascade deletes, and junction tables (`user_skills`, `user_platforms`, `user_projects`). Migrations must be tested against a clean DB. Never edit generated files in `lib/generated/prisma/`.
 - **BigInt serialization**: Prisma uses `BigInt` IDs. JSON cannot serialize BigInt — always convert with `.toString()` before returning from route handlers or repositories. This is a recurring source of runtime crashes.
