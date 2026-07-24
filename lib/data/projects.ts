@@ -30,6 +30,16 @@ const unique = (values: string[]): string[] => Array.from(new Set(values)).sort(
 
 const VALID_STAGES: ProjectStage[] = ["incubacion", "desarrollo", "validacion", "produccion", "experimentacion", "pausa"];
 
+/**
+ * Obtiene el catálogo completo de proyectos no archivados desde la BD,
+ * con caché ISR (TTL largo = 6h, tag "projects").
+ *
+ * Cada proyecto se transforma a ProjectItem con conversión BigInt → string
+ * y validación de stage contra el conjunto permitido.
+ *
+ * @returns {Promise<ProjectItem[]>} Lista de proyectos ordenados por updated_at descendente.
+ * @throws Si la consulta a la base de datos falla — propaga la excepción.
+ */
 export const getProjectsCatalog = unstable_cache(
   async (): Promise<ProjectItem[]> => {
     const rows = await prisma.projects.findMany({

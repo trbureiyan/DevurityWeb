@@ -146,7 +146,7 @@ export async function getExampleData() {
 ### Protected API route
 ```ts
 // app/api/admin/example/route.ts
-import { validateToken } from '@/lib/auth/utils'
+import { validateToken } from '@/lib/jwt'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(req: NextRequest) {
@@ -155,6 +155,10 @@ export async function GET(req: NextRequest) {
 
   const payload = await validateToken(token)
   if (!payload) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+
+  if (payload.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   // business logic
 }

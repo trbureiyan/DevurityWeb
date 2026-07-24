@@ -1,6 +1,8 @@
 // Declaración de tipos para el Web Component <altcha-widget>
 // El widget se carga desde CDN vía useEffect — no requiere el paquete 'altcha' en el bundle
-declare namespace React {
+import "react";
+
+declare module "react" {
   namespace JSX {
     interface IntrinsicElements {
       "altcha-widget": React.DetailedHTMLProps<

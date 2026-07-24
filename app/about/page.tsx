@@ -46,6 +46,15 @@ const getTeamMembers = unstable_cache(
   }
 );
 
+/**
+ * Página "Sobre Nosotros" — misión, visión y equipo.
+ *
+ * Renderiza secciones Hero, Misión, Visión, Team y Founders.
+ * Los miembros del equipo se obtienen con caché ISR (1 hora, tag "team").
+ *
+ * @returns {Promise<JSX.Element>} Página completa de about.
+ * @throws Nunca — captura errores internos y retorna array vacío para el equipo.
+ */
 export default async function AboutPage() {
   logger.info("AboutPage: Iniciando renderizado");
   const mappedMembers = await getTeamMembers();

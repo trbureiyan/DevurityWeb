@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/postgresDriver";
 import { csrfAdapter } from "@/lib/csrf";
 
+/**
+ * Registra asistencia mediante escaneo de QR.
+ *
+ * Valida CSRF, verifica firma criptográfica del QR, confirma que el usuario
+ * existe y que no haya registrado asistencia hoy, y crea el registro.
+ *
+ * @param request - NextRequest con JSON body: { qrData: { userId, timestamp, token, expiresAt, signature } }.
+ * @returns 200 con datos de la asistencia registrada.
+ * @returns 400 si el QR es inválido, faltan campos, o la firma no coincide.
+ * @returns 403 si el token CSRF falta o es inválido.
+ * @returns 404 si el usuario no existe.
+ * @returns 409 si ya existe asistencia hoy.
+ * @returns 500 si hay un error interno del servidor.
+ */
 export async function POST(request: NextRequest) {
   try {
     const csrfTokenFromHeader = request.headers.get("x-csrf-token");
@@ -170,6 +184,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * Obtiene el listado completo de asistencias. Solo accesible para administradores.
+ *
+ * @param request - NextRequest con cookie auth_token.
+ * @returns 200 con array de asistencias serializadas (BigInt → string).
+ * @returns 401 si no hay token o es inválido.
+ * @returns 403 si el rol no es admin.
+ * @returns 500 si hay un error interno.
+ */
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get("auth_token")?.value;

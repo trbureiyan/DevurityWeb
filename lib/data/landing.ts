@@ -24,11 +24,31 @@ const getGalleryPreviewImagesInternal = cache(async (): Promise<string[]> => {
   return GALLERY_IMAGES.slice(0, 12);
 });
 
+/**
+ * Retorna los elementos de navegación rápida del landing (datos estáticos).
+ * @returns {Promise<QuickNavItem[]>} Lista de ítems de navegación.
+ */
 export const getLandingQuickNav     = () => getQuickNavItemsInternal();
+
+/**
+ * Retorna los proyectos destacados del landing (datos estáticos).
+ * @returns {Promise<ProjectPreview[]>} Lista de proyectos en preview.
+ */
 export const getLandingProjects     = () => getFeaturedProjectsInternal();
+
+/**
+ * Retorna hasta 12 imágenes de previsualización para la galería del landing.
+ * @returns {Promise<string[]>} URLs de imágenes de galería.
+ */
 export const getLandingGalleryPreview = () => getGalleryPreviewImagesInternal();
 
-// Noticias del landing — comparte el tag "updates" para invalidación conjunta
+/**
+ * Obtiene las últimas 3 noticias/eventos desde la BD con caché ISR.
+ * Comparte el tag "updates" para invalidación conjunta con otras partes del sitio.
+ *
+ * @returns {Promise<NewsEvent[]>} Lista de noticias recientes.
+ * @throws Si la consulta a la base de datos falla — propaga la excepción.
+ */
 export const getLandingNews = unstable_cache(
   async (): Promise<NewsEvent[]> => getLatestUpdates(3),
   ["landing-news"],

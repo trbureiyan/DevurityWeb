@@ -12,7 +12,16 @@ export const CACHE_TTL = {
   long:   60 * 60 * 6,  // 6 horas
 } as const;
 
-// En desarrollo, cada petición va directo a DB sin esperar expiración.
-// Resuelve el problema de fixtures y seeds que no se reflejan en UI.
+/**
+ * En desarrollo retorna `false` para desactivar la revalidación por tiempo
+ * (cada petición va directo a DB sin esperar expiración), resolviendo el
+ * problema de fixtures y seeds que no se reflejan en la UI.
+ *
+ * En producción/test retorna el `ttl` recibido intacto.
+ *
+ * @param ttl - Tiempo de vida en segundos (ej. CACHE_TTL.medium = 3600).
+ * @returns `false` en desarrollo, el valor `ttl` original en otros entornos.
+ * @throws Nunca — siempre retorna un valor válido para `unstable_cache`.
+ */
 export const activeTTL = (ttl: number): number | false =>
   process.env.NODE_ENV === "development" ? false : ttl;

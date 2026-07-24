@@ -100,7 +100,7 @@ export default function ContactSection() {
       const script = document.createElement("script");
       script.type = "module";
       script.dataset.altcha = "true";
-      script.src = "https://cdn.jsdelivr.net/npm/altcha@2/dist/altcha.min.js";
+      script.src = "https://cdn.jsdelivr.net/npm/altcha@2.3.0/dist/altcha.min.js";
       document.head.appendChild(script);
     }
 
@@ -108,7 +108,7 @@ export default function ContactSection() {
       const link = document.createElement("link");
       link.rel = "stylesheet";
       link.dataset.altchaCss = "true";
-      link.href = "https://cdn.jsdelivr.net/npm/altcha@2/dist/altcha.css";
+      link.href = "https://cdn.jsdelivr.net/npm/altcha@2.3.0/dist/altcha.css";
       document.head.appendChild(link);
     }
   }, []);

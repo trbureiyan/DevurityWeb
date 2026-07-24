@@ -1,10 +1,63 @@
+import { NextRequest } from "next/server";
 import { errorRequest } from "@/lib/error";
 import { EmailOptions, sendEmail } from "@/lib/email";
 import { verifyAltchaPayload } from "@/lib/altcha";
+import { csrfAdapter } from "@/lib/csrf";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
-// api/contact
-export async function POST(request: Request) {
+/**
+ * Valida y envía mensajes del formulario de contacto público.
+ *
+ * - Verifica ALTCHA (anti-bot PoW) antes de procesar.
+ * - Aplica rate limiting por IP para prevenir abuso.
+ * - Valida CSRF como defensa en profundidad.
+ *
+ * @param request - Objeto NextRequest con payload JSON { name, email, message, altchaPayload }.
+ * @returns 200 con mensaje de éxito si el correo se envió.
+ * @returns 403 si ALTCHA falla o CSRF inválido.
+ * @returns 429 si se excede el rate limit.
+ * @returns 422 si los campos requeridos no pasan validación.
+ * @returns 500 si el envío del correo falla o hay un error interno.
+ */
+export async function POST(request: NextRequest) {
   try {
+    // Rate limiting por IP
+    const ip = getClientIp(request);
+    const rateCheck = checkRateLimit(ip);
+    if (rateCheck.isLimited) {
+      return new Response(
+        JSON.stringify(
+          errorRequest(
+            "rate_limit",
+            "Demasiadas solicitudes. Intenta de nuevo más tarde."
+          )
+        ),
+        {
+          status: 429,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Validación CSRF en servidor (defensa en profundidad — middleware también la aplica)
+    const csrfTokenFromHeader = csrfAdapter.extractTokenFromHeaders(request);
+    const csrfTokenFromCookie = request.cookies.get("csrf_token")?.value;
+    if (
+      !csrfTokenFromHeader ||
+      !csrfTokenFromCookie ||
+      !csrfAdapter.validateToken(csrfTokenFromHeader, csrfTokenFromCookie)
+    ) {
+      return new Response(
+        JSON.stringify(
+          errorRequest("csrf", "Token CSRF inválido o ausente.")
+        ),
+        {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const { name, email, message, altchaPayload } = await request.json();
 
     // Validar anti-spam con ALTCHA (stateless HMAC verification)
