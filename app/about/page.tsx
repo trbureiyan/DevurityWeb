@@ -1,44 +1,50 @@
 import Image from "next/image";
+import { unstable_cache } from "next/cache";
 import { IMAGES } from "@/public/images";
 import logger from "@/lib/logger";
 import { findActiveUsersForTeam } from "@/repositories/users/users.repositories";
 import TeamSection from "@/components/about/TeamSection";
 import type { TeamMember } from "@/components/about/team.types";
 import FoundersSection from "@/components/about/FoundersSection";
+import { CACHE_TAGS, CACHE_TTL, activeTTL } from "@/lib/cache-tags";
 
-// Revalidar en background cada 1 hora
-export const revalidate = 3600;
+const getTeamMembers = unstable_cache(
+  async (): Promise<TeamMember[]> => {
+    try {
+      const users = await findActiveUsersForTeam();
 
-async function getTeamMembers(): Promise<TeamMember[]> {
-  try {
-    const users = await findActiveUsersForTeam();
-    
-    return users.map((user) => {
-      const socialLinks = user.platforms.map((p) => ({
-        icon: p.name.toLowerCase(),
-        url: p.link,
-        label: p.name,
-      }));
-      
-      return {
-        id: user.id,
-        name: `${user.name} ${user.last_name}`,
-        username: user.username ?? undefined,
-        role: user.role,
-        bio: user.motivation || "Miembro del equipo Devurity",
-        avatar: undefined,
-        tagline:
-          user.skills.length > 0
-            ? user.skills.slice(0, 3).join(" \u2022 ")
-            : undefined,
-        socialLinks: socialLinks.slice(0, 3),
-      };
-    });
-  } catch (error) {
-    logger.error("Error fetching team members:", { error });
-    return [];
+      return users.map((user) => {
+        const socialLinks = user.platforms.map((p) => ({
+          icon: p.name.toLowerCase(),
+          url: p.link,
+          label: p.name,
+        }));
+
+        return {
+          id: user.id,
+          name: `${user.name} ${user.last_name}`,
+          username: user.username ?? undefined,
+          role: user.role,
+          bio: user.motivation || "Miembro del equipo Devurity",
+          avatar: undefined,
+          tagline:
+            user.skills.length > 0
+              ? user.skills.slice(0, 3).join(" \u2022 ")
+              : undefined,
+          socialLinks: socialLinks.slice(0, 3),
+        };
+      });
+    } catch (error) {
+      logger.error("Error fetching team members:", { error });
+      return [];
+    }
+  },
+  ["team-members"],
+  {
+    tags:       [CACHE_TAGS.team],
+    revalidate: activeTTL(CACHE_TTL.medium),
   }
-}
+);
 
 export default async function AboutPage() {
   logger.info("AboutPage: Iniciando renderizado");
