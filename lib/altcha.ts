@@ -1,29 +1,28 @@
-import { create, randomInt } from "altcha-lib/frameworks/nextjs";
-import { deriveKey } from "altcha-lib/algorithms/pbkdf2";
+import { createChallenge, verifySolution } from "altcha-lib/v1";
 
 // Secret HMAC para firma y verificación stateless
-const HMAC_SECRET =
+const HMAC_KEY =
   process.env.ALTCHA_HMAC_SECRET ||
   "devurity-local-altcha-secret-key-change-in-prod";
 
-const _instance = create({
-  hmacSignatureSecret: HMAC_SECRET,
-  createChallengeParameters: () => ({
-    algorithm: "PBKDF2/SHA-256",
-    cost: 3000,
-    counter: randomInt(3000, 6000),
-    expiresAt: new Date(Date.now() + 10 * 60 * 1000), // Expiración de 10 minutos
-  }),
-  deriveKey,
-});
+/**
+ * Genera un challenge ALTCHA firmado con HMAC y expiración de 10 minutos.
+ * Devuelve el formato plano que espera el widget v2.x del CDN.
+ */
+export async function generateChallenge() {
+  return createChallenge({
+    algorithm: "SHA-256",
+    hmacKey: HMAC_KEY,
+    maxnumber: 100000,
+    expires: new Date(Date.now() + 10 * 60 * 1000),
+  });
+}
 
 /**
- * Instancia de ALTCHA lista para usar en route handlers de Next.js.
- * challengeHandler: GET handler que genera y firma el challenge.
- * verify: valida el payload enviado por el widget del cliente.
+ * Verifica el payload base64 enviado por el widget ALTCHA.
+ * Devuelve true si la solución es válida y no está expirada.
  */
-export const altcha = {
-  challengeHandler: _instance.challengeHandler,
-  // pre-vinculamos deriveKey y el secreto para que los route handlers solo pasen el payload
-  verify: (payload: unknown) => _instance.verify(payload, deriveKey, HMAC_SECRET),
-};
+export async function verifyAltchaPayload(payload: unknown): Promise<boolean> {
+  if (!payload || typeof payload !== "string") return false;
+  return verifySolution(payload, HMAC_KEY, true);
+}

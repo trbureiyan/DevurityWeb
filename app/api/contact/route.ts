@@ -1,6 +1,6 @@
 import { errorRequest } from "@/lib/error";
 import { EmailOptions, sendEmail } from "@/lib/email";
-import { altcha } from "@/lib/altcha";
+import { verifyAltchaPayload } from "@/lib/altcha";
 
 // api/contact
 export async function POST(request: Request) {
@@ -8,8 +8,8 @@ export async function POST(request: Request) {
     const { name, email, message, altchaPayload } = await request.json();
 
     // Validar anti-spam con ALTCHA (stateless HMAC verification)
-    const altchaVerification = await altcha.verify(altchaPayload);
-    if (!altchaVerification.verification?.verified) {
+    const altchaVerified = await verifyAltchaPayload(altchaPayload);
+    if (!altchaVerified) {
       return new Response(
         JSON.stringify(
           errorRequest(
