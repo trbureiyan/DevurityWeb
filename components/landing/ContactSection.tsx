@@ -1,6 +1,6 @@
 "use client"; // SSG Component: ContactSection
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, useRef } from "react";
 import { useCsrf } from "@/hooks/useCsrf";
 
 // Componentes de iconos SVG para redes sociales
@@ -70,15 +70,19 @@ export default function ContactSection() {
     email: "",
     message: "",
   });
-  
+
   // Estado para controlar si se está enviando el formulario
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Estado para manejar mensajes de éxito o error
   const [submitStatus, setSubmitStatus] = useState<{
     type: "success" | "error" | null;
     message: string;
   }>({ type: null, message: "" });
+
+  // Payload resuelto por el widget ALTCHA — null mientras no ha completado el PoW
+  const [altchaPayload, setAltchaPayload] = useState<string | null>(null);
+  const altchaRef = useRef<HTMLElement>(null);
 
   // Hook personalizado para manejar tokens CSRF
   const { fetchWithCsrf, refetch, hasToken, error: csrfError } = useCsrf();
@@ -89,6 +93,16 @@ export default function ContactSection() {
       void refetch();
     }
   }, [hasToken, refetch]);
+
+  // Cargar el Web Component de ALTCHA desde CDN — solo en el cliente
+  useEffect(() => {
+    if (document.querySelector("script[data-altcha]")) return;
+    const script = document.createElement("script");
+    script.type = "module";
+    script.dataset.altcha = "true";
+    script.src = "https://cdn.jsdelivr.net/npm/altcha/dist/altcha.min.js";
+    document.head.appendChild(script);
+  }, []);
 
   // Manejador del envío del formulario
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -131,7 +145,7 @@ export default function ContactSection() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(trimmedPayload),
+        body: JSON.stringify({ ...trimmedPayload, altchaPayload }),
       });
 
       // Parsear respuesta JSON
@@ -152,10 +166,13 @@ export default function ContactSection() {
         });
         // Limpiar el formulario
         setFormData({
-          name: "",
-          email: "",
-          message: "",
-        });
+            name: "",
+            email: "",
+            message: "",
+          });
+          // Resetear el widget ALTCHA para la próxima vez
+          setAltchaPayload(null);
+          (altchaRef.current as unknown as { reset?: () => void })?.reset?.();
       } else {
         // Manejar errores del servidor
         const errorMessage =
@@ -292,11 +309,31 @@ export default function ContactSection() {
               ></textarea>
             </div>
 
+            {/* Widget ALTCHA — invisible hasta que resuelve el PoW */}
+            <altcha-widget
+              ref={altchaRef}
+              challengeurl="/api/altcha/challenge"
+              hidelogo
+              hidefooter
+              onVerify={(e: CustomEvent<{ payload: string }>) =>
+                setAltchaPayload(e.detail?.payload ?? null)
+              }
+              style={
+                {
+                  "--altcha-color-base": "transparent",
+                  "--altcha-color-border-width": "0px",
+                  "--altcha-color-text": "#ffffff",
+                  "--altcha-color-subtext": "rgba(255,255,255,0.5)",
+                  "--altcha-color-success-text": "#4ade80",
+                } as React.CSSProperties
+              }
+            />
+
             {/* Botón Enviar */}
             <div className="pt-2">
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !altchaPayload}
                 className="border-[3px] border-[#3d3d3d] rounded-lg px-5 py-2 min-w-[100px] hover:border-variable-collection-link transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="font-ubuntu font-bold text-white text-base leading-[21px] group-hover:text-variable-collection-link transition-colors">

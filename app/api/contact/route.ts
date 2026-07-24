@@ -1,43 +1,28 @@
 import { errorRequest } from "@/lib/error";
 import { EmailOptions, sendEmail } from "@/lib/email";
-import {
-  checkRateLimit,
-  getClientIp,
-  formatResetTime,
-} from "@/lib/rateLimit";
+import { altcha } from "@/lib/altcha";
 
 // api/contact
 export async function POST(request: Request) {
   try {
-    // Verificar rate limit por IP
-    const clientIp = getClientIp(request);
-    const rateLimitCheck = checkRateLimit(clientIp);
+    const { name, email, message, altchaPayload } = await request.json();
 
-    if (rateLimitCheck.isLimited) {
-      const timeRemaining = formatResetTime(rateLimitCheck.resetTime);
+    // Validar anti-spam con ALTCHA (stateless HMAC verification)
+    const altchaVerification = await altcha.verify(altchaPayload);
+    if (!altchaVerification.verification?.verified) {
       return new Response(
         JSON.stringify(
           errorRequest(
-            "límite",
-            `Has excedido el límite de solicitudes. Por favor, intenta de nuevo en ${timeRemaining}.`
+            "captcha",
+            "La verificación de seguridad anti-bot ha fallado o expirado. Por favor, intenta de nuevo."
           )
         ),
         {
-          status: 429,
-          headers: {
-            "Content-Type": "application/json",
-            "X-RateLimit-Limit": "3",
-            "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": rateLimitCheck.resetTime.toString(),
-            "Retry-After": Math.ceil(
-              (rateLimitCheck.resetTime - Date.now()) / 1000
-            ).toString(),
-          },
+          status: 403,
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
-
-    const { name, email, message } = await request.json();
 
     // Validaciones
     if (!name || !email || !message) {
@@ -129,12 +114,7 @@ export async function POST(request: Request) {
       }),
       {
         status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "X-RateLimit-Limit": "3",
-          "X-RateLimit-Remaining": rateLimitCheck.remaining.toString(),
-          "X-RateLimit-Reset": rateLimitCheck.resetTime.toString(),
-        },
+        headers: { "Content-Type": "application/json" },
       }
     );
   } catch (error) {
