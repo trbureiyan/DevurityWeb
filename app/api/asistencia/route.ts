@@ -1,8 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/postgresDriver";
+import { csrfAdapter } from "@/lib/csrf";
 
 export async function POST(request: NextRequest) {
   try {
+    const csrfTokenFromHeader = request.headers.get("x-csrf-token");
+    const csrfTokenFromCookie = request.cookies.get("csrf_token")?.value;
+
+    if (!csrfTokenFromHeader || !csrfTokenFromCookie) {
+      return NextResponse.json(
+        { error: "Token CSRF requerido" },
+        { status: 403 }
+      );
+    }
+
+    if (!csrfAdapter.validateToken(csrfTokenFromHeader, csrfTokenFromCookie)) {
+      return NextResponse.json(
+        { error: "Token CSRF inválido" },
+        { status: 403 }
+      );
+    }
+
     const { qrData } = await request.json();
 
     if (!qrData) {

@@ -168,12 +168,57 @@ test("Attendance GET Route - Authentication and Authorization security", async (
   });
 });
 
-test("Attendance POST Route - Cryptographic Signature and Expiration checks", async (t) => {
+test("Attendance POST Route - Cryptographic Signature, Expiration, and CSRF checks", async (t) => {
   const { POST: postAttendanceHandler } = await import("../app/api/asistencia/route");
   const crypto = await import("crypto");
   const secret = process.env.JWT_SECRET || "supersecretkeyfortestingpurposesonly";
+  const csrfToken = "test-csrf-token-32-chars-long-abc";
 
-  await t.test("Succeeds when QR is valid and correctly signed", async () => {
+  await t.test("Fails when CSRF tokens are missing", async () => {
+    const req = new NextRequest("http://localhost/api/asistencia", {
+      method: "POST",
+      body: JSON.stringify({
+        qrData: {
+          userId: "1",
+          timestamp: Date.now(),
+          token: "some-token",
+          expiresAt: Date.now() + 60000,
+          signature: "some-sig",
+        },
+      }),
+    });
+
+    const res = await postAttendanceHandler(req);
+    strictEqual(res.status, 403);
+    const data = await res.json();
+    strictEqual(data.error, "Token CSRF requerido");
+  });
+
+  await t.test("Fails when CSRF tokens mismatch", async () => {
+    const req = new NextRequest("http://localhost/api/asistencia", {
+      method: "POST",
+      headers: {
+        "x-csrf-token": csrfToken,
+        cookie: "csrf_token=different-token-value-here-12345",
+      },
+      body: JSON.stringify({
+        qrData: {
+          userId: "1",
+          timestamp: Date.now(),
+          token: "some-token",
+          expiresAt: Date.now() + 60000,
+          signature: "some-sig",
+        },
+      }),
+    });
+
+    const res = await postAttendanceHandler(req);
+    strictEqual(res.status, 403);
+    const data = await res.json();
+    strictEqual(data.error, "Token CSRF inválido");
+  });
+
+  await t.test("Succeeds when QR is valid and correctly signed with valid CSRF", async () => {
     const timestamp = Date.now();
     const expiresAt = timestamp + 120 * 1000;
     const token = "some-secure-uuid";
@@ -186,6 +231,10 @@ test("Attendance POST Route - Cryptographic Signature and Expiration checks", as
 
     const req = new NextRequest("http://localhost/api/asistencia", {
       method: "POST",
+      headers: {
+        "x-csrf-token": csrfToken,
+        cookie: `csrf_token=${csrfToken}`,
+      },
       body: JSON.stringify({
         qrData: {
           userId,
@@ -204,7 +253,7 @@ test("Attendance POST Route - Cryptographic Signature and Expiration checks", as
     strictEqual(data.usuario.nombre, "Test User");
   });
 
-  await t.test("Fails when signature is missing", async () => {
+  await t.test("Fails when signature is missing but CSRF is valid", async () => {
     const timestamp = Date.now();
     const expiresAt = timestamp + 120 * 1000;
     const token = "some-secure-uuid";
@@ -212,6 +261,10 @@ test("Attendance POST Route - Cryptographic Signature and Expiration checks", as
 
     const req = new NextRequest("http://localhost/api/asistencia", {
       method: "POST",
+      headers: {
+        "x-csrf-token": csrfToken,
+        cookie: `csrf_token=${csrfToken}`,
+      },
       body: JSON.stringify({
         qrData: {
           userId,
@@ -228,7 +281,7 @@ test("Attendance POST Route - Cryptographic Signature and Expiration checks", as
     ok(data.error.includes("firma de seguridad"));
   });
 
-  await t.test("Fails when signature is invalid/forged", async () => {
+  await t.test("Fails when signature is invalid/forged but CSRF is valid", async () => {
     const timestamp = Date.now();
     const expiresAt = timestamp + 120 * 1000;
     const token = "some-secure-uuid";
@@ -236,6 +289,10 @@ test("Attendance POST Route - Cryptographic Signature and Expiration checks", as
 
     const req = new NextRequest("http://localhost/api/asistencia", {
       method: "POST",
+      headers: {
+        "x-csrf-token": csrfToken,
+        cookie: `csrf_token=${csrfToken}`,
+      },
       body: JSON.stringify({
         qrData: {
           userId,
@@ -253,7 +310,7 @@ test("Attendance POST Route - Cryptographic Signature and Expiration checks", as
     ok(data.error.includes("firma corrupta o no autorizada"));
   });
 
-  await t.test("Fails when QR code is expired", async () => {
+  await t.test("Fails when QR code is expired but CSRF is valid", async () => {
     const timestamp = Date.now() - 300 * 1000; // 5 mins ago
     const expiresAt = timestamp + 120 * 1000; // expired 3 mins ago
     const token = "some-secure-uuid";
@@ -266,6 +323,10 @@ test("Attendance POST Route - Cryptographic Signature and Expiration checks", as
 
     const req = new NextRequest("http://localhost/api/asistencia", {
       method: "POST",
+      headers: {
+        "x-csrf-token": csrfToken,
+        cookie: `csrf_token=${csrfToken}`,
+      },
       body: JSON.stringify({
         qrData: {
           userId,
