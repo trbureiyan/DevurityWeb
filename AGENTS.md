@@ -140,6 +140,7 @@ When assigned a task:
 - **Middleware scope**: `middleware.ts` runs on every request (matcher excludes static assets). It handles auth redirect, RBAC, CSRF, path traversal protection, and forbidden fragment blocking. Changes here affect the entire app.
 - **Rate limiting**: Login endpoint uses in-memory `Map` for attempt tracking. This resets on server restart and does not work across Vercel serverless instances.
 - **Environment variables**: `.env` es el archivo principal local. Validar variables requeridas al inicio. Ver `.env.example` para la lista canónica.
+- **CSP en `next.config.ts`**: La política `Content-Security-Policy` en `next.config.ts:33-48` define los orígenes permitidos (scripts, estilos, fuentes, conexiones, etc.). Cualquier dependencia externa nueva se registra actualizando las directivas correspondientes.
 
 ---
 
