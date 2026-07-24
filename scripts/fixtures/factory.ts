@@ -19,10 +19,13 @@ export function assertDevelopmentOnly(): void {
   // local host. Any other combination — staging, preview, production, missing
   // env — is treated as unsafe. This inverts the default stance so that a
   // misconfigured environment fails closed rather than open.
-  const isLocalUrl =
-    url.includes("localhost") ||
-    url.includes("127.0.0.1") ||
-    url.includes("host.docker.internal");
+  let isLocalUrl = false;
+  try {
+    const hostname = new URL(url).hostname;
+    isLocalUrl = ["localhost", "127.0.0.1", "host.docker.internal"].includes(hostname);
+  } catch {
+    isLocalUrl = false;
+  }
 
   const isSafe = env === "development" && isLocalUrl;
 
