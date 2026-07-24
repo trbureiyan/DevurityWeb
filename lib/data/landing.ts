@@ -9,8 +9,9 @@ import { getLatestUpdates } from "@/repositories/updates/updates.repositories";
 import { GALLERY_IMAGES } from "@/lib/constants/gallery";
 import type { QuickNavItem } from "@/lib/types/landing";
 import type { NewsEvent } from "@/lib/types/update.types";
+import { CACHE_TAGS, CACHE_TTL, activeTTL } from "@/lib/cache-tags";
 
-// Funciones internas cacheadas para datos del landing
+// Datos estáticos: memoización por request es suficiente, no necesitan ISR
 const getQuickNavItemsInternal = cache(async (): Promise<QuickNavItem[]> => {
   return QUICK_NAV_ITEMS;
 });
@@ -23,17 +24,16 @@ const getGalleryPreviewImagesInternal = cache(async (): Promise<string[]> => {
   return GALLERY_IMAGES.slice(0, 12);
 });
 
-const getLatestNewsInternal = async (): Promise<NewsEvent[]> => {
-  // Obtener las últimas 3 noticias desde la base de datos
-  return getLatestUpdates(3);
-};
-
-export const getLandingQuickNav = () => getQuickNavItemsInternal();
-
-export const getLandingProjects = () => getFeaturedProjectsInternal();
-
+export const getLandingQuickNav     = () => getQuickNavItemsInternal();
+export const getLandingProjects     = () => getFeaturedProjectsInternal();
 export const getLandingGalleryPreview = () => getGalleryPreviewImagesInternal();
 
-export const getLandingNews = unstable_cache(getLatestNewsInternal, ["landing-news"], {
-  revalidate: 21600, // Revalidar cada 6 horas | 60 * 60 * 6
-});
+// Noticias del landing — comparte el tag "updates" para invalidación conjunta
+export const getLandingNews = unstable_cache(
+  async (): Promise<NewsEvent[]> => getLatestUpdates(3),
+  ["landing-news"],
+  {
+    tags:       [CACHE_TAGS.updates],
+    revalidate: activeTTL(CACHE_TTL.long),
+  }
+);
