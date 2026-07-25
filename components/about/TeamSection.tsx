@@ -1,30 +1,13 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { m, LazyMotion, domAnimation } from "framer-motion";
 import TeamMemberCard from "./TeamMemberCard";
+import type { RoleGroup, TeamMember } from "@/lib/types/team";
+import { groupTeamMembers, getPaginatedMembers, getTotalPages } from "@/lib/utils/teamUtils";
 
-export type SocialLink = {
-  icon: string;
-  url: string;
-  label: string;
-};
-
-export type TeamMember = {
-  id: string;
-  name: string;
-  username?: string;
-  role: string;
-  tagline?: string;
-  bio?: string;
-  avatar?: string;
-  socialLinks?: SocialLink[];
-};
-
-interface TeamSectionProps {
+export interface TeamSectionProps {
   members: TeamMember[];
 }
-
-export type RoleGroup = "admin" | "lead_project" | "content_manager" | "user";
 
 const ROLE_LABELS: Record<RoleGroup, string> = {
   admin: "Administradores del Semillero",
@@ -40,8 +23,12 @@ export const ROLE_SINGULAR_LABELS: Record<RoleGroup, string> = {
   user: "Integrante",
 };
 
-import { groupTeamMembers, getPaginatedMembers, getTotalPages } from "@/lib/utils/teamUtils";
-
+/**
+ * Renders team members grouped by role with accessible role tabs and pagination.
+ * @param members Active team members to group and display.
+ * @returns The team section, including role navigation, member cards, and pagination when needed.
+ * Empty role groups are omitted and the first non-empty group is selected when the default is unavailable.
+ */
 export default function TeamSection({ members }: TeamSectionProps) {
   const [activeTab, setActiveTab] = useState<RoleGroup>("admin");
   const [page, setPage] = useState(1);
@@ -49,8 +36,8 @@ export default function TeamSection({ members }: TeamSectionProps) {
   // Agrupar miembros por rol
   const groupedMembers = useMemo(() => groupTeamMembers(members), [members]);
 
-  // Si el grupo inicial (admin) está vacío, intentar seleccionar otro
-  useMemo(() => {
+  // el fallback depende del resultado agrupado y debe ejecutarse después del render
+  useEffect(() => {
     if (groupedMembers[activeTab].length === 0) {
       const firstNonEmpty = (Object.keys(groupedMembers) as RoleGroup[]).find(
         (key) => groupedMembers[key].length > 0
@@ -89,7 +76,11 @@ export default function TeamSection({ members }: TeamSectionProps) {
 
         {/* Sliders Navigation */}
         <div className="flex flex-col items-center mb-16 space-y-8">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-center w-full max-w-4xl mx-auto">
+          <div
+            className="flex flex-col md:flex-row gap-4 items-center justify-center w-full max-w-4xl mx-auto"
+            role="tablist"
+            aria-label="Roles del equipo"
+          >
             {(Object.keys(ROLE_LABELS) as RoleGroup[]).map((roleKey) => {
               // No mostrar secciones vacías
               if (groupedMembers[roleKey].length === 0) return null;
@@ -97,10 +88,15 @@ export default function TeamSection({ members }: TeamSectionProps) {
               const isActive = activeTab === roleKey;
 
               return (
-                <div 
+                <button
                   key={roleKey}
+                  type="button"
                   className="flex flex-col items-center flex-1 cursor-pointer group"
                   onClick={() => handleTabChange(roleKey)}
+                  role="tab"
+                  id={`team-tab-${roleKey}`}
+                  aria-selected={isActive}
+                  aria-controls="team-members-panel"
                 >
                   <span className={`text-2xl md:text-3xl font-bold mb-3 text-center transition-colors ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`}>
                     {ROLE_LABELS[roleKey]}
@@ -112,7 +108,7 @@ export default function TeamSection({ members }: TeamSectionProps) {
                         : 'h-1.5 bg-gray-600 opacity-40 group-hover:opacity-70 group-hover:bg-gray-500'
                     }`}
                   />
-                </div>
+                </button>
               );
             })}
           </div>
@@ -128,6 +124,9 @@ export default function TeamSection({ members }: TeamSectionProps) {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.3 }}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8"
+              role="tabpanel"
+              id="team-members-panel"
+              aria-labelledby={`team-tab-${activeTab}`}
             >
               {currentMembers.length > 0 ? (
                 currentMembers.map((member) => (

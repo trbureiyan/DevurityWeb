@@ -1,7 +1,12 @@
-import { TeamMember, RoleGroup } from "@/components/about/TeamSection";
+import type { RoleGroup, TeamMember } from "@/lib/types/team";
 
 export const ITEMS_PER_PAGE = 8;
 
+/**
+ * Groups members by supported role, placing unknown roles in the user group.
+ * @param members Members to classify by their role string.
+ * @returns A complete role-to-members map, including empty groups.
+ */
 export function groupTeamMembers(members: TeamMember[]): Record<RoleGroup, TeamMember[]> {
   const groups: Record<RoleGroup, TeamMember[]> = {
     admin: [],
@@ -28,12 +33,23 @@ export function groupTeamMembers(members: TeamMember[]): Record<RoleGroup, TeamM
   return groups;
 }
 
+/**
+ * Returns one page of members using the shared page size.
+ * @param members Ordered members to paginate.
+ * @param page One-based page number; callers should provide a value of at least one.
+ * @returns At most `ITEMS_PER_PAGE` members for the requested page.
+ */
 export function getPaginatedMembers(members: TeamMember[], page: number): TeamMember[] {
   const startIndex = (page - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   return members.slice(startIndex, endIndex);
 }
 
+/**
+ * Calculates the number of pages required for a member count.
+ * @param totalItems Number of members; zero returns zero pages.
+ * @returns The ceiling of the item count divided by `ITEMS_PER_PAGE`.
+ */
 export function getTotalPages(totalItems: number): number {
   return Math.ceil(totalItems / ITEMS_PER_PAGE);
 }

@@ -2,7 +2,8 @@ import Image from "next/image";
 import { IMAGES } from "@/public/images";
 import logger from "@/lib/logger";
 import { findActiveUsersForTeam } from "@/repositories/users/users.repositories";
-import TeamSection, { TeamMember } from "@/components/about/TeamSection";
+import TeamSection from "@/components/about/TeamSection";
+import type { TeamMember } from "@/lib/types/team";
 import FoundersSection from "@/components/about/FoundersSection";
 
 // Revalidar en background cada 1 hora
@@ -40,7 +41,7 @@ async function getTeamMembers(): Promise<TeamMember[]> {
 }
 
 export default async function AboutPage() {
-  logger.info("AboutPage: Iniciando renderizado");
+  logger.debug("AboutPage: Iniciando renderizado");
   const mappedMembers = await getTeamMembers();
 
   return (
@@ -166,8 +167,8 @@ export default async function AboutPage() {
               <h2 className="text-6xl font-bold tracking-wider mb-12">
                 <span className="text-white">MIS</span>
                 <span className="text-white">IÓN</span>
-                <div className="h-1 w-24 bg-[#ca2b26] mt-2"></div>
               </h2>
+              <div className="h-1 w-24 bg-[#ca2b26] mt-2"></div>
 
               <div className="border-l-4 pl-6 space-y-6 text-gray-300 leading-relaxed border-[#ca2b26]">
                 <p className="text-lg">
@@ -214,8 +215,8 @@ export default async function AboutPage() {
               <h2 className="text-6xl font-bold tracking-wider mb-12">
                 <span className="text-white">VIS</span>
                 <span className="text-white">IÓN</span>
-                <div className="h-1 w-24 bg-[#ca2b26] mt-2"></div>
               </h2>
+              <div className="h-1 w-24 bg-[#ca2b26] mt-2"></div>
               
               <div className="space-y-6 text-gray-300 text-lg leading-relaxed">
                 <p>
