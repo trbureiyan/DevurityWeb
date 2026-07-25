@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type { SocialLink } from "@/lib/types/team";
+import type { SocialLink } from "./team.types";
 
 interface TeamMemberCardProps {
   id: string;
@@ -148,8 +148,8 @@ export default function TeamMemberCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white transition-all duration-300 hover:scale-110"
-                  aria-label={link.label}
                   title={link.label}
+                  aria-label={link.label}
                 >
                   <SocialIcon icon={link.icon} />
                 </a>

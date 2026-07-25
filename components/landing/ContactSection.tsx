@@ -1,6 +1,6 @@
 "use client"; // SSG Component: ContactSection
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, useRef, useCallback } from "react";
 import { useCsrf } from "@/hooks/useCsrf";
 
 // Componentes de iconos SVG para redes sociales
@@ -70,15 +70,19 @@ export default function ContactSection() {
     email: "",
     message: "",
   });
-  
+
   // Estado para controlar si se está enviando el formulario
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Estado para manejar mensajes de éxito o error
   const [submitStatus, setSubmitStatus] = useState<{
     type: "success" | "error" | null;
     message: string;
   }>({ type: null, message: "" });
+
+  // Payload resuelto por el widget ALTCHA — null mientras no ha completado el PoW
+  const [altchaPayload, setAltchaPayload] = useState<string | null>(null);
+  const altchaElementRef = useRef<HTMLElement | null>(null);
 
   // Hook personalizado para manejar tokens CSRF
   const { fetchWithCsrf, refetch, hasToken, error: csrfError } = useCsrf();
@@ -89,6 +93,52 @@ export default function ContactSection() {
       void refetch();
     }
   }, [hasToken, refetch]);
+
+  // Cargar el Web Component y el CSS de ALTCHA desde CDN — solo en el cliente
+  useEffect(() => {
+    if (!document.querySelector("script[data-altcha]")) {
+      const script = document.createElement("script");
+      script.type = "module";
+      script.dataset.altcha = "true";
+      script.src = "https://cdn.jsdelivr.net/npm/altcha@2.3.0/dist/altcha.min.js";
+      document.head.appendChild(script);
+    }
+
+    if (!document.querySelector("link[data-altcha-css]")) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.dataset.altchaCss = "true";
+      link.href = "https://cdn.jsdelivr.net/npm/altcha@2.3.0/dist/altcha.css";
+      document.head.appendChild(link);
+    }
+  }, []);
+
+  const handleVerified = useCallback((e: Event) => {
+    const customEvent = e as CustomEvent<{ payload: string }>;
+    setAltchaPayload(customEvent.detail?.payload ?? null);
+  }, []);
+
+  const handleStateChange = useCallback((e: Event) => {
+    const customEvent = e as CustomEvent<{ state: string }>;
+    if (customEvent.detail?.state === "expired" || customEvent.detail?.state === "error") {
+      setAltchaPayload(null);
+    }
+  }, []);
+
+  // Callback ref para adjuntar/desadjuntar listeners dinámicamente sin fallos de ciclo de vida
+  const altchaRefCallback = useCallback((node: HTMLElement | null) => {
+    if (altchaElementRef.current) {
+      altchaElementRef.current.removeEventListener("verified", handleVerified);
+      altchaElementRef.current.removeEventListener("statechange", handleStateChange);
+    }
+
+    altchaElementRef.current = node;
+
+    if (node) {
+      node.addEventListener("verified", handleVerified);
+      node.addEventListener("statechange", handleStateChange);
+    }
+  }, [handleVerified, handleStateChange]);
 
   // Manejador del envío del formulario
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -131,7 +181,7 @@ export default function ContactSection() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(trimmedPayload),
+        body: JSON.stringify({ ...trimmedPayload, altchaPayload }),
       });
 
       // Parsear respuesta JSON
@@ -152,10 +202,13 @@ export default function ContactSection() {
         });
         // Limpiar el formulario
         setFormData({
-          name: "",
-          email: "",
-          message: "",
-        });
+            name: "",
+            email: "",
+            message: "",
+          });
+          // Resetear el widget ALTCHA para la próxima vez
+          setAltchaPayload(null);
+          (altchaElementRef.current as unknown as { reset?: () => void })?.reset?.();
       } else {
         // Manejar errores del servidor
         const errorMessage =
@@ -292,11 +345,28 @@ export default function ContactSection() {
               ></textarea>
             </div>
 
+            {/* Widget ALTCHA */}
+            <div className="w-full max-w-[506px]">
+              <altcha-widget
+                ref={altchaRefCallback}
+                challengeurl="/api/altcha/challenge"
+                hidelogo
+                hidefooter
+                style={
+                  {
+                    "--altcha-color-base": "transparent",
+                    "--altcha-color-text": "#ffffff",
+                    "--altcha-color-success-text": "#4ade80",
+                  } as React.CSSProperties
+                }
+              />
+            </div>
+
             {/* Botón Enviar */}
             <div className="pt-2">
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !altchaPayload}
                 className="border-[3px] border-[#3d3d3d] rounded-lg px-5 py-2 min-w-[100px] hover:border-variable-collection-link transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="font-ubuntu font-bold text-white text-base leading-[21px] group-hover:text-variable-collection-link transition-colors">

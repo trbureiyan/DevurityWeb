@@ -1,47 +1,62 @@
 import Image from "next/image";
+import { unstable_cache } from "next/cache";
 import { IMAGES } from "@/public/images";
 import logger from "@/lib/logger";
 import { findActiveUsersForTeam } from "@/repositories/users/users.repositories";
 import TeamSection from "@/components/about/TeamSection";
-import type { TeamMember } from "@/lib/types/team";
+import type { TeamMember } from "@/components/about/team.types";
 import FoundersSection from "@/components/about/FoundersSection";
+import { CACHE_TAGS, CACHE_TTL, activeTTL } from "@/lib/cache-tags";
 
-// Revalidar en background cada 1 hora
-export const revalidate = 3600;
+const getTeamMembers = unstable_cache(
+  async (): Promise<TeamMember[]> => {
+    try {
+      const users = await findActiveUsersForTeam();
 
-async function getTeamMembers(): Promise<TeamMember[]> {
-  try {
-    const users = await findActiveUsersForTeam();
-    
-    return users.map((user) => {
-      const socialLinks = user.platforms.map((p) => ({
-        icon: p.name.toLowerCase(),
-        url: p.link,
-        label: p.name,
-      }));
-      
-      return {
-        id: user.id,
-        name: `${user.name} ${user.last_name}`,
-        username: user.username ?? undefined,
-        role: user.role,
-        bio: user.motivation || "Miembro del equipo Devurity",
-        avatar: undefined,
-        tagline:
-          user.skills.length > 0
-            ? user.skills.slice(0, 3).join(" \u2022 ")
-            : undefined,
-        socialLinks: socialLinks.slice(0, 3),
-      };
-    });
-  } catch (error) {
-    logger.error("Error fetching team members:", { error });
-    return [];
+      return users.map((user) => {
+        const socialLinks = user.platforms.map((p) => ({
+          icon: p.name.toLowerCase(),
+          url: p.link,
+          label: p.name,
+        }));
+
+        return {
+          id: user.id,
+          name: `${user.name} ${user.last_name}`,
+          username: user.username ?? undefined,
+          role: user.role,
+          bio: user.motivation || "Miembro del equipo Devurity",
+          avatar: undefined,
+          tagline:
+            user.skills.length > 0
+              ? user.skills.slice(0, 3).join(" \u2022 ")
+              : undefined,
+          socialLinks: socialLinks.slice(0, 3),
+        };
+      });
+    } catch (error) {
+      logger.error("Error fetching team members:", { error });
+      return [];
+    }
+  },
+  ["team-members"],
+  {
+    tags:       [CACHE_TAGS.team],
+    revalidate: activeTTL(CACHE_TTL.medium),
   }
-}
+);
 
+/**
+ * Página "Sobre Nosotros" — misión, visión y equipo.
+ *
+ * Renderiza secciones Hero, Misión, Visión, Team y Founders.
+ * Los miembros del equipo se obtienen con caché ISR (1 hora, tag "team").
+ *
+ * @returns {Promise<JSX.Element>} Página completa de about.
+ * @throws Nunca — captura errores internos y retorna array vacío para el equipo.
+ */
 export default async function AboutPage() {
-  logger.debug("AboutPage: Iniciando renderizado");
+  logger.info("AboutPage: Iniciando renderizado");
   const mappedMembers = await getTeamMembers();
 
   return (
@@ -167,8 +182,8 @@ export default async function AboutPage() {
               <h2 className="text-6xl font-bold tracking-wider mb-12">
                 <span className="text-white">MIS</span>
                 <span className="text-white">IÓN</span>
+                <span className="block h-1 w-24 bg-[#ca2b26] mt-2" />
               </h2>
-              <div className="h-1 w-24 bg-[#ca2b26] mt-2"></div>
 
               <div className="border-l-4 pl-6 space-y-6 text-gray-300 leading-relaxed border-[#ca2b26]">
                 <p className="text-lg">
@@ -215,8 +230,8 @@ export default async function AboutPage() {
               <h2 className="text-6xl font-bold tracking-wider mb-12">
                 <span className="text-white">VIS</span>
                 <span className="text-white">IÓN</span>
+                <span className="block h-1 w-24 bg-[#ca2b26] mt-2" />
               </h2>
-              <div className="h-1 w-24 bg-[#ca2b26] mt-2"></div>
               
               <div className="space-y-6 text-gray-300 text-lg leading-relaxed">
                 <p>

@@ -14,6 +14,11 @@ Supply chain: never use `^` or `~` in version specifiers; pin exact versions. Co
 
 Testing uses Node's built-in `node:test` runner and destructured imports from `node:assert/strict`. Do not import the default `assert` object.
 
+## Database fixtures
+
+For development, `pnpm run db:fixture` runs an interactive CLI to seed or reset dynamic tables (`users`, `attendances`, `user_projects`) as base. Resets require interactive typing of `CONFIRMAR` and are guarded to run in development only.
+
+
 ## Code style
 
 Variable and function names should be descriptive without being verbose. Components stay modular and single-responsibility. Document complex business rules where the behavior isn't derivable from the code alone — in inline comments or associated Markdown docs in `/docs`. Document public API contracts (functions, route handlers) with JSDoc covering what the function does, its parameters, return value, and any exceptions it throws. Do not document implementation internals in the docstring.

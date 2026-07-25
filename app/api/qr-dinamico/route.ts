@@ -65,17 +65,27 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const expirationTime = timestamp + QR_EXPIRATION_MINUTES * 60 * 1000;
 
-    // Crear un token simple usando Math.random
-    const token =
-      Math.random().toString(36).substring(2, 15) +
-      Math.random().toString(36).substring(2, 15);
+    // Crear un token criptográficamente seguro
+    const token = crypto.randomUUID();
 
-    // Datos que irán en el QR: userId + timestamp + token
+    // Generar firma criptográfica para el QR usando el JWT_SECRET existente
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      return NextResponse.json({ error: "Configuración del servidor incompleta" }, { status: 500 });
+    }
+    const cryptoMod = await import("crypto");
+    const signature = cryptoMod.default
+      .createHmac("sha256", jwtSecret)
+      .update(`${usuario.id.toString()}:${timestamp}:${token}:${expirationTime}`)
+      .digest("hex");
+
+    // Datos que irán en el QR: userId + timestamp + token + signature
     const qrData = JSON.stringify({
       userId: usuario.id.toString(),
       timestamp: timestamp,
       token: token,
       expiresAt: expirationTime,
+      signature: signature,
     });
 
     // Generar QR con los datos dinámicos
