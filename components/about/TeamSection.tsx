@@ -11,6 +11,12 @@ interface TeamSectionProps {
   members: TeamMember[];
 }
 
+/**
+ * Renders team members grouped by role with accessible role tabs and pagination.
+ * @param members Active team members to group and display.
+ * @returns The team section, including role navigation, member cards, and pagination when needed.
+ * Empty role groups are omitted and the first non-empty group is selected when the default is unavailable.
+ */
 export default function TeamSection({ members }: TeamSectionProps) {
   const [activeTab, setActiveTab] = useState<RoleGroup>("admin");
   const [page, setPage] = useState(1);
@@ -64,7 +70,11 @@ export default function TeamSection({ members }: TeamSectionProps) {
 
         {/* Sliders Navigation */}
         <div className="flex flex-col items-center mb-16 space-y-8">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-center w-full max-w-4xl mx-auto">
+          <div
+            className="flex flex-col md:flex-row gap-4 items-center justify-center w-full max-w-4xl mx-auto"
+            role="tablist"
+            aria-label="Roles del equipo"
+          >
             {(Object.keys(ROLE_LABELS) as RoleGroup[]).map((roleKey) => {
               // No mostrar secciones vacías
               if (groupedMembers[roleKey].length === 0) return null;
@@ -77,7 +87,10 @@ export default function TeamSection({ members }: TeamSectionProps) {
                   type="button"
                   className="flex flex-col items-center flex-1 cursor-pointer group bg-transparent border-0 p-0"
                   onClick={() => handleTabChange(roleKey)}
-                  aria-pressed={isActive}
+                  role="tab"
+                  id={`team-tab-${roleKey}`}
+                  aria-selected={isActive}
+                  aria-controls="team-members-panel"
                 >
                   <span className={`text-2xl md:text-3xl font-bold mb-3 text-center transition-colors ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`}>
                     {ROLE_LABELS[roleKey]}
@@ -105,6 +118,9 @@ export default function TeamSection({ members }: TeamSectionProps) {
               exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
               transition={shouldReduceMotion ? { duration: 0.05 } : { duration: 0.3 }}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8"
+              role="tabpanel"
+              id="team-members-panel"
+              aria-labelledby={`team-tab-${activeTab}`}
             >
               {currentMembers.length > 0 ? (
                 currentMembers.map((member) => (
