@@ -1,0 +1,8 @@
+version: 2
+secret:
+  ignored_paths:
+    # Archivos de fixture de Prisma con datos sintéticos (slugs, valores generados)
+    - 'scripts/fixtures/**'
+    # Snapshots y migraciones — contienen SQL con datos de seed, no secretos reales
+    - 'prisma/migrations/**'
+    - 'prisma/seeders/**'
