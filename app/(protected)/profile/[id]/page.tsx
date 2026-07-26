@@ -13,6 +13,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import ProgramSelector from "@/components/ui/ProgramSelector";
 import { useCsrf } from "@/hooks/useCsrf";
 import { useProfileData } from "@/hooks/useProfileData";
+import { skillNamesFromOptions } from "@/lib/profile/skills";
 import logger from "@/lib/logger";
 
 // Configurar fuente Orbitron
@@ -281,7 +282,7 @@ export default function ProfilePage() {
   // Prepara estados editables a partir del perfil actual.
   const handleEdit = () => {
     // Inicializar los estados con los datos actuales
-    setEditableSkills(userData?.skills || []);
+    setEditableSkills(skillNamesFromOptions(userData?.skills));
     setEditableProgram(userData?.program || "");
     setEditableWorkingOnText(workingOnArrayToText(userData?.working_on || []));
     setEditableSocialLinks(
@@ -312,11 +313,29 @@ export default function ProfilePage() {
     try {
       // Validar y normalizar links antes de enviar
       const normalizedSocialLinks = normalizeSocialLinks(editableSocialLinks, editableGithub);
+      const workingOn = workingOnTextToArray(editableWorkingOnText);
+
+      const normalizedWorkingOn = workingOn.map((project) => {
+        if (project.link === "#") return project;
+
+        try {
+          return {
+            ...project,
+            link: validateAndNormalizeUrl(project.link, `Proyecto "${project.title}"`),
+          };
+        } catch (error) {
+          throw new Error(
+            error instanceof Error
+              ? error.message
+              : `URL inválida para Proyecto "${project.title}"`,
+          );
+        }
+      });
 
       // Preparar datos para enviar
       const updatedData = {
         skills: editableSkills,
-        working_on: workingOnTextToArray(editableWorkingOnText),
+        working_on: normalizedWorkingOn,
         social_links: normalizedSocialLinks,
         bio: editableBio,
         github: editableGithub,
@@ -354,8 +373,12 @@ export default function ProfilePage() {
       setTimeout(() => setSaveSuccess(false), 3000);
 
     } catch (err) {
-      logger.error('Error al guardar perfil', { error: err });
-      setSaveError(err instanceof Error ? err.message : 'Error desconocido al guardar');
+      const errorMessage = err instanceof Error ? err.message : "Error desconocido al guardar";
+      // Una URL inválida es un error del formulario, no una falla inesperada del servidor.
+      if (!errorMessage.includes("URL")) {
+        logger.error("Error al guardar perfil", err);
+      }
+      setSaveError(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -367,6 +390,9 @@ export default function ProfilePage() {
     setSaveError(null);
     setSaveSuccess(false);
   };
+
+  const workingOnSaveError =
+    saveError?.includes("URL") || saveError?.includes("Proyecto");
 
   // --- Lógica del componente ---
 
@@ -387,17 +413,27 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#110e0e] flex items-center justify-center">
-        <div className="text-white text-xl">Cargando perfil...</div>
+      <div className="min-h-screen bg-[#171212] px-6 py-16 text-white">
+        <div className="mx-auto max-w-6xl animate-pulse space-y-6">
+          <div className="h-40 rounded-[28px] bg-white/5" />
+          <div className="mx-auto h-32 w-32 rounded-full bg-white/10" />
+          <div className="mx-auto h-8 max-w-sm rounded bg-white/10" />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="h-56 rounded-[24px] bg-white/5" />
+            <div className="h-56 rounded-[24px] bg-white/5" />
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error || !userData) {
     return (
-      <div className="min-h-screen bg-[#110e0e] flex flex-col items-center justify-center p-4">
-        <div className="text-red-400 text-2xl font-bold mb-4">404 - Perfil no encontrado</div>
-        <div className="text-white/60 mb-6 text-center max-w-md">
+      <div className="min-h-screen bg-[#171212] px-6 py-16 text-white">
+        <div className="mx-auto flex max-w-xl flex-col items-start justify-center rounded-[28px] border border-white/10 bg-[#221b1b] p-8 md:p-12">
+        <p className="mb-4 font-mono text-xs uppercase tracking-[0.3em] text-[#f66661]">Devurity / perfil</p>
+        <div className="mb-4 text-2xl font-bold text-white">Perfil no encontrado</div>
+        <div className="mb-6 max-w-md text-white/60">
           {error || "El perfil que buscas no existe o no está disponible."}
         </div>
         <Link 
@@ -406,6 +442,7 @@ export default function ProfilePage() {
         >
           Volver al inicio
         </Link>
+        </div>
       </div>
     );
   }
@@ -480,47 +517,53 @@ export default function ProfilePage() {
   const skillsText = userData.skills?.length ? userData.skills.join(", ") : "Sin habilidades registradas";
 
   return (
-    <div className="min-h-screen bg-[#110e0e] text-white font-sans selection:bg-red-500/30">
+    <div className="min-h-screen bg-[#171212] font-sans text-white selection:bg-red-500/30">
       
       {/* Banner Superior */}
-      <div className="h-58 bg-[#ffefe0]" aria-hidden />
+      <div className="relative h-44 overflow-hidden bg-[#ffefe0] md:h-56" aria-hidden>
+        <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_0%,transparent_48%,rgba(202,43,38,0.16)_48%,rgba(202,43,38,0.16)_50%,transparent_50%)]" />
+        <div className="absolute -right-24 -top-28 size-80 rounded-full border-[36px] border-[#ca2b26]/15" />
+        <div className="absolute bottom-5 left-6 font-mono text-[10px] uppercase tracking-[0.35em] text-[#171212]/45 md:left-12">
+          Comunidad / Investigación / Práctica
+        </div>
+      </div>
 
       {/* Contenedor principal */}
-      <main className="relative z-10 mx-auto max-w-6xl px-4 pb-16">
+      <main className="relative z-10 mx-auto max-w-6xl px-4 pb-20 md:px-8">
         
         {/* Mensajes de estado */}
         {saveSuccess && (
-          <div className="mb-4 rounded-lg bg-green-900/50 border border-green-700 p-4 text-green-200">
-            ✅ Perfil actualizado correctamente
+          <div className="mb-4 rounded-lg border border-green-700 bg-green-900/50 p-4 text-green-200" role="status">
+            Perfil actualizado correctamente
           </div>
         )}
         
         {saveError && (
-          <div className="mb-4 rounded-lg bg-red-900/50 border border-red-700 p-4 text-red-200">
-            ❌ Error: {saveError}
+          <div className="mb-4 rounded-lg border border-red-700 bg-red-900/50 p-4 text-red-200" role="alert">
+            {saveError}
           </div>
         )}
 
         {/* --- SECTION HEADER / PERFIL --- */}
         <section className="relative -mt-20">
-          <div className="relative rounded-[24px] bg-[#221b1b] px-8 pb-10 pt-16 shadow-2xl md:px-12 md:pb-12 md:pt-20">
+          <div className="relative rounded-[28px] border border-white/10 bg-[#221b1b] px-6 pb-8 pt-24 shadow-[0_24px_70px_rgba(17,14,14,0.35)] md:px-12 md:pb-12 md:pt-20">
             
             {/* Botón de Edición - Solo mostrar si es perfil propio */}
             {userData && currentUserId && userData.id.toString() === currentUserId && (
-              <div className="absolute right-8 top-8">
+              <div className="absolute inset-x-6 top-6 flex justify-end md:right-8 md:top-8 md:inset-x-auto">
                 {isEditing ? (
                   <div className="flex gap-3">
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className={`rounded-full ${saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} px-4 py-2 text-sm font-semibold text-white transition-colors`}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold text-white transition-all active:scale-95 ${saving ? 'cursor-not-allowed bg-white/20' : 'bg-[#ca2b26] hover:bg-[#b52521]'}`}
                     >
                       {saving ? 'Guardando...' : 'Guardar'}
                     </button>
                     <button
                       onClick={handleCancel}
                       disabled={saving}
-                      className="rounded-full bg-gray-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600 disabled:bg-gray-700"
+                      className="rounded-full border border-white/15 bg-transparent px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-white/10 active:scale-95 disabled:bg-white/5"
                     >
                       Cancelar
                     </button>
@@ -528,7 +571,7 @@ export default function ProfilePage() {
                 ) : (
                   <button
                     onClick={handleEdit}
-                    className="rounded-full bg-[#da292e] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+                    className="rounded-full bg-[#ca2b26] px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-[#b52521] active:scale-95"
                   >
                     Editar Perfil
                   </button>
@@ -537,7 +580,7 @@ export default function ProfilePage() {
             )}
 
             <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[60%]">
-              <div className="flex size-48 items-center justify-center rounded-full border-[8px] border-[#221b1b] bg-[#ffefe0]">
+              <div className="flex size-40 items-center justify-center rounded-full border-[7px] border-[#221b1b] bg-[#ffefe0] shadow-[0_12px_36px_rgba(17,14,14,0.35)] md:size-48">
                 <Avatar className="size-full overflow-hidden rounded-full">
                   {avatarSrc ? (
                     <AvatarImage
@@ -554,8 +597,13 @@ export default function ProfilePage() {
             </div>
 
             {/* Textos del Header */}
-            <div className="mt-16 text-center">
-              <h1 className={`text-4xl font-bold tracking-wide text-white ${orbitron.className}`}>{fullName}</h1>
+            <div className="mt-10 text-center md:mt-16">
+              <div className="mb-4 flex items-center justify-center gap-3 text-xs font-medium text-[#f66661]">
+                <span className="h-px w-8 bg-[#ca2b26]" aria-hidden="true" />
+                <span>Miembro de Devurity · {userData.role}</span>
+                <span className="h-px w-8 bg-[#ca2b26]" aria-hidden="true" />
+              </div>
+              <h1 className={`text-4xl font-bold tracking-tight text-white md:text-5xl ${orbitron.className}`}>{fullName}</h1>
               
               {/* Username con editor si está en modo edición */}
               {isEditing ? (
@@ -600,7 +648,7 @@ export default function ProfilePage() {
                     </div>
                   </Tooltip>
                 ) : (
-                  <p className="max-w-2xl text-center text-base leading-relaxed text-white/70">
+                  <p className="max-w-2xl text-center text-lg leading-8 text-white/75 md:text-xl">
                     {bio}
                   </p>
                 )}
@@ -609,7 +657,7 @@ export default function ProfilePage() {
               {/* Fila de Iconos de Contacto */}
               {infoItems.length > 0 && (
                 <div className="mt-8 border-t border-white/10 pt-6">
-                  <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-white/60">
+                  <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-base text-white/65">
                     {infoItems.map((item) => (
                       <div key={item.text} className="flex items-center gap-2 transition-colors hover:text-white">
                         {item.icon}
@@ -643,13 +691,20 @@ export default function ProfilePage() {
         </section>
 
         {/* --- GRID DE CONTENIDO (Skills, Proyectos, Social, QR) --- */}
-        <section className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <section className="mt-14 grid gap-0 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
           
-          <div className="space-y-6">
+          <div className="space-y-12 lg:border-r lg:border-white/10 lg:pr-12">
 
             {/* Programa académico */}
-            <article className="rounded-[24px] bg-[#221b1b] p-8 shadow-xl">
-              <h2 className="text-lg font-bold text-white">Programa académico</h2>
+            <article className="border-t border-white/15 py-8 first:border-t-0 lg:first:pt-0">
+              <div className="mb-4 flex items-center gap-3 text-sm font-medium text-[#f66661]">
+                <span className="h-5 w-1 bg-[#ca2b26]" aria-hidden="true" />
+                <span>Formación</span>
+              </div>
+              <h2 className={`text-2xl font-bold text-white ${orbitron.className}`}>Programa académico</h2>
+              <p className="mt-3 max-w-xl text-base leading-7 text-white/50">
+                La base académica desde la que esta persona aporta al semillero.
+              </p>
               {isEditing ? (
                 <div className="mt-4">
                   <ProgramSelector
@@ -660,15 +715,22 @@ export default function ProfilePage() {
                   />
                 </div>
               ) : (
-                <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
+                  <p className="mt-5 text-base font-medium leading-7 text-white/70">
                   {userData.program || "Programa no especificado"}
                 </p>
               )}
             </article>
             
             {/* Skills */}
-            <article className="rounded-[24px] bg-[#221b1b] p-8 shadow-xl">
-              <h2 className="text-lg font-bold text-white">Skills / Lenguajes</h2>
+            <article className="border-t border-white/15 py-8">
+              <div className="mb-4 flex items-center gap-3 text-sm font-medium text-[#f66661]">
+                <span className="h-5 w-1 bg-[#ca2b26]" aria-hidden="true" />
+                <span>Práctica técnica</span>
+              </div>
+              <h2 className={`text-2xl font-bold text-white ${orbitron.className}`}>Herramientas que domina</h2>
+              <p className="mt-3 max-w-xl text-base leading-7 text-white/50">
+                Tecnologías y conocimientos que forman parte de su trabajo actual.
+              </p>
               {isEditing ? (
                 <Tooltip 
                   content="Selecciona las tecnologías que dominas. Esto ayuda a formar equipos complementarios en proyectos."
@@ -688,34 +750,52 @@ export default function ProfilePage() {
                   </div>
                 </Tooltip>
               ) : (
-                <p className="mt-4 text-sm font-medium leading-relaxed text-white/60">
+                  <p className="mt-5 text-base font-medium leading-7 text-white/70">
                   {skillsText}
                 </p>
               )}
             </article>
 
             {/* Trabajando en */}
-            <article className="rounded-[24px] bg-[#221b1b] p-8 shadow-xl">
-              <h2 className="text-lg font-bold text-white">Trabajando en</h2>
+            <article className="border-t border-white/15 py-8">
+              <h2 className={`text-2xl font-bold text-white ${orbitron.className}`}>Proyectos actuales</h2>
+              <p className="mt-3 max-w-xl text-base leading-7 text-white/50">
+                Las preguntas y proyectos que ocupan su atención dentro de Devurity.
+              </p>
               {isEditing ? (
                 <div className="mt-4">
-                  <textarea
-                    value={editableWorkingOnText}
-                    onChange={(e) => setEditableWorkingOnText(e.target.value)}
-                    rows={5}
-                    className="w-full resize-none rounded-lg border border-white/20 bg-black/30 p-3 text-white/90 focus:border-[#da292e] focus:ring-1 focus:ring-[#da292e]"
-                    placeholder="Escribe un proyecto por línea. Usa ' | ' para separar el Título y el Link. (Ej: Proyecto X | #)"
-                  />
-                </div>
+                    <textarea
+                      value={editableWorkingOnText}
+                      onChange={(e) => setEditableWorkingOnText(e.target.value)}
+                      aria-invalid={workingOnSaveError}
+                      aria-describedby={workingOnSaveError ? "working-on-error" : "working-on-help"}
+                      rows={5}
+                      className={`w-full resize-none rounded-lg border bg-black/30 p-3 text-white/90 focus:ring-1 focus:outline-none ${
+                        workingOnSaveError
+                          ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                          : "border-white/20 focus:border-[#da292e] focus:ring-[#da292e]"
+                      }`}
+                      placeholder="Un proyecto por línea: Título | URL. Usa # si no tiene enlace. (Ej: Proyecto X | https://ejemplo.com)"
+                    />
+                    <p
+                      id={workingOnSaveError ? "working-on-error" : "working-on-help"}
+                      className={`mt-2 text-xs ${workingOnSaveError ? "text-red-300" : "text-white/40"}`}
+                      role={workingOnSaveError ? "alert" : undefined}
+                    >
+                      {workingOnSaveError
+                        ? saveError
+                        : "Usa una URL completa después de | o # si el proyecto no tiene enlace."}
+                    </p>
+                  </div>
               ) : (
-                <ul className="mt-5 space-y-3">
+                <ul className="mt-6 space-y-4">
                   {userData.working_on && userData.working_on.length > 0 ? (
                     userData.working_on.map((project) => (
                       <li key={project.title} className="flex items-center gap-2">
                         <span className="size-1.5 rounded-full bg-[#da292e]" />
                         <Link
                           href={project.link}
-                          className="text-sm font-medium text-[#da292e] hover:text-red-400 transition-colors"
+                          className="text-base font-medium text-[#f66661] transition-colors hover:text-white"
                         >
                           {project.title}
                         </Link>
@@ -729,10 +809,17 @@ export default function ProfilePage() {
             </article>
           </div>
 
-          <div className="space-y-6">
+          <aside className="space-y-12 lg:pl-12">
             {/* Social Links */}
-            <article className="rounded-[24px] bg-[#221b1b] p-8 shadow-xl">
-              <h2 className="text-lg font-bold text-white">Social & Links</h2>
+            <article className="border-t border-white/15 py-8 lg:border-t-0 lg:pt-0">
+              <div className="mb-4 flex items-center gap-3 text-sm font-medium text-[#f66661]">
+                <span className="h-5 w-1 bg-[#ca2b26]" aria-hidden="true" />
+                <span>Conexiones</span>
+              </div>
+              <h2 className={`text-2xl font-bold text-white ${orbitron.className}`}>Dónde encontrarlo</h2>
+              <p className="mt-3 text-base leading-7 text-white/50">
+                Enlaces públicos para conocer su trabajo y mantener el contacto.
+              </p>
               {isEditing ? (
                  <div className="mt-4">
                     <SocialLinksEditor 
@@ -741,7 +828,7 @@ export default function ProfilePage() {
                     />
                 </div>
               ) : (
-                <div className="mt-5 space-y-4">
+                <div className="mt-6 space-y-3">
                   {userData.social_links && userData.social_links.length > 0 ? (
                     userData.social_links.map((social) => {
                       const socialHref = social.url.startsWith('http://') || social.url.startsWith('https://') 
@@ -754,7 +841,7 @@ export default function ProfilePage() {
                           href={socialHref}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="group flex items-center gap-4 rounded-xl border border-transparent bg-white/5 px-4 py-3 transition-all hover:bg-white/10"
+                          className="group flex items-center gap-4 border-b border-white/10 py-4 transition-all hover:border-[#ca2b26]/60"
                         >
                           <span className="flex size-10 items-center justify-center rounded-full bg-black/40 text-white/80 group-hover:text-white">
                             <SocialIconDisplay icon={social.icon} />
@@ -776,8 +863,11 @@ export default function ProfilePage() {
 
             {/* Código QR Dinámico - Solo visible para el propietario del perfil */}
             {userData && currentUserId && userData.id.toString() === currentUserId && (
-              <article className="rounded-[24px] bg-[#221b1b] p-8 shadow-xl">
-                <h2 className="mb-6 text-lg font-bold text-white">Código QR</h2>
+              <article className="border-t border-white/15 py-8 lg:border-t-0 lg:pt-0">
+                <h2 className={`mb-2 text-2xl font-bold text-white ${orbitron.className}`}>Registro de asistencia</h2>
+                <p className="mb-6 text-base leading-7 text-white/50">
+                  Genera el código para registrar tu asistencia en las actividades del semillero.
+                </p>
                 {userData?.id ? (
                   <QRDynamic
                     userId={userData.id}
@@ -788,7 +878,7 @@ export default function ProfilePage() {
                 )}
               </article>
             )}
-          </div>
+          </aside>
 
         </section>
       </main>
