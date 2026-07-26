@@ -194,6 +194,7 @@ export default function AdminSidebar({
         ))}
 
         <Link
+          key="/home"
           href="/"
           onClick={handleNavigation}
           className="flex items-center gap-2 px-4 py-3 text-white font-semibold text-[16px] leading-[20px] hover:bg-[rgba(255,255,255,0.05)] border-b border-[rgba(140,140,140,0.2)]"
@@ -203,6 +204,7 @@ export default function AdminSidebar({
         </Link>
 
         <button
+          key="logout"
           type="button"
           onClick={() => void handleLogoutClick()}
           className="w-full px-4 py-3 text-white font-semibold text-[16px] leading-[20px] text-left hover:bg-[rgba(255,255,255,0.05)] flex items-center gap-2"
