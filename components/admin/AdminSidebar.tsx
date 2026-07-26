@@ -180,38 +180,37 @@ export default function AdminSidebar({
       </nav>
 
       <div className="border-t border-[rgba(140,140,140,0.2)] mt-auto">
-        {bottomMenuItems.map((item) => (
+        {[
+          ...bottomMenuItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={handleNavigation}
+              className="flex items-center gap-2 border-b border-[rgba(140,140,140,0.2)] px-4 py-3 text-[16px] font-semibold leading-[20px] text-white hover:bg-[rgba(255,255,255,0.05)]"
+            >
+              <item.icon className="h-5 w-5" aria-hidden="true" />
+              <span>{item.label}</span>
+            </Link>
+          )),
           <Link
-        key={item.href}
-        href={item.href}
-        onClick={handleNavigation}
-        // Enlaces secundarios: perfil y edición de páginas
-        className="flex items-center gap-2 px-4 py-3 text-white font-semibold text-[16px] leading-[20px] hover:bg-[rgba(255,255,255,0.05)] border-b border-[rgba(140,140,140,0.2)]"
+            key="/home"
+            href="/"
+            onClick={handleNavigation}
+            className="flex items-center gap-2 border-b border-[rgba(140,140,140,0.2)] px-4 py-3 text-[16px] font-semibold leading-[20px] text-white hover:bg-[rgba(255,255,255,0.05)]"
           >
-        <item.icon className="w-5 h-5" aria-hidden="true" />
-        <span>{item.label}</span>
-          </Link>
-        ))}
-
-        <Link
-          key="/home"
-          href="/"
-          onClick={handleNavigation}
-          className="flex items-center gap-2 px-4 py-3 text-white font-semibold text-[16px] leading-[20px] hover:bg-[rgba(255,255,255,0.05)] border-b border-[rgba(140,140,140,0.2)]"
-        >
-          <ArrowLeftOnRectangleIcon className="w-5 h-5" aria-hidden="true" />
-          <span>Salir al home</span>
-        </Link>
-
-        <button
-          key="logout"
-          type="button"
-          onClick={() => void handleLogoutClick()}
-          className="w-full px-4 py-3 text-white font-semibold text-[16px] leading-[20px] text-left hover:bg-[rgba(255,255,255,0.05)] flex items-center gap-2"
-        >
-          <ArrowLeftOnRectangleIcon className="w-5 h-5" aria-hidden="true" />
-          Cerrar sesión
-        </button>
+            <ArrowLeftOnRectangleIcon className="h-5 w-5" aria-hidden="true" />
+            <span>Salir al home</span>
+          </Link>,
+          <button
+            key="logout"
+            type="button"
+            onClick={() => void handleLogoutClick()}
+            className="flex w-full items-center gap-2 px-4 py-3 text-left text-[16px] font-semibold leading-[20px] text-white hover:bg-[rgba(255,255,255,0.05)]"
+          >
+            <ArrowLeftOnRectangleIcon className="h-5 w-5" aria-hidden="true" />
+            Cerrar sesión
+          </button>,
+        ]}
       </div>
     </aside>
   );
