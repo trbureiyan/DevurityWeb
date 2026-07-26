@@ -2,9 +2,10 @@
 
 import React, { useState, useDeferredValue, useMemo } from "react";
 import { useAvailableSkills } from "@/hooks/useAvailableSkills";
+import { skillNamesFromOptions } from "@/lib/profile/skills";
 
 interface SkillSelectorProps {
-  selectedSkills: string[];
+  selectedSkills: Array<string | { id: number | string; name: string }>;
   onChange: (skills: string[]) => void;
   maxSkills?: number;
 }
@@ -15,17 +16,19 @@ export default function SkillSelector({
   maxSkills = 15,
 }: SkillSelectorProps) {
   const availableSkills = useAvailableSkills();
+  const normalizedSelectedSkills = skillNamesFromOptions(selectedSkills);
+  const normalizedAvailableSkills = skillNamesFromOptions(availableSkills);
   const [skillInput, setSkillInput] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
   // Derive filtered skills using deferred value for smooth typing
   const deferredInput = useDeferredValue(skillInput);
   const filteredSkills = useMemo(() => {
-    if (!deferredInput.trim()) return availableSkills;
-    return availableSkills.filter((skill) =>
+    if (!deferredInput.trim()) return normalizedAvailableSkills;
+    return normalizedAvailableSkills.filter((skill) =>
       skill.toLowerCase().includes(deferredInput.toLowerCase()),
     );
-  }, [deferredInput, availableSkills]);
+  }, [deferredInput, normalizedAvailableSkills]);
 
   const showSuggestions = isOpen && filteredSkills.length > 0;
 
@@ -34,19 +37,19 @@ export default function SkillSelector({
   };
 
   const handleSkillSelect = (skill: string) => {
-    if (!selectedSkills.includes(skill)) {
-      if (maxSkills && selectedSkills.length >= maxSkills) {
+    if (!normalizedSelectedSkills.includes(skill)) {
+      if (maxSkills && normalizedSelectedSkills.length >= maxSkills) {
         // Opcional: Mostrar mensaje de límite alcanzado
         return;
       }
-      onChange([...selectedSkills, skill]);
+      onChange([...normalizedSelectedSkills, skill]);
     }
     setSkillInput("");
     // No ocultar las sugerencias al seleccionar una habilidad para permitir selección múltiple rápida
   };
 
   const handleRemoveSkill = (skillToRemove: string) => {
-    onChange(selectedSkills.filter((skill) => skill !== skillToRemove));
+    onChange(normalizedSelectedSkills.filter((skill) => skill !== skillToRemove));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -58,9 +61,9 @@ export default function SkillSelector({
     } else if (
       e.key === "Backspace" &&
       !skillInput &&
-      selectedSkills.length > 0
+      normalizedSelectedSkills.length > 0
     ) {
-      handleRemoveSkill(selectedSkills[selectedSkills.length - 1]);
+      handleRemoveSkill(normalizedSelectedSkills[normalizedSelectedSkills.length - 1]);
     }
   };
 
@@ -74,7 +77,7 @@ export default function SkillSelector({
       {/* Tags container */}
       <div className="w-full bg-black/30 border border-white/20 focus-within:border-[#da292e] focus-within:ring-1 focus-within:ring-[#da292e] rounded-lg px-4 py-3 min-h-12 flex flex-wrap gap-2 items-center transition-colors">
         {/* Tags existentes */}
-        {selectedSkills.map((skill) => (
+        {normalizedSelectedSkills.map((skill) => (
           <div
             key={skill}
             className="bg-[#da292e] text-white px-3 py-1 rounded-full text-sm flex items-center gap-2 animate-in fade-in zoom-in duration-200"
@@ -102,7 +105,7 @@ export default function SkillSelector({
           onFocus={() => setIsOpen(true)}
           onBlur={() => setTimeout(() => setIsOpen(false), 200)}
           placeholder={
-            selectedSkills.length === 0
+              normalizedSelectedSkills.length === 0
               ? "Escribe para buscar habilidades..."
               : ""
           }
