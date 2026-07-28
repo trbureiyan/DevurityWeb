@@ -20,6 +20,17 @@ export const MOCK_UPDATES: UpdateItem[] = [];
 
 const STORAGE_KEY = "devurity-local-updates";
 
+// Keeps the first occurrence of each id. Local items should be prepended so
+// they win over DB items when both share an id (e.g. an edited DB entry). [!]
+function deduplicateById(items: UpdateItem[]): UpdateItem[] {
+  const seen = new Set<string>();
+  return items.filter((u) => {
+    if (seen.has(u.id)) return false;
+    seen.add(u.id);
+    return true;
+  });
+}
+
 /**
  * Hook que fusiona datos de la base de datos (initialData) con adiciones locales
  * guardadas en localStorage.
@@ -27,27 +38,33 @@ const STORAGE_KEY = "devurity-local-updates";
  * @param initialData - Datos precargados desde la DB por el Server Component padre.
  */
 export function useUpdates(initialData: UpdateItem[] = []) {
-  const [allUpdates, setAllUpdates] = useState<UpdateItem[]>(initialData);
+  // Deduplicate on the very first render so EditPanel never sees duplicate keys
+  // even before the useEffect fires. [!]
+  const [allUpdates, setAllUpdates] = useState<UpdateItem[]>(() =>
+    deduplicateById(initialData)
+  );
 
   useEffect(() => {
     const load = () => {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) {
-          setAllUpdates(initialData);
+          setAllUpdates(deduplicateById(initialData));
           return;
         }
         const parsed: UpdateItem[] = JSON.parse(raw);
         // Solo los items marcados como locales se persisten en localStorage
         const localItems = parsed.filter((u) => u.isLocal);
         if (localItems.length > 0) {
-          setAllUpdates([...localItems, ...initialData]);
+          // Local items take precedence; drop any DB item whose id is already
+          // covered by a local edit to prevent duplicate React keys. [!]
+          setAllUpdates(deduplicateById([...localItems, ...initialData]));
         } else {
-          setAllUpdates(initialData);
+          setAllUpdates(deduplicateById(initialData));
         }
       } catch {
         // localStorage corrupto, ignorar
-        setAllUpdates(initialData);
+        setAllUpdates(deduplicateById(initialData));
       }
     };
 
@@ -76,7 +93,7 @@ export function useUpdates(initialData: UpdateItem[] = []) {
   };
 
   const addUpdate = (newUpdate: UpdateItem) => {
-    const updated = [newUpdate, ...allUpdates];
+    const updated = deduplicateById([newUpdate, ...allUpdates]);
     setAllUpdates(updated);
     persistLocal(updated);
   };
@@ -96,3 +113,4 @@ export function useUpdates(initialData: UpdateItem[] = []) {
 
   return { allUpdates, setAllUpdates, addUpdate, editUpdate, deleteUpdate };
 }
+
