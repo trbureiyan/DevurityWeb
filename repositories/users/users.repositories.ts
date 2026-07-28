@@ -347,6 +347,19 @@ export async function existUserByEmail(email: string) {
   return !!user;
 }
 
+const ROLE_TRANSLATIONS: Record<string, string> = {
+  admin: "Administrador",
+  project_lead: "Líder de Proyecto",
+  lead_project: "Líder de Proyecto",
+  content_manager: "Gestor de Contenido",
+  member: "Miembro",
+  user: "Miembro",
+};
+
+function getFriendlyRole(roleName: string): string {
+  return ROLE_TRANSLATIONS[roleName.toLowerCase()] || roleName;
+}
+
 export async function findActiveUsersForTeam() {
   try {
     logger.debug("findActiveUsersForTeam: Starting query");
@@ -361,12 +374,18 @@ export async function findActiveUsersForTeam() {
         last_name: true,
         username: true,
         motivation: true,
+        semester: true,
         user_skills: {
           include: {
             skills: true,
           },
         },
         roles: true,
+        programs: {
+          select: {
+            name: true,
+          },
+        },
         user_platforms: {
           include: {
             platforms: true,
@@ -393,7 +412,9 @@ export async function findActiveUsersForTeam() {
         ...user,
         id: user.id.toString(),
         skills: user.user_skills?.map((us) => us.skills?.name ?? 'Unknown') ?? [],
-        role: user.roles?.name ?? 'Member',
+        role: getFriendlyRole(user.roles?.name ?? 'member'),
+        program: user.programs?.name ?? null,
+        semester: user.semester,
         platforms: user.user_platforms?.map((up) => ({
           name: up.platforms?.name ?? 'Link',
           link: up.link,
