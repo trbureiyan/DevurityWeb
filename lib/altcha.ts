@@ -13,17 +13,20 @@ function getHmacKey(): string {
   );
 }
 
-/**
- * Genera un challenge ALTCHA firmado con HMAC y expiración de 10 minutos.
- * Devuelve el formato plano que espera el widget v2.x del CDN.
- */
-/** @returns HMAC key evaluado lazy — para no fallar en build si falta la env var */
+// [!] Cachea el secreto HMAC en memoria; evaluado lazy para no fallar en build si falta la env var
 let _hmacKey: string | null = null;
 function getOrInitHmacKey(): string {
   if (!_hmacKey) _hmacKey = getHmacKey();
   return _hmacKey;
 }
 
+/**
+ * Genera un challenge ALTCHA firmado con HMAC y expiración de 10 minutos.
+ * Devuelve el formato plano que espera el widget v2.x del CDN.
+ *
+ * @returns Challenge con algorithm, challenge, salt, signature y expires.
+ * @throws Error si falta ALTCHA_HMAC_SECRET fuera de desarrollo.
+ */
 export async function generateChallenge() {
   return createChallenge({
     algorithm: "SHA-256",
@@ -33,10 +36,6 @@ export async function generateChallenge() {
   });
 }
 
-/**
- * Verifica el payload base64 enviado por el widget ALTCHA.
- * Devuelve true si la solución es válida y no está expirada.
- */
 /**
  * Verifica el payload base64 enviado por el widget ALTCHA.
  * Devuelve true si la solución es válida y no está expirada.
