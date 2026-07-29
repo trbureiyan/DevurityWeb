@@ -20,11 +20,6 @@ interface _AttendanceResponse {
   };
 }
 
-interface DuplicateInfo {
-  fecha: string;
-  usuario: string;
-}
-
 interface LastScanned {
   id: string;
   usuario: string;
@@ -37,9 +32,6 @@ export default function AttendancesPage() {
   const [scanning, setScanning] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
-  const [duplicateInfo, setDuplicateInfo] = useState<DuplicateInfo | null>(
-    null,
-  );
   const [lastScanned, setLastScanned] = useState<LastScanned | null>(null);
   const [cameraError, setCameraError] = useState("");
   const [cameraActive, setCameraActive] = useState(false);
@@ -52,6 +44,7 @@ export default function AttendancesPage() {
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isStoppingRef = useRef(false);
+  const isScanLockedRef = useRef(false);
   const cooldownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const SCAN_COOLDOWN = 3000; // 3 seconds between scans
 
@@ -75,6 +68,7 @@ export default function AttendancesPage() {
       }
     } finally {
       setScanning(false);
+      isScanLockedRef.current = false;
       setCameraActive(false);
       if (clearInstance) {
         scannerRef.current = null;
@@ -93,17 +87,17 @@ export default function AttendancesPage() {
         return;
       }
       
-      // Prevent multiple simultaneous scans
-      if (scanning) {
+      // El estado de React tarda en actualizarse; este ref bloquea lecturas simultáneas.
+      if (isScanLockedRef.current) {
         console.log("Scan already in progress, skipping...");
         return;
       }
+      isScanLockedRef.current = true;
 
       setLastScanTime(now);
       setScanning(true);
       setError("");
       setSuccess("");
-      setDuplicateInfo(null);
       
       // Start cooldown timer
       setCooldownRemaining(SCAN_COOLDOWN);
@@ -140,6 +134,7 @@ export default function AttendancesPage() {
             "QR inválido. El usuario debe generar un nuevo código desde su perfil.",
           );
           setScanning(false);
+          isScanLockedRef.current = false;
           return;
         }
 
@@ -152,6 +147,7 @@ export default function AttendancesPage() {
         ) {
           setError("QR inválido - faltan datos requeridos");
           setScanning(false);
+          isScanLockedRef.current = false;
           return;
         }
 
@@ -160,6 +156,7 @@ export default function AttendancesPage() {
         if (now > qrData.expiresAt) {
           setError("QR expirado. Por favor, genera uno nuevo desde tu perfil.");
           setScanning(false);
+          isScanLockedRef.current = false;
           return;
         }
 
@@ -170,6 +167,7 @@ export default function AttendancesPage() {
               setError("Token CSRF no disponible. Recargando...");
               setTimeout(() => window.location.reload(), 2000);
               setScanning(false);
+              isScanLockedRef.current = false;
               return;
             }
             
@@ -194,17 +192,16 @@ export default function AttendancesPage() {
                 id: data.id || qrData.userId,
                 usuario: data.usuario?.nombre || "Usuario",
                 correo: data.usuario?.correo || "",
-                fecha: new Date().toLocaleString("es-CO", {
+                fecha: new Date().toLocaleDateString("es-CO", {
                   year: "numeric",
                   month: "long",
                   day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
                 }),
               });
               
               // Resume scanner after delay
               setTimeout(() => {
+                isScanLockedRef.current = false;
                 if (scannerRef.current && cameraActive) {
                   try {
                     scannerRef.current.resume();
@@ -215,11 +212,6 @@ export default function AttendancesPage() {
               }, 2000);
             } else {
               if (res.status === 409) {
-                // Conflicto - asistencia duplicada
-                setDuplicateInfo({
-                  fecha: data.fecha || new Date().toLocaleString("es-CO"),
-                  usuario: data.usuario || "Usuario",
-                });
                 setError("Esta asistencia ya fue registrada anteriormente");
               } else {
                 setError(data.error || "Error al registrar asistencia");
@@ -227,6 +219,7 @@ export default function AttendancesPage() {
               
               // Resume scanner after error with delay
               setTimeout(() => {
+                isScanLockedRef.current = false;
                 if (scannerRef.current && cameraActive) {
                   try {
                     scannerRef.current.resume();
@@ -242,6 +235,7 @@ export default function AttendancesPage() {
             
             // Resume scanner after error
             setTimeout(() => {
+              isScanLockedRef.current = false;
               if (scannerRef.current && cameraActive) {
                 try {
                   scannerRef.current.resume();
@@ -257,14 +251,16 @@ export default function AttendancesPage() {
           console.error("Error scanning QR:", err);
           setError("Error interno del servidor");
           setScanning(false);
+          isScanLockedRef.current = false;
         }
       } catch (err) {
         console.error("Error scanning QR:", err);
         setError("Error interno del servidor");
         setScanning(false);
+        isScanLockedRef.current = false;
       }
     },
-    [scanning, lastScanTime, SCAN_COOLDOWN, csrfToken, cameraActive],
+    [lastScanTime, SCAN_COOLDOWN, csrfToken, cameraActive],
   );
 
   const stopScanner = useCallback(() => {
@@ -322,7 +318,6 @@ export default function AttendancesPage() {
     setScanning(false);
     setError("");
     setSuccess("");
-    setDuplicateInfo(null);
     setLastScanned(null);
 
     // Get available cameras first and wait for the result
@@ -518,7 +513,6 @@ export default function AttendancesPage() {
   const handleRetry = useCallback(async () => {
     setError("");
     setSuccess("");
-    setDuplicateInfo(null);
     setLastScanned(null);
     setCameraError("");
     setWaitingForPermission(false);
@@ -897,21 +891,6 @@ export default function AttendancesPage() {
                 <div className="flex-1 min-w-0">
                   <h4 className="text-red-400 font-semibold text-base sm:text-lg mb-1">Error al registrar</h4>
                   <p className="text-red-400/80 text-xs sm:text-sm mb-2 sm:mb-3 break-words">{error}</p>
-                  
-                  {duplicateInfo && (
-                    <div className="bg-[#1A1515] rounded-lg p-3 sm:p-4 border border-red-500/10">
-                      <div className="flex items-center gap-2 text-red-300 text-xs sm:text-sm mb-2">
-                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="font-medium">Detalles del registro previo:</span>
-                      </div>
-                      <div className="grid grid-cols-1 gap-2 text-xs sm:text-sm text-gray-300">
-                        <p className="truncate"><span className="text-gray-500">Usuario:</span> {duplicateInfo.usuario}</p>
-                        <p className="truncate"><span className="text-gray-500">Fecha:</span> {duplicateInfo.fecha}</p>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
