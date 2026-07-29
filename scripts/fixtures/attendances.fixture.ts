@@ -64,10 +64,14 @@ export async function seedAttendances(
 }
 
 /**
- * Delete all attendance records then re-seed.
- * Requires caller to have obtained confirmation before invoking.
+ * Elimina todos los registros de asistencia y vuelve a sembrar datos de prueba.
+ * Requiere que el llamador haya obtenido confirmación previa del usuario.
+ * Aborta si `NODE_ENV` no es `"development"` o `DATABASE_URL` no apunta a localhost.
  *
- * @returns Counts from the subsequent seed call.
+ * @param prisma - Cliente Prisma activo.
+ * @param options - Opciones de sembrado (count, dryRun, onProgress).
+ * @returns Conteo de registros creados y omitidos del sembrado posterior.
+ * @throws Aborta el proceso si no está en entorno de desarrollo (via assertDevelopmentOnly).
  */
 export async function resetAttendances(
   prisma: PrismaClient,

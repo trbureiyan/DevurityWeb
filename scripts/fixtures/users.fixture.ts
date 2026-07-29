@@ -25,10 +25,15 @@ export interface UsersFixtureOptions {
 }
 
 /**
- * Insert N fixture users into the database.
- * Silently skips records that collide on unique constraints.
+ * Inserta N usuarios de prueba en la base de datos.
+ * Omite silenciosamente registros que colisionan en restricciones únicas (email, username).
+ * Si se provee `role`, todos los usuarios reciben ese rol; de lo contrario, cada usuario
+ * recibe un rol aleatorio de los disponibles.
  *
- * @returns Counts of created and skipped records.
+ * @param prisma - Cliente Prisma activo.
+ * @param options - Opciones: count, role, isActive, dryRun, onProgress.
+ * @returns Conteo de registros creados y omitidos.
+ * @throws Si `getRoleId` o `getAllRoleIds` fallan al resolver los IDs de rol.
  */
 export async function seedUsers(
   prisma: PrismaClient,

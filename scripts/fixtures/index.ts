@@ -31,7 +31,8 @@ import { createBackup, listBackups, restoreBackup } from "./backup";
 // Bootstrap
 // ─────────────────────────────────────────────────────────────
 
-// assertDevelopmentOnly valida NODE_ENV + DATABASE_URL (factory.ts)
+// [!] Bloquea operaciones de fixtures contra bases de datos remotas.
+// --> assertDevelopmentOnly en factory.ts verifica NODE_ENV + DATABASE_URL.
 assertDevelopmentOnly();
 
 const args = process.argv.slice(2);

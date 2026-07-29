@@ -12,7 +12,8 @@ export function extractTokenFromCookies(request: NextRequest): string | null {
  *
  * @param token JWT firmado con HS256 (de cookie auth_token).
  * @returns Objeto con `sub` obligatorio y `role` opcional.
- * @throws Error si el token no contiene el claim `sub`.
+ * @throws Error si `verifyJwtPayload` retorna null (token inválido, expirado,
+ *   secreto ausente o error de parseo) o si el token no contiene el claim `sub`.
  */
 export async function validateAuthToken(
   token: string,

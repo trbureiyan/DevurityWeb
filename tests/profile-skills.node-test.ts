@@ -1,9 +1,9 @@
-import assert from "node:assert/strict";
+import { deepEqual } from "node:assert/strict";
 import test from "node:test";
 import { skillNamesFromOptions } from "../lib/profile/skills";
 
 test("normalizes API skill options to names for the profile editor", () => {
-  assert.deepEqual(
+  deepEqual(
     skillNamesFromOptions([
       { id: 1, name: "TypeScript" },
       { id: 2, name: "React" },
@@ -13,7 +13,7 @@ test("normalizes API skill options to names for the profile editor", () => {
 });
 
 test("removes duplicate skill names before rendering or saving", () => {
-  assert.deepEqual(
+  deepEqual(
     skillNamesFromOptions([
       { id: 1, name: "React" },
       { id: 2, name: "React" },
