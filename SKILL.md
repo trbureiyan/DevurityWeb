@@ -39,6 +39,9 @@ Next.js 15 App Router, React 19, TypeScript strict, Tailwind CSS v4, Prisma ORM 
 PostgreSQL (Supabase), JWT + CSRF + RBAC, Framer Motion, Vercel. Package manager: pnpm
 with frozen lockfile.
 
+Supply chain hardening via `pnpm-workspace.yaml`: `allowBuilds` whitelist,
+`minimumReleaseAge: 1440` (1-day release age gate), exact version pinning.
+
 ---
 
 ## Team

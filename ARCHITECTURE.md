@@ -268,6 +268,16 @@ Exempt endpoints bypass CSRF checks: `/api/auth/login`, `/api/auth/register`, `/
   5. Lint: `pnpm run lint`.
   6. Build: `pnpm run build`.
 
+### Supply Chain Security
+
+`pnpm-workspace.yaml` enforces supply chain hardening:
+
+- **`allowBuilds`**: only whitelisted packages run install scripts (`@prisma/client`, `@prisma/engines`, `esbuild`, `prisma`, `sharp`, `unrs-resolver`).
+- **`minimumReleaseAge: 1440`**: blocks packages published less than 24 hours ago.
+- **`minimumReleaseAgeIgnoreMissingTime: true`**: skips the check gracefully when npm registry metadata lacks a `time` field.
+
+Dependencies are pinned with exact versions (no `^` or `~`). The lockfile (`pnpm-lock.yaml`) is committed and used with `--frozen-lockfile` in CI.
+
 ## Known Limitations & Technical Debt
 
 | Area | Issue | Impact | Mitigation / Status |

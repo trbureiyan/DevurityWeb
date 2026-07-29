@@ -340,6 +340,16 @@ This applies to every task: bug fixes, features, refactors, audits. No exception
 
 Pin exact dependency versions — no `^` or `~`. Commit `pnpm-lock.yaml` with every change that touches `package.json`. Use `pnpm install --frozen-lockfile` for deterministic installs in CI and scripts.
 
+Release age gating is enabled in `pnpm-workspace.yaml`:
+
+| Política | Valor | Efecto |
+|----------|-------|--------|
+| `allowBuilds` | Lista blanca explícita | Solo paquetes aprobados ejecutan scripts de instalación |
+| `minimumReleaseAge` | `1440` (1 día) | Bloquea versiones publicadas hace menos de 24 horas |
+| `minimumReleaseAgeIgnoreMissingTime` | `true` | Omite el chequeo si el registro no tiene metadatos de tiempo |
+
+Install scripts are disabled by default. If a new dependency requires a build step, it must be explicitly approved via `allowBuilds` in `pnpm-workspace.yaml`.
+
 | Dependency | Purpose | Source |
 |---|---|---|
 | `altcha-lib` | Server-side challenge creation + solution verification (stateless HMAC PoW) | npm |
