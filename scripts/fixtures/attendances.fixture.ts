@@ -1,5 +1,5 @@
 import { PrismaClient } from "../../lib/generated/prisma";
-import { getActiveUserIds, randomDateAround } from "./factory";
+import { getActiveUserIds, randomDateAround, assertDevelopmentOnly } from "./factory";
 import type { SeedResult } from "./ui";
 
 const DEFAULT_COUNT = 30;
@@ -73,6 +73,7 @@ export async function resetAttendances(
   prisma: PrismaClient,
   options: AttendancesFixtureOptions = {}
 ): Promise<SeedResult> {
+  assertDevelopmentOnly();
   await prisma.attendances.deleteMany({});
   return seedAttendances(prisma, options);
 }

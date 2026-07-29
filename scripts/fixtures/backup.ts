@@ -140,7 +140,8 @@ export async function restoreBackup(
   const user_skills = (data.user_skills ?? []).map(reviveUserSkill);
   const user_platforms = (data.user_platforms ?? []).map(reviveUserPlatform);
 
-  // Restore everything in a single safe transaction
+  // Restore everything in a single safe transaction with explicit timeouts
+  // (maxWait: time to acquire connection, timeout: max transaction duration)
   await prisma.$transaction(async (tx) => {
     // 1. Clear dynamic tables in order of dependency (dependents first)
     await tx.attendances.deleteMany({});
@@ -174,6 +175,9 @@ export async function restoreBackup(
         `SELECT setval(pg_get_serial_sequence('${table}', 'id'), COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM "${table}";`
       );
     }
+  }, {
+    maxWait: 10000,  // 10s para adquirir conexión
+    timeout: 60000,  // 60s para completar la transacción completa
   });
 
   return {

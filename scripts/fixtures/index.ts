@@ -31,12 +31,7 @@ import { createBackup, listBackups, restoreBackup } from "./backup";
 // Bootstrap
 // ─────────────────────────────────────────────────────────────
 
-// NODE_ENV no siempre viene definido al ejecutar scripts con tsx directamente.
-// Object.assign evita el error de TypeScript de propiedad read-only.
-if (!process.env.NODE_ENV) {
-  Object.assign(process.env, { NODE_ENV: "development" });
-}
-
+// assertDevelopmentOnly valida NODE_ENV + DATABASE_URL (factory.ts)
 assertDevelopmentOnly();
 
 const args = process.argv.slice(2);
