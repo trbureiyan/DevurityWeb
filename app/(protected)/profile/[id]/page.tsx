@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import QRDynamic from "@/components/qr-dynamic";
 import SkillSelector from "@/components/ui/SkillSelector";
 import SocialLinksEditor from "@/components/ui/SocialLinksEditor";
+import { getInitials } from "@/lib/utils/getInitials";
 import { UsernameEditor } from "@/components/ui/UsernameEditor";
 import { Tooltip } from "@/components/ui/Tooltip";
 import ProgramSelector from "@/components/ui/ProgramSelector";
@@ -378,11 +379,6 @@ export default function ProfilePage() {
     if (/^(https?:|mailto:|tel:|data:|blob:)/i.test(trimmed)) return trimmed;
     if (trimmed.startsWith("/")) return trimmed;
     return `https://${trimmed.replace(/^\/+/, "")}`;
-  };
-
-  // Genera las iniciales del usuario a partir de su nombre y apellido
-  const getInitials = (name: string, lastName: string) => {
-    return `${name.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`;
   };
 
   if (loading) {

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import { useCsrf } from "@/hooks/useCsrf";
 
 interface QRData {
   userId: string;
@@ -77,7 +78,7 @@ export default function AttendancesPage() {
   const [availableCameras, setAvailableCameras] = useState<string[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [showCameraSelector, setShowCameraSelector] = useState(false);
-  const [csrfToken, setCsrfToken] = useState<string>("");
+  const { csrfToken, refetch: refetchCsrf } = useCsrf();
   const [lastScanTime, setLastScanTime] = useState<number>(0);
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
   const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -685,27 +686,8 @@ export default function AttendancesPage() {
 
   // Fetch CSRF token on mount
   useEffect(() => {
-    const fetchCsrf = async () => {
-      try {
-        const response = await fetch("/api/auth/csrf-token", {
-          method: "GET",
-          credentials: "include",
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setCsrfToken(data.csrfToken);
-          console.log("CSRF token fetched successfully");
-        } else {
-          console.error("Failed to fetch CSRF token");
-        }
-      } catch (err) {
-        console.error("Error fetching CSRF token:", err);
-      }
-    };
-    
-    fetchCsrf();
-  }, []);
+    refetchCsrf();
+  }, [refetchCsrf]);
 
   useEffect(() => {
     // No iniciar automáticamente - esperar que el usuario haga clic

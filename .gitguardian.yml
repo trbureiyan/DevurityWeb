@@ -4,3 +4,5 @@ secret:
     # Solo archivos sintéticos específicos y auditados — el resto del directorio se escanea
     - 'scripts/fixtures/seed-data.json'
     - 'prisma/seeders/seed-constants.ts'
+    # Contraseñas sintéticas para ejercitar isValidPassword (falsos positivos)
+    - 'tests/regex.node-test.ts'

@@ -4,6 +4,7 @@ import React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthContext } from "@/contexts/AuthContext";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import { getInitials } from "@/lib/utils/getInitials";
 
 export default function AdminLayout({
   children,
@@ -28,11 +29,6 @@ export default function AdminLayout({
   const handleLogout = async () => {
     await logout();
     router.push("/");
-  };
-
-  // Deriva iniciales para avatar fallback.
-  const getInitials = (name: string, last_name: string) => {
-    return `${name.charAt(0).toUpperCase()}${last_name?.charAt(0)?.toUpperCase() || ""}`;
   };
 
   const initials = user

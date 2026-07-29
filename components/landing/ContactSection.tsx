@@ -82,6 +82,7 @@ export default function ContactSection() {
 
   // Payload resuelto por el widget ALTCHA — null mientras no ha completado el PoW
   const [altchaPayload, setAltchaPayload] = useState<string | null>(null);
+  const [altchaLoadError, setAltchaLoadError] = useState(false);
   const altchaElementRef = useRef<HTMLElement | null>(null);
 
   // Hook personalizado para manejar tokens CSRF
@@ -101,6 +102,9 @@ export default function ContactSection() {
       script.type = "module";
       script.dataset.altcha = "true";
       script.src = "https://cdn.jsdelivr.net/npm/altcha@2.3.0/dist/altcha.min.js";
+      script.integrity = "sha384-8I1KL049hNSwGKuCu/6NlGM1rfkVTfw/5bVzUFNvxO3XLV3isCJR1s5pTyuE2Zuo";
+      script.crossOrigin = "anonymous";
+      script.onerror = () => setAltchaLoadError(true);
       document.head.appendChild(script);
     }
 
@@ -347,26 +351,37 @@ export default function ContactSection() {
 
             {/* Widget ALTCHA */}
             <div className="w-full max-w-[506px]">
-              <altcha-widget
-                ref={altchaRefCallback}
-                challengeurl="/api/altcha/challenge"
-                hidelogo
-                hidefooter
-                style={
-                  {
-                    "--altcha-color-base": "transparent",
-                    "--altcha-color-text": "#ffffff",
-                    "--altcha-color-success-text": "#4ade80",
-                  } as React.CSSProperties
-                }
-              />
+              {altchaLoadError ? (
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-red-500/30 bg-red-500/10">
+                  <svg className="w-5 h-5 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-red-300 text-sm">
+                    No se pudo cargar la verificación anti-bot. Recarga la página o intenta más tarde.
+                  </p>
+                </div>
+              ) : (
+                <altcha-widget
+                  ref={altchaRefCallback}
+                  challengeurl="/api/altcha/challenge"
+                  hidelogo
+                  hidefooter
+                  style={
+                    {
+                      "--altcha-color-base": "transparent",
+                      "--altcha-color-text": "#ffffff",
+                      "--altcha-color-success-text": "#4ade80",
+                    } as React.CSSProperties
+                  }
+                />
+              )}
             </div>
 
             {/* Botón Enviar */}
             <div className="pt-2">
               <button
                 type="submit"
-                disabled={isSubmitting || !altchaPayload}
+                disabled={isSubmitting || !altchaPayload || altchaLoadError}
                 className="border-[3px] border-[#3d3d3d] rounded-lg px-5 py-2 min-w-[100px] hover:border-variable-collection-link transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="font-ubuntu font-bold text-white text-base leading-[21px] group-hover:text-variable-collection-link transition-colors">

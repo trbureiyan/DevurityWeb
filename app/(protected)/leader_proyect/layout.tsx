@@ -4,6 +4,7 @@ import React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthContext } from "@/contexts/AuthContext";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import { getInitials } from "@/lib/utils/getInitials";
 
 export default function LeaderProyectLayout({
   children,
@@ -22,9 +23,6 @@ export default function LeaderProyectLayout({
     await logout();
     router.push("/");
   };
-
-  const getInitials = (name: string, last_name: string) =>
-    `${name.charAt(0).toUpperCase()}${last_name?.charAt(0)?.toUpperCase() || ""}`;
 
   const initials = user
     ? getInitials(user.name, user.last_name ?? "")

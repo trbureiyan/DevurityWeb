@@ -42,7 +42,8 @@ export default function TeamSection({ members }: TeamSectionProps) {
 
   const activeMembers = groupedMembers[activeTab] || [];
   const totalPages = getTotalPages(activeMembers.length);
-  const currentMembers = getPaginatedMembers(activeMembers, page);
+  const safePage = Math.max(1, Math.min(page, totalPages || 1));
+  const currentMembers = getPaginatedMembers(activeMembers, safePage);
 
   const handleTabChange = (tab: RoleGroup) => {
     if (tab !== activeTab) {
@@ -165,18 +166,18 @@ export default function TeamSection({ members }: TeamSectionProps) {
           <div className="flex justify-center items-center gap-4 mt-12">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
+              disabled={safePage === 1}
               className="w-10 h-10 rounded-full border border-gray-800 flex items-center justify-center text-gray-400 hover:text-white hover:border-gray-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               aria-label="Anterior"
             >
               &larr;
             </button>
             <span className="text-gray-400 font-mono text-sm">
-              {page} / {totalPages}
+              {safePage} / {totalPages}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
+              disabled={safePage === totalPages}
               className="w-10 h-10 rounded-full border border-gray-800 flex items-center justify-center text-gray-400 hover:text-white hover:border-gray-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               aria-label="Siguiente"
             >

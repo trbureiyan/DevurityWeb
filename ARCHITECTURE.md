@@ -254,7 +254,7 @@ Edge Middleware cannot execute Node.js native modules (`jsonwebtoken`). The proj
 3. Client includes token in `x-csrf-token` header on state-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`).
 4. Middleware validates token header against cookie using `timingSafeEqual` (`lib/csrf.ts`).
 
-Exempt endpoints bypass CSRF checks: `/api/auth/login`, `/api/auth/register`, `/api/auth/logout`, `/api/auth/refresh`, `/api/auth/is-admin`, `/api/auth/forgot-password`, `/api/auth/reset-password`, `/api/qr-dinamico`, `/api/asistencia`. `/api/admin/attendances` is also exempt as an administrative, server-controlled endpoint (QR scan flow, not a public web mutation).
+Exempt endpoints bypass CSRF checks: `/api/auth/login`, `/api/auth/register`, `/api/auth/logout`, `/api/auth/refresh`, `/api/auth/is-admin`, `/api/auth/forgot-password`, `/api/auth/reset-password`, `/api/qr-dinamico`, `/api/admin/attendances`. Note: `/api/asistencia` is exempt in middleware but validates CSRF internally in its route handler (`app/api/asistencia/route.ts`), so it is not listed as a public exception.
 
 ## Deployment & CI/CD Pipeline
 
