@@ -68,6 +68,6 @@ export const getLatestNewsForLanding = unstable_cache(
   ["latest-news-landing"],
   {
     tags:       [CACHE_TAGS.updates],
-    revalidate: activeTTL(CACHE_TTL.long),
+    revalidate: activeTTL(CACHE_TTL.medium),
   }
 );
