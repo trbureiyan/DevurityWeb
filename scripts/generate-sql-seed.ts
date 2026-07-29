@@ -150,7 +150,6 @@ function generateSql(): string {
       `hero_image   = EXCLUDED.hero_image`,
       `cta_label    = EXCLUDED.cta_label`,
       `cta_href     = EXCLUDED.cta_href`,
-      `start_date   = EXCLUDED.start_date`,
       `is_archived  = EXCLUDED.is_archived`,
       `updated_at   = NOW()`,
     ].join(",\n  ");

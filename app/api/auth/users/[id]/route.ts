@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { validateToken } from "@/lib/jwt";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { 
   findByIdWithFullProfile, 
   updateUserProfile,
@@ -51,7 +53,7 @@ export async function GET(
       // Intentar buscar por username
       console.log(`[API] Buscando por username: ${id}`);
       const userByUsername = await findByUsername(id);
-      console.log(`[API] Usuario encontrado por username:`, userByUsername ? "Sí" : "No", userByUsername);
+      console.log(`[API] Usuario encontrado por username:`, userByUsername ? "Sí" : "No");
       if (userByUsername) {
         // Si encontramos el usuario por username, obtener su perfil completo
         user = await findByIdWithFullProfile(userByUsername.id.toString());
@@ -103,7 +105,7 @@ export async function GET(
       skills: skills,
       working_on: user.user_projects.map((up) => ({
         title: up.projects?.title || "Proyecto",
-        link: "#", // Schema doesn't have link for projects
+        link: up.projects?.description?.startsWith("http") ? up.projects.description : "#",
       })),
       social_links: user.user_platforms.map((up) => ({
         label: up.platforms?.name || "Link",
@@ -218,6 +220,7 @@ export async function PUT(
     // Actualizar perfil usando el repositorio
     try {
       await updateUserProfile(targetUserId, body);
+      revalidateTag(CACHE_TAGS.team);
       
       return NextResponse.json({
         success: true,
@@ -267,6 +270,16 @@ export async function PUT(
       if (error.message.includes("Programa") && error.message.includes("no existe")) {
         return NextResponse.json(
           { error: error.message, field: "program" },
+          { status: 400 }
+        );
+      }
+
+      if (
+        error.message.includes("URL") &&
+        error.message.includes("Proyecto")
+      ) {
+        return NextResponse.json(
+          { error: error.message, field: "working_on" },
           { status: 400 }
         );
       }

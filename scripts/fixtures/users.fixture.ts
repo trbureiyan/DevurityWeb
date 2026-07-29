@@ -6,8 +6,9 @@ import {
   randomUsername,
   randomMotivation,
   randomSemester,
-  getRandomRoleId,
+  getAllRoleIds,
   getRoleId,
+  pick,
 } from "./factory";
 import type { SeedResult } from "./ui";
 
@@ -24,10 +25,15 @@ export interface UsersFixtureOptions {
 }
 
 /**
- * Insert N fixture users into the database.
- * Silently skips records that collide on unique constraints.
+ * Inserta N usuarios de prueba en la base de datos.
+ * Omite silenciosamente registros que colisionan en restricciones únicas (email, username).
+ * Si se provee `role`, todos los usuarios reciben ese rol; de lo contrario, cada usuario
+ * recibe un rol aleatorio de los disponibles.
  *
- * @returns Counts of created and skipped records.
+ * @param prisma - Cliente Prisma activo.
+ * @param options - Opciones: count, role, isActive, dryRun, onProgress.
+ * @returns Conteo de registros creados y omitidos.
+ * @throws Si `getRoleId` o `getAllRoleIds` fallan al resolver los IDs de rol.
  */
 export async function seedUsers(
   prisma: PrismaClient,
@@ -35,9 +41,9 @@ export async function seedUsers(
 ): Promise<SeedResult> {
   const { count = DEFAULT_COUNT, role, isActive = true, dryRun = false, onProgress } = options;
 
-  const roleId = role
-    ? await getRoleId(prisma, role)
-    : await getRandomRoleId(prisma);
+  // Cargar IDs de rol una sola vez; si se provee un rol explícito, resolverlo aquí
+  const explicitRoleId = role ? await getRoleId(prisma, role) : null;
+  const allRoleIds = explicitRoleId ? [] : await getAllRoleIds(prisma);
 
   if (dryRun) {
     return { created: 0, skipped: 0 };
@@ -49,6 +55,7 @@ export async function seedUsers(
   for (let i = 0; i < count; i++) {
     const { name, last_name } = randomName();
     const suffix = Date.now() + i;
+    const roleId = explicitRoleId ?? pick(allRoleIds);
 
     try {
       await prisma.users.create({

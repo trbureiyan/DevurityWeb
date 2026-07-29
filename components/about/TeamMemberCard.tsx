@@ -3,6 +3,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { SocialLink } from "./team.types";
+import { getInitials } from "@/lib/utils/getInitials";
 
 interface TeamMemberCardProps {
   id: string;
@@ -53,13 +54,6 @@ const SocialIcon = ({ icon }: { icon: string }) => {
 };
 
 const EMPTY_SOCIAL_LINKS: SocialLink[] = [];
-
-function getInitials(name: string) {
-  const parts = name.trim().split(" ");
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 
 export default function TeamMemberCard({
   id,
