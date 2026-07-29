@@ -80,7 +80,10 @@ export async function POST(request: NextRequest) {
       .update(`${qrData.userId}:${qrData.timestamp}:${qrData.token}:${qrData.expiresAt}`)
       .digest("hex");
 
-    if (qrData.signature !== expectedSignature) {
+    // Comparación de tiempo constante para evitar timing attacks
+    const sigBuffer = Buffer.from(qrData.signature, "hex");
+    const expectedBuffer = Buffer.from(expectedSignature, "hex");
+    if (sigBuffer.length !== expectedBuffer.length || !cryptoMod.default.timingSafeEqual(sigBuffer, expectedBuffer)) {
       return NextResponse.json(
         { error: "QR inválido - firma corrupta o no autorizada" },
         { status: 400 },

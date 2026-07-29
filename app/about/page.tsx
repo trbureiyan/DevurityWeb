@@ -8,36 +8,31 @@ import type { TeamMember } from "@/components/about/team.types";
 import FoundersSection from "@/components/about/FoundersSection";
 import { CACHE_TAGS, CACHE_TTL, activeTTL } from "@/lib/cache-tags";
 
-const getTeamMembers = unstable_cache(
+const getTeamMembersCached = unstable_cache(
   async (): Promise<TeamMember[]> => {
-    try {
-      const users = await findActiveUsersForTeam();
+    const users = await findActiveUsersForTeam();
 
-      return users.map((user) => {
-        const socialLinks = user.platforms.map((p) => ({
-          icon: p.name.toLowerCase(),
-          url: p.link,
-          label: p.name,
-        }));
+    return users.map((user) => {
+      const socialLinks = user.platforms.map((p) => ({
+        icon: p.name.toLowerCase(),
+        url: p.link,
+        label: p.name,
+      }));
 
-        return {
-          id: user.id,
-          name: `${user.name} ${user.last_name}`,
-          username: user.username ?? undefined,
-          role: user.role,
-          bio: user.motivation || "Miembro del equipo Devurity",
-          avatar: undefined,
-          tagline:
-            user.skills.length > 0
-              ? user.skills.slice(0, 3).join(" \u2022 ")
-              : undefined,
-          socialLinks: socialLinks.slice(0, 3),
-        };
-      });
-    } catch (error) {
-      logger.error("Error fetching team members:", { error });
-      return [];
-    }
+      return {
+        id: user.id,
+        name: `${user.name} ${user.last_name}`,
+        username: user.username ?? undefined,
+        role: user.role,
+        bio: user.motivation || "Miembro del equipo Devurity",
+        avatar: undefined,
+        tagline:
+          user.skills.length > 0
+            ? user.skills.slice(0, 3).join(" \u2022 ")
+            : undefined,
+        socialLinks: socialLinks.slice(0, 3),
+      };
+    });
   },
   ["team-members"],
   {
@@ -45,6 +40,16 @@ const getTeamMembers = unstable_cache(
     revalidate: activeTTL(CACHE_TTL.medium),
   }
 );
+
+/** Wrapper: errores no se cachean — solo resultados exitosos. */
+async function getTeamMembers(): Promise<TeamMember[]> {
+  try {
+    return await getTeamMembersCached();
+  } catch (error) {
+    logger.error("Error fetching team members:", { error });
+    return [];
+  }
+}
 
 /**
  * Página "Sobre Nosotros" — misión, visión y equipo.
