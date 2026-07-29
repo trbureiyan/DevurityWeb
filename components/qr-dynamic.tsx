@@ -101,7 +101,16 @@ export default function QRDynamic({ userId, className }: QRDynamicProps) {
       if (!isMountedRef.current) return;
 
       if (res.ok) {
-        if (!data.qr || !data.usuario) {
+        if (
+          !data.qr || typeof data.qr !== "string" ||
+          !data.usuario || typeof data.usuario !== "object" ||
+          typeof data.usuario.id !== "string" ||
+          typeof data.usuario.nombre !== "string" ||
+          typeof data.usuario.correo !== "string" ||
+          typeof data.usuario.role !== "string" ||
+          typeof data.expiresAt !== "number" ||
+          typeof data.userId !== "string"
+        ) {
           throw new Error("La respuesta del servidor no contiene un código QR válido");
         }
         setQrData(data as QRData);
