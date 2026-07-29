@@ -15,7 +15,7 @@
 
 // JWT_SECRET must be set before any jwt module is imported, because lib/jwt.ts
 // reads the env at module load time and throws if it is missing.
-process.env.JWT_SECRET = "c2ee3b42a56e9873c0bae16334aba09a5533fb3e261b97cf7dc84ac97677756680e156640c624c9cd18e671e069103879a1c131a44b7ddc0ac051b6d328ee09f";
+process.env.JWT_SECRET = "test-secret-key-for-testing";
 
 import { test } from "node:test";
 import { ok, strictEqual, rejects } from "node:assert/strict";
