@@ -6,6 +6,7 @@ import NavbarConditional from "@/components/layouts/NavbarConditional";
 import Footer from "@/components/layouts/Footer";
 import { siteIcons } from "@/lib/constants/metadata";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // Config de fuentes
 const orbitron = Orbitron({
@@ -73,6 +74,7 @@ export default function RootLayout({
         </AuthProvider>
         <Footer />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

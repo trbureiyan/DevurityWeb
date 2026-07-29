@@ -1,139 +1,186 @@
-import React from "react";
+"use client";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-
-type SocialLink = {
-  icon: string;
-  url: string;
-  label: string;
-};
+import type { SocialLink } from "./team.types";
 
 interface TeamMemberCardProps {
   id: string;
   name: string;
   username?: string;
   role: string;
-  tagline?: string;
   bio: string;
   avatar?: string;
   socialLinks?: SocialLink[];
+  tagline?: string;
   program?: string;
   semester?: number;
+}
+
+const SocialIcon = ({ icon }: { icon: string }) => {
+  const iconClass = "w-5 h-5";
+  
+  switch (icon.toLowerCase()) {
+    case "github":
+      return (
+        <svg className={iconClass} fill="currentColor" viewBox="0 0 24 24">
+          <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+        </svg>
+      );
+    case "linkedin":
+      return (
+        <svg className={iconClass} fill="currentColor" viewBox="0 0 24 24">
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+        </svg>
+      );
+    case "twitter":
+      return (
+        <svg className={iconClass} fill="currentColor" viewBox="0 0 24 24">
+          <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+        </svg>
+      );
+    case "website":
+      return (
+        <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+        </svg>
+      );
+    default:
+      return (
+        <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+        </svg>
+      );
+  }
+};
+
+const EMPTY_SOCIAL_LINKS: SocialLink[] = [];
+
+function getInitials(name: string) {
+  const parts = name.trim().split(" ");
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 export default function TeamMemberCard({
   id,
   name,
   username,
-  tagline,
+  role,
   bio,
   avatar,
-  socialLinks = [],
+  socialLinks = EMPTY_SOCIAL_LINKS,
+  tagline,
   program,
   semester,
 }: TeamMemberCardProps) {
-  
-  // Usamos el username para la ruta; si no existe, usamos el id como fallback seguro
-  const profileUrl = username ? `/profile/${username}` : `/profile/${id}`;
+  const [imageError, setImageError] = useState(false);
+  const profileSlug = username || id;
+
+  const showInitials = imageError || !avatar;
 
   return (
-    <Link 
-      href={profileUrl}
-      className="group relative bg-zinc-900/30 backdrop-blur-md rounded-2xl border border-zinc-800/80 hover:border-red-500/40 p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_0_40px_rgba(178,4,3,0.12)] overflow-hidden min-h-[340px] cursor-pointer"
-    >
-      {/* Glow ambiental de fondo */}
-      <div className="absolute -inset-px bg-gradient-to-br from-transparent via-transparent to-red-600/0 group-hover:to-red-600/5 rounded-2xl transition-all duration-500" />
-      
-      <div className="relative z-10">
-        {/* Header Expandido */}
-        <div className="flex items-start gap-5 mb-6">
-          <div className="relative w-20 h-20 rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden flex-shrink-0 flex items-center justify-center group-hover:border-red-500/30 transition-colors duration-300 shadow-inner">
-            {avatar ? (
+    <div className="group relative">
+      {/* Card Container */}
+      <div className="relative bg-gradient-to-br from-zinc-900/50 to-black/50 backdrop-blur-sm border border-zinc-800/50 rounded-2xl overflow-hidden transition-all duration-300 hover:border-[#ca2b26]/50 hover:shadow-[0_0_30px_rgba(202,43,38,0.15)]">
+        
+        {/* Glow Effect on Hover (CSS instead of framer-motion) */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#ca2b26]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+        {/* Avatar Section */}
+        <Link href={`/profile/${profileSlug}`} className="block">
+          <div className="relative aspect-square overflow-hidden bg-zinc-800">
+            {showInitials ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-900">
+                <span className="text-5xl font-bold text-white/50">{getInitials(name)}</span>
+              </div>
+            ) : (
               <Image
                 src={avatar}
-                alt={`${name} avatar`}
+                alt={name}
                 fill
-                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                className="object-cover transition-transform duration-500 group-hover:scale-110"
+                onError={() => setImageError(true)}
               />
-            ) : (
-              <span className="font-orbitron text-2xl font-bold text-zinc-600 group-hover:text-red-500 transition-colors duration-300">
-                {name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-              </span>
             )}
             
-            {/* Status dot cyber */}
-            <div className="absolute bottom-1.5 right-1.5 w-3 h-3 bg-red-500 rounded-full border-2 border-zinc-950 animate-pulse" />
+            {/* Overlay on hover */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            
+            {/* Role badge */}
+            <div className="absolute top-3 left-3 px-3 py-1 bg-[#ca2b26]/90 backdrop-blur-sm rounded-full">
+              <span className="text-xs font-semibold text-white uppercase tracking-wider">
+                {role}
+              </span>
+            </div>
           </div>
+        </Link>
 
-          <div className="space-y-1.5 pt-1 overflow-hidden">
-            <h4 className="font-orbitron font-bold text-xl lg:text-2xl tracking-wide text-zinc-100 group-hover:text-white leading-tight truncate">
-              {name}
-            </h4>
-            {username && (
-              <p className="text-sm text-zinc-500 font-mono truncate">@{username}</p>
+        {/* Content Section */}
+        <div className="p-6 space-y-4 relative z-10">
+          {/* Name */}
+          <div>
+            <Link 
+              href={`/profile/${profileSlug}`}
+              className="block group/name"
+            >
+              <h3 className="text-xl font-bold text-white group-hover/name:text-[#ca2b26] transition-colors">
+                {name}
+              </h3>
+            </Link>
+            {tagline && (
+              <p className="text-sm text-[#ca2b26] mt-1 font-mono">
+                {tagline}
+              </p>
             )}
           </div>
+
+          {/* Bio/Description */}
+          <p className="text-sm text-zinc-400 line-clamp-3 leading-relaxed">
+            {bio}
+          </p>
+
+          {/* Program / Semester */}
+          {(program || semester) && (
+            <div className="space-y-0.5">
+              {program && (
+                <p className="text-xs text-zinc-400 font-medium truncate" title={program}>
+                  {program}
+                </p>
+              )}
+              {semester && (
+                <p className="text-xs text-zinc-500 font-mono">
+                  {semester}° Semestre
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Social Links - Máximo 3 */}
+          {socialLinks.length > 0 && (
+            <div className="flex items-center gap-3 pt-2 border-t border-zinc-800/50">
+              {socialLinks.slice(0, 3).map((link) => (
+                <a
+                  key={`${link.icon}-${link.url}`}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white transition-all duration-300 hover:scale-110"
+                  title={link.label}
+                  aria-label={link.label}
+                >
+                  <SocialIcon icon={link.icon} />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Separador */}
-        <div className="w-full h-px bg-gradient-to-r from-zinc-800 via-zinc-800/40 to-transparent mb-5" />
-
-        {/* Biografía */}
-        <p className="text-base text-zinc-400 leading-relaxed mb-6 min-h-[72px] line-clamp-3">
-          {bio}
-        </p>
-
-        {/* Habilidades en bloque destacado */}
-        {tagline && (
-          <div className="mb-6">
-            <p className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase mb-2">
-              {"// TECH_STACK"}
-            </p>
-            <p className="text-sm text-zinc-300 bg-zinc-950/60 rounded-xl px-3 py-2.5 border border-zinc-800/80 font-mono tracking-wide">
-              {tagline}
-            </p>
-          </div>
-        )}
+        {/* Bottom accent line */}
+        <div className="h-1 bg-gradient-to-r from-transparent via-[#ca2b26] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
-
-      {/* Footer con metadata e iconos */}
-      <div className="relative z-10 pt-4 border-t border-zinc-800/50 flex items-center justify-between mt-auto">
-        <div className="text-left max-w-[70%]">
-          {program && (
-            <p className="text-xs text-zinc-400 font-medium truncate" title={program}>
-              {program}
-            </p>
-          )}
-          {semester && (
-            <p className="text-xs text-zinc-500 font-mono mt-0.5">
-              {semester}° Semestre
-            </p>
-          )}
-        </div>
-
-        {/* Redes Sociales del Integrante */}
-        <div className="flex items-center gap-2.5 relative z-20">
-          {socialLinks.length > 0 ? (
-            socialLinks.map((link, idx) => (
-              <a
-                key={idx}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={link.label}
-                className="w-8 h-8 rounded-lg bg-zinc-900 hover:bg-white text-zinc-400 hover:text-black flex items-center justify-center transition-all duration-200 border border-zinc-800 pointer-events-auto"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span className="text-xs font-mono font-bold uppercase">
-                  {link.icon.slice(0, 2)}
-                </span>
-              </a>
-            ))
-          ) : (
-            <span className="text-xs text-zinc-600 font-mono">core_dev</span>
-          )}
-        </div>
-      </div>
-    </Link>
+    </div>
   );
 }

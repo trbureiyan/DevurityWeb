@@ -376,19 +376,26 @@ export async function findActiveUsersForTeam() {
         motivation: true,
         semester: true,
         user_skills: {
-          include: {
-            skills: true,
+          select: {
+            skills: {
+              select: { name: true }
+            }
           },
         },
-        roles: true,
+        roles: {
+          select: { name: true }
+        },
         programs: {
           select: {
             name: true,
           },
         },
         user_platforms: {
-          include: {
-            platforms: true,
+          select: {
+            link: true,
+            platforms: {
+              select: { name: true }
+            }
           },
         },
       },

@@ -1,7 +1,7 @@
-# CodeRabbit configuration — DevurityWeb
-# Docs: https://docs.coderabbit.ai/configure-coderabbit
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 
 language: "es-ES"
+tone_instructions: "Tono técnico, directo y conciso. Sin emojis, sin rodeos y sin vocabulario corporativo. Estilo profesional y enfocado en la precisión técnica."
 
 reviews:
   profile: "chill"
@@ -37,7 +37,7 @@ reviews:
   sequence_diagrams: true
   review_details: false
 
-  # Sin generación de tests unitarios
+  # Sin generación de poemas ni tests unitarios automáticos
   poem: false
   in_progress_fortune: true
   enable_prompt_for_ai_agents: true
@@ -64,11 +64,41 @@ reviews:
   finishing_touches:
     docstrings:
       enabled: false
+    unit_tests:
+      enabled: false
+    simplify:
+      enabled: false
+
+  tools:
+    shellcheck:
+      enabled: false
+
+  # Reglas específicas de revisión por ruta de archivos
+  path_instructions:
+    - path: "package.json"
+      instructions: "Las versiones de las dependencias deben estar fijadas exactamente (sin usar '^' ni '~')."
+    - path: "**/tests/**/*.ts"
+      instructions: "Utilizar el test runner integrado de Node (`node:test`) y desestructurar las funciones de aserción de `node:assert/strict`. No importar el objeto `assert` por defecto."
+    - path: "**/*.test.ts"
+      instructions: "Utilizar el test runner integrado de Node (`node:test`) y desestructurar las funciones de aserción de `node:assert/strict`. No importar el objeto `assert` por defecto."
+    - path: "**/*.node-test.ts"
+      instructions: "Utilizar el test runner integrado de Node (`node:test`) y desestructurar las funciones de aserción de `node:assert/strict`. No importar el objeto `assert` por defecto."
+    - path: "app/**/*.tsx"
+      instructions: "Preferir Server Components por defecto. Añadir 'use client' únicamente cuando sea estrictamente necesario (hooks, APIs del navegador o estado del cliente)."
+    - path: "components/**/*.tsx"
+      instructions: "Preferir Server Components por defecto. Añadir 'use client' únicamente cuando sea estrictamente necesario (hooks, APIs del navegador o estado del cliente)."
+    - path: "**/*.ts"
+      instructions: |
+        - Los comentarios en el código deben explicar el 'por qué' y lo 'no obvio', no el 'cómo'.
+        - Documentar los contratos de las funciones públicas con JSDoc (qué hace, parámetros, retorno y excepciones), sin describir los detalles de implementación interna.
+        - Usar marcadores ASCII en comentarios de una sola línea: `[!]` para mutaciones o efectos secundarios peligrosos, `[?]` para enfoques inciertos, `[x]` para rutas obsoletas, y `-->` para redirigir al lector.
 
 chat:
   auto_reply: true
 
-# No generar sugerencias de tests unitarios
-tools:
-  shellcheck:
-    enabled: false
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "**/AGENTS.md"
+      - ".github/copilot-instructions.md"

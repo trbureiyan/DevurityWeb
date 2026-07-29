@@ -82,6 +82,9 @@ jobs:
       - name: TypeScript check
         run: pnpm exec tsc --noEmit
 
+      - name: Run Tests
+        run: pnpm run test
+
       - name: Lint
         run: pnpm run lint
 

@@ -1,0 +1,6 @@
+version: 2
+secret:
+  ignored_paths:
+    # Solo archivos sintéticos específicos y auditados — el resto del directorio se escanea
+    - 'scripts/fixtures/seed-data.json'
+    - 'prisma/seeders/seed-constants.ts'

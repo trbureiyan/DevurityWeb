@@ -150,8 +150,7 @@ export default function Footer() {
               { name: "Brayan Toro Bustos" },
               { name: "Alexander Lozada Caviedes" },
               { name: "Manuel Felipe Rojas Yasno" },
-              { name: "Juan Camilo Mora Castañeda" },
-              { name: "Pablo Trujillo Artunduaga" },
+              { name: "Juan Camilo Mora Castañeda" }
             ].map((author) => (
               <div key={author.name} className="flex flex-col">
                 <span className="font-ubuntu text-[#9ca3af] text-xs font-medium hover:text-white transition-colors duration-200">
