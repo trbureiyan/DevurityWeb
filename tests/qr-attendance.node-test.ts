@@ -55,7 +55,7 @@ const mockPrisma = {
 (globalThis as any).prisma = mockPrisma;
 
 // Mock process.env for tests
-process.env.JWT_SECRET = "supersecretkeyfortestingpurposesonly";
+process.env.JWT_SECRET = "c2ee3b42a56e9873c0bae16334aba09a5533fb3e261b97cf7dc84ac97677756680e156640c624c9cd18e671e069103879a1c131a44b7ddc0ac051b6d328ee09f";
 
 test("QR Dynamic Route - Token Validation and UUID check", async (t) => {
   // Use dynamic imports to prevent ES module hoisting from initializing Prisma too early
@@ -171,7 +171,7 @@ test("Attendance GET Route - Authentication and Authorization security", async (
 test("Attendance POST Route - Cryptographic Signature, Expiration, and CSRF checks", async (t) => {
   const { POST: postAttendanceHandler } = await import("../app/api/asistencia/route");
   const crypto = await import("crypto");
-  const secret = process.env.JWT_SECRET || "supersecretkeyfortestingpurposesonly";
+  const secret = process.env.JWT_SECRET!;
   const csrfToken = "test-csrf-token-32-chars-long-abc";
 
   await t.test("Fails when CSRF tokens are missing", async () => {
