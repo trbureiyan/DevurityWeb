@@ -45,6 +45,11 @@ export default function TeamSection({ members }: TeamSectionProps) {
   const safePage = Math.max(1, Math.min(page, totalPages || 1));
   const currentMembers = getPaginatedMembers(activeMembers, safePage);
 
+  // Sync page state when safePage corrects it (e.g. after tab/data changes)
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+  }, [page, safePage]);
+
   const handleTabChange = (tab: RoleGroup) => {
     if (tab !== activeTab) {
       setActiveTab(tab);

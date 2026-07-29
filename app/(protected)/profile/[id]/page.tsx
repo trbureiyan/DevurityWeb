@@ -787,7 +787,7 @@ export default function ProfilePage() {
                 <ul className="mt-6 space-y-4">
                   {userData.working_on && userData.working_on.length > 0 ? (
                     userData.working_on.map((project) => (
-                      <li key={project.title} className="flex items-center gap-2">
+                      <li key={`${project.title}::${project.link}`} className="flex items-center gap-2">
                         <span className="size-1.5 rounded-full bg-[#da292e]" />
                         <Link
                           href={project.link}

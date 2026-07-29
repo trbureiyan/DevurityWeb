@@ -105,7 +105,7 @@ export async function GET(
       skills: skills,
       working_on: user.user_projects.map((up) => ({
         title: up.projects?.title || "Proyecto",
-        link: "#", // Schema doesn't have link for projects
+        link: up.projects?.description?.startsWith("http") ? up.projects.description : "#",
       })),
       social_links: user.user_platforms.map((up) => ({
         label: up.platforms?.name || "Link",
