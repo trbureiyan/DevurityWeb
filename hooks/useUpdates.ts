@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useCsrf } from "@/hooks/useCsrf";
 
 // ============ TIPOS ============
 export type UpdateItem = {
@@ -11,106 +12,86 @@ export type UpdateItem = {
   href?: string;
   tags: string[];
   borderColor: string;
-  isLocal?: boolean;
   imageUrl?: string;
 };
 
 // Mantenido para compatibilidad con imports existentes — datos reales provienen de la DB
 export const MOCK_UPDATES: UpdateItem[] = [];
 
-const STORAGE_KEY = "devurity-local-updates";
-
-// Keeps the first occurrence of each id. Local items should be prepended so
-// they win over DB items when both share an id (e.g. an edited DB entry). [!]
-function deduplicateById(items: UpdateItem[]): UpdateItem[] {
-  const seen = new Set<string>();
-  return items.filter((u) => {
-    if (seen.has(u.id)) return false;
-    seen.add(u.id);
-    return true;
-  });
-}
-
 /**
- * Hook que fusiona datos de la base de datos (initialData) con adiciones locales
- * guardadas en localStorage.
+ * Hook que gestiona las actualizaciones (noticias y eventos) conectándose
+ * con la base de datos a través de la API REST del backend con tokens CSRF.
  *
  * @param initialData - Datos precargados desde la DB por el Server Component padre.
  */
 export function useUpdates(initialData: UpdateItem[] = []) {
-  // Deduplicate on the very first render so EditPanel never sees duplicate keys
-  // even before the useEffect fires. [!]
-  const [allUpdates, setAllUpdates] = useState<UpdateItem[]>(() =>
-    deduplicateById(initialData)
-  );
+  const [allUpdates, setAllUpdates] = useState<UpdateItem[]>(initialData);
+  const { fetchWithCsrf } = useCsrf();
 
-  useEffect(() => {
-    const load = () => {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) {
-          setAllUpdates(deduplicateById(initialData));
-          return;
-        }
-        const parsed: UpdateItem[] = JSON.parse(raw);
-        // Solo los items marcados como locales se persisten en localStorage
-        const localItems = parsed.filter((u) => u.isLocal);
-        if (localItems.length > 0) {
-          // Local items take precedence; drop any DB item whose id is already
-          // covered by a local edit to prevent duplicate React keys. [!]
-          setAllUpdates(deduplicateById([...localItems, ...initialData]));
-        } else {
-          setAllUpdates(deduplicateById(initialData));
-        }
-      } catch {
-        // localStorage corrupto, ignorar
-        setAllUpdates(deduplicateById(initialData));
-      }
-    };
+  const addUpdate = async (item: Omit<UpdateItem, "id">) => {
+    const response = await fetchWithCsrf("/api/updates", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: item.title,
+        excerpt: item.excerpt,
+        displayDate: item.displayDate,
+        tags: item.tags,
+        href: item.href,
+        borderColor: item.borderColor,
+      }),
+    });
 
-    load();
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || "Error al crear la actualización");
+    }
 
-    // Escuchar cambios en otras pestañas / componentes
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) load();
-    };
-    const handleCustom = () => load();
-
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("devurity-updates-changed", handleCustom);
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("devurity-updates-changed", handleCustom);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const persistLocal = (updates: UpdateItem[]) => {
-    const localItems = updates.filter((u) => u.isLocal);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(localItems));
-    // Disparar evento para que otros componentes en la misma pestaña se actualicen
-    window.dispatchEvent(new Event("devurity-updates-changed"));
+    setAllUpdates((prev) => [result.data, ...prev]);
+    return result.data;
   };
 
-  const addUpdate = (newUpdate: UpdateItem) => {
-    const updated = deduplicateById([newUpdate, ...allUpdates]);
-    setAllUpdates(updated);
-    persistLocal(updated);
+  const editUpdate = async (item: UpdateItem) => {
+    const response = await fetchWithCsrf(`/api/updates/${item.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: item.title,
+        excerpt: item.excerpt,
+        displayDate: item.displayDate,
+        tags: item.tags,
+        href: item.href,
+        borderColor: item.borderColor,
+      }),
+    });
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || "Error al actualizar la actualización");
+    }
+
+    setAllUpdates((prev) =>
+      prev.map((u) => (u.id === item.id ? result.data : u))
+    );
+    return result.data;
   };
 
-  const editUpdate = (edited: UpdateItem) => {
-    const marked = { ...edited, isLocal: true };
-    const updated = allUpdates.map((u) => (u.id === edited.id ? marked : u));
-    setAllUpdates(updated);
-    persistLocal(updated);
-  };
+  const deleteUpdate = async (id: string) => {
+    const response = await fetchWithCsrf(`/api/updates/${id}`, {
+      method: "DELETE",
+    });
 
-  const deleteUpdate = (id: string) => {
-    const updated = allUpdates.filter((u) => u.id !== id);
-    setAllUpdates(updated);
-    persistLocal(updated);
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || "Error al eliminar la actualización");
+    }
+
+    setAllUpdates((prev) => prev.filter((u) => u.id !== id));
   };
 
   return { allUpdates, setAllUpdates, addUpdate, editUpdate, deleteUpdate };
 }
-

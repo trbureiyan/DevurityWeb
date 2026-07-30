@@ -59,9 +59,9 @@ interface EditPanelProps {
   isOpen: boolean;
   onClose: () => void;
   updates: UpdateItem[];
-  onAdd: (p: UpdateItem) => void;
-  onEdit: (p: UpdateItem) => void;
-  onDelete: (id: string) => void;
+  onAdd: (p: Omit<UpdateItem, "id">) => Promise<UpdateItem>;
+  onEdit: (p: UpdateItem) => Promise<UpdateItem>;
+  onDelete: (id: string) => Promise<void>;
 }
 
 function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPanelProps) {
@@ -69,11 +69,15 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
   const [editingItem, setEditingItem] = useState<UpdateItem | null>(null);
   const [formData, setFormData] = useState(emptyForm);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const resetToList = () => {
     setMode("list");
     setEditingItem(null);
     setFormData(emptyForm);
+    setError(null);
+    setSubmitting(false);
   };
 
   const handleStartEdit = (item: UpdateItem) => {
@@ -94,37 +98,43 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
     setMode("add");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
+    setError(null);
     const tagsArray = formData.tags.split(",").map((s) => s.trim()).filter(Boolean);
     const displayDate = formData.displayDate
       ? dateInputToDisplay(formData.displayDate)
       : dateInputToDisplay(todayISO());
 
-    if (mode === "add") {
-      const newUpdate: UpdateItem = {
-        id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-        title: formData.title,
-        excerpt: formData.summary,
-        displayDate,
-        tags: tagsArray,
-        href: formData.href || "#",
-        borderColor: ACCENT_COLOR,
-        isLocal: true,
-      };
-      onAdd(newUpdate);
-    } else if (mode === "edit" && editingItem) {
-      onEdit({
-        ...editingItem,
-        title: formData.title,
-        excerpt: formData.summary,
-        displayDate: formData.displayDate ? displayDate : editingItem.displayDate,
-        tags: tagsArray,
-        href: formData.href || editingItem.href,
-        borderColor: ACCENT_COLOR,
-      });
+    try {
+      if (mode === "add") {
+        const newUpdate = {
+          title: formData.title,
+          excerpt: formData.summary,
+          displayDate,
+          tags: tagsArray,
+          href: formData.href || "#",
+          borderColor: ACCENT_COLOR,
+        };
+        await onAdd(newUpdate);
+      } else if (mode === "edit" && editingItem) {
+        await onEdit({
+          ...editingItem,
+          title: formData.title,
+          excerpt: formData.summary,
+          displayDate: formData.displayDate ? displayDate : editingItem.displayDate,
+          tags: tagsArray,
+          href: formData.href || editingItem.href,
+          borderColor: ACCENT_COLOR,
+        });
+      }
+      resetToList();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al guardar la actualización");
+    } finally {
+      setSubmitting(false);
     }
-    resetToList();
   };
 
   if (!isOpen) return null;
@@ -175,7 +185,8 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
             <div className="p-5 space-y-4">
               <button
                 onClick={handleStartAdd}
-                className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl border border-dashed border-red-600/40 hover:border-red-600/80 bg-red-600/5 hover:bg-red-600/10 transition-all group"
+                disabled={submitting}
+                className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl border border-dashed border-red-600/40 hover:border-red-600/80 bg-red-600/5 hover:bg-red-600/10 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="w-10 h-10 rounded-full bg-red-600/20 border border-red-600/30 flex items-center justify-center flex-shrink-0 group-hover:bg-red-600/30 transition-colors">
                   <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -198,11 +209,6 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        {item.isLocal && (
-                          <span className="text-[10px] text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-ubuntu uppercase tracking-wider">
-                            local
-                          </span>
-                        )}
                         <p className="font-ubuntu text-[11px] text-white/30 uppercase tracking-wider">
                           {item.displayDate}
                         </p>
@@ -223,8 +229,9 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
                     <div className="flex flex-col gap-2 flex-shrink-0">
                       <button
                         onClick={() => handleStartEdit(item)}
+                        disabled={submitting}
                         title="Editar"
-                        className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 flex items-center justify-center transition-colors"
+                        className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 flex items-center justify-center transition-colors disabled:opacity-50"
                       >
                         <svg className="w-3.5 h-3.5 text-white/60 hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -234,8 +241,20 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
                       {confirmDeleteId === item.id ? (
                         <div className="flex flex-col gap-1">
                           <button
-                            onClick={() => { onDelete(item.id); setConfirmDeleteId(null); }}
-                            className="w-8 h-8 rounded-full bg-red-600/30 hover:bg-red-600/60 border border-red-600/40 flex items-center justify-center transition-colors"
+                            onClick={async () => {
+                              try {
+                                setSubmitting(true);
+                                setError(null);
+                                await onDelete(item.id);
+                                setConfirmDeleteId(null);
+                              } catch (err) {
+                                alert(err instanceof Error ? err.message : "Error al eliminar");
+                              } finally {
+                                setSubmitting(false);
+                              }
+                            }}
+                            disabled={submitting}
+                            className="w-8 h-8 rounded-full bg-red-600/30 hover:bg-red-600/60 border border-red-600/40 flex items-center justify-center transition-colors disabled:opacity-50"
                             title="Confirmar"
                           >
                             <svg className="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -244,7 +263,8 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
                           </button>
                           <button
                             onClick={() => setConfirmDeleteId(null)}
-                            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-colors"
+                            disabled={submitting}
+                            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-colors disabled:opacity-50"
                             title="Cancelar"
                           >
                             <svg className="w-3.5 h-3.5 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -255,8 +275,9 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
                       ) : (
                         <button
                           onClick={() => setConfirmDeleteId(item.id)}
+                          disabled={submitting}
                           title="Eliminar"
-                          className="w-8 h-8 rounded-full bg-white/5 hover:bg-red-600/20 border border-white/10 hover:border-red-600/30 flex items-center justify-center transition-colors"
+                          className="w-8 h-8 rounded-full bg-white/5 hover:bg-red-600/20 border border-white/10 hover:border-red-600/30 flex items-center justify-center transition-colors disabled:opacity-50"
                         >
                           <svg className="w-3.5 h-3.5 text-white/40 hover:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -273,11 +294,21 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
           {/* ——— FORMULARIO (ADD / EDIT) ——— */}
           {(mode === "add" || mode === "edit") && (
             <form onSubmit={handleSubmit} className="p-5 space-y-5">
+              {error && (
+                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-ubuntu flex items-center gap-3">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>{error}</span>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className={labelCls}>Título *</label>
                 <input
                   type="text"
                   required
+                  disabled={submitting}
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className={inputCls}
@@ -289,6 +320,7 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
                 <label className={labelCls}>Descripción *</label>
                 <textarea
                   required
+                  disabled={submitting}
                   value={formData.summary}
                   onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
                   rows={4}
@@ -301,6 +333,7 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
                 <label className={labelCls}>Fecha</label>
                 <input
                   type="date"
+                  disabled={submitting}
                   value={formData.displayDate}
                   onChange={(e) => setFormData({ ...formData, displayDate: e.target.value })}
                   className={`${inputCls} [color-scheme:dark]`}
@@ -320,6 +353,7 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
                 <input
                   type="text"
                   required
+                  disabled={submitting}
                   value={formData.tags}
                   onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                   className={inputCls}
@@ -331,6 +365,7 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
                 <label className={labelCls}>Link (opcional)</label>
                 <input
                   type="text"
+                  disabled={submitting}
                   value={formData.href}
                   onChange={(e) => setFormData({ ...formData, href: e.target.value })}
                   className={inputCls}
@@ -342,15 +377,27 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
                 <button
                   type="button"
                   onClick={resetToList}
-                  className="flex-1 py-3 border border-white/20 hover:border-white/40 text-white/70 hover:text-white rounded-full font-ubuntu text-xs uppercase tracking-wider transition-all"
+                  disabled={submitting}
+                  className="flex-1 py-3 border border-white/20 hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed text-white/70 hover:text-white rounded-full font-ubuntu text-xs uppercase tracking-wider transition-all"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-ubuntu text-xs uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(178,4,3,0.5)]"
+                  disabled={submitting}
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-800/50 disabled:cursor-not-allowed text-white rounded-full font-ubuntu text-xs uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(178,4,3,0.5)] flex items-center justify-center gap-2"
                 >
-                  {mode === "add" ? "Guardar" : "Actualizar"}
+                  {submitting ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <span>{mode === "add" ? "Guardar" : "Actualizar"}</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -683,11 +730,6 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
                         NOTICIA
                       </span>
                       <div className="flex items-center gap-2">
-                        {item.isLocal && (
-                          <span className="text-[10px] text-red-400 border border-red-500/30 px-2 py-1 rounded-full font-ubuntu uppercase">
-                            local
-                          </span>
-                        )}
                         <span className="text-xs font-orbitron uppercase tracking-[0.3em] text-white/50">
                           {item.displayDate}
                         </span>
