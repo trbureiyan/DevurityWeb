@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useCsrf } from "@/hooks/useCsrf";
 
 // ============ TIPOS ============
 export type ProjectStage =
@@ -12,7 +13,7 @@ export type ProjectStage =
   | "pausa";
 
 export interface ProjectItem {
-  id: string;
+  id: string; // El slug es usado como ID en el cliente
   title: string;
   summary: string;
   stage: ProjectStage;
@@ -20,7 +21,6 @@ export interface ProjectItem {
   stack: string[];
   updatedAt: string;
   heroImage: string | null;
-  isLocal?: boolean;
   callToAction?: {
     label: string;
     href: string;
@@ -56,91 +56,64 @@ export const STAGE_COLORS: Record<ProjectStage, string> = {
 // Mantenido para compatibilidad con imports existentes — datos reales provienen de la DB
 export const PROJECTS_CATALOG: ProjectItem[] = [];
 
-const STORAGE_KEY = "devurity-local-projects";
-
 /**
- * Hook compartido — fuente de verdad para proyectos.
+ * Hook compartido — fuente de verdad para proyectos conectados a la BD con CSRF.
  *
  * @param initialData - Datos precargados desde la DB por el Server Component padre.
- *
- * Úsalo en projects/page.tsx y en ProjectsPreviewSection del landing.
  */
 export function useProjects(initialData: ProjectItem[] = []) {
   const [allProjects, setAllProjects] = useState<ProjectItem[]>(initialData);
+  const { fetchWithCsrf } = useCsrf();
 
-  // Carga local al montar
-  useEffect(() => {
-    const load = () => {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) {
-          setAllProjects(initialData);
-          return;
-        }
-        const parsed: ProjectItem[] = JSON.parse(raw);
-        // Solo los items marcados como locales se persisten en localStorage
-        const localItems = parsed.filter((p) => p.isLocal);
-        if (localItems.length > 0) {
-          setAllProjects([...localItems, ...initialData]);
-        } else {
-          setAllProjects(initialData);
-        }
-      } catch {
-        // localStorage corrupto, ignorar
-        setAllProjects(initialData);
-      }
-    };
+  const addProject = async (project: Omit<ProjectItem, "id"> & { id?: string }) => {
+    const res = await fetchWithCsrf("/api/projects", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(project),
+    });
 
-    load();
+    const result = await res.json();
+    if (!result.success) {
+      throw new Error(result.error || "Error al guardar el proyecto en el servidor");
+    }
 
-    // Escuchar cambios en otras pestañas
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) load();
-    };
-    // Escuchar cambios en la misma pestaña
-    const handleCustom = () => load();
-
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("devurity-projects-changed", handleCustom);
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("devurity-projects-changed", handleCustom);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const persist = (projects: ProjectItem[]) => {
-    // Solo guardar items locales (los de DB son la fuente de verdad)
-    const toSave = projects.filter((p) => p.isLocal);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
-    window.dispatchEvent(new Event("devurity-projects-changed"));
+    const created: ProjectItem = result.data;
+    setAllProjects((prev) => [created, ...prev]);
+    return created;
   };
 
-  const addProject = (project: ProjectItem) => {
-    const updated = [project, ...allProjects];
-    setAllProjects(updated);
-    persist(updated);
+  const editProject = async (edited: ProjectItem) => {
+    const res = await fetchWithCsrf(`/api/projects/${edited.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(edited),
+    });
+
+    const result = await res.json();
+    if (!result.success) {
+      throw new Error(result.error || "Error al actualizar el proyecto en el servidor");
+    }
+
+    const updated: ProjectItem = result.data;
+    setAllProjects((prev) => prev.map((p) => (p.id === edited.id ? updated : p)));
+    return updated;
   };
 
-  const editProject = (edited: ProjectItem) => {
-    const updated = allProjects.map((p) => (p.id === edited.id ? edited : p));
-    setAllProjects(updated);
-    persist(updated);
-  };
+  const deleteProject = async (id: string) => {
+    const res = await fetchWithCsrf(`/api/projects/${id}`, {
+      method: "DELETE",
+    });
 
-  const deleteProject = (id: string) => {
-    const updated = allProjects.filter((p) => p.id !== id);
-    setAllProjects(updated);
-    // Remover del storage si era local
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const saved: ProjectItem[] = raw ? JSON.parse(raw) : [];
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(saved.filter((p) => p.id !== id))
-      );
-      window.dispatchEvent(new Event("devurity-projects-changed"));
-    } catch {}
+    const result = await res.json();
+    if (!result.success) {
+      throw new Error(result.error || "Error al eliminar el proyecto del servidor");
+    }
+
+    setAllProjects((prev) => prev.filter((p) => p.id !== id));
   };
 
   // Filtros computados dinámicamente
