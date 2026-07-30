@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { IMAGES } from "@/public/images";
 import { useUpdates, type UpdateItem } from "@/hooks/useUpdates";
-
-// Types are provided by the hook import
 
 // ============ COLOR UNIFICADO ============
 const ACCENT_COLOR = "#b20403";
@@ -15,7 +13,6 @@ const ACCENT_COLOR = "#b20403";
 // ============ UTILIDADES DE FECHA ============
 const MONTHS_ES = ["ENE","FEB","MAR","ABR","MAY","JUN","JUL","AGO","SEP","OCT","NOV","DIC"];
 
-// "2024-03-15" → "15 MAR 2024"
 const dateInputToDisplay = (isoDate: string): string => {
   if (!isoDate) return "";
   const [year, month, day] = isoDate.split("-");
@@ -23,7 +20,6 @@ const dateInputToDisplay = (isoDate: string): string => {
   return `${day} ${MONTHS_ES[parseInt(month, 10) - 1]} ${year}`;
 };
 
-// "15 MAR 2024" → "2024-03-15"
 const displayToDateInput = (display: string): string => {
   if (!display) return "";
   const parts = display.trim().split(" ");
@@ -34,7 +30,6 @@ const displayToDateInput = (display: string): string => {
   return `${year}-${String(monthIdx + 1).padStart(2, "0")}-${day.padStart(2, "0")}`;
 };
 
-// Fecha de hoy en formato ISO "YYYY-MM-DD"
 const todayISO = (): string => {
   const now = new Date();
   const y = now.getFullYear();
@@ -42,19 +37,6 @@ const todayISO = (): string => {
   const d = String(now.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 };
-
-// ============ IMÁGENES DE EJEMPLO ============
-const MOCK_IMAGES = [
-  "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop",
-];
-
-// Datos iniciales provienen de la DB (pasados como props desde el Server Component)
 
 // ============ FUNCIONES AUXILIARES ============
 const isExternalHref = (href?: string): boolean =>
@@ -64,23 +46,21 @@ const isExternalHref = (href?: string): boolean =>
   !href.startsWith("#");
 
 // ============ FORMULARIO VACÍO ============
-// dateInput almacena "YYYY-MM-DD" (lo que acepta <input type="date">)
 const emptyForm = {
   title: "",
-  excerpt: "",
-  dateInput: "",   // ← solo números vía picker nativo
+  summary: "",
+  displayDate: "",
   tags: "",
   href: "",
-  imageUrl: "",
 };
 
-// ============ PANEL DE EDICIÓN LATERAL ============
+// ============ PANEL DE EDICIÓN ============
 interface EditPanelProps {
   isOpen: boolean;
   onClose: () => void;
   updates: UpdateItem[];
-  onAdd: (update: UpdateItem) => void;
-  onEdit: (update: UpdateItem) => void;
+  onAdd: (p: UpdateItem) => void;
+  onEdit: (p: UpdateItem) => void;
   onDelete: (id: string) => void;
 }
 
@@ -90,85 +70,73 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
   const [formData, setFormData] = useState(emptyForm);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  // Reset al abrir
-  useEffect(() => {
-    if (isOpen) {
-      setMode("list");
-      setEditingItem(null);
-      setFormData(emptyForm);
-      setConfirmDeleteId(null);
-    }
-  }, [isOpen]);
+  const resetToList = () => {
+    setMode("list");
+    setEditingItem(null);
+    setFormData(emptyForm);
+  };
 
   const handleStartEdit = (item: UpdateItem) => {
     setEditingItem(item);
     setFormData({
       title: item.title,
-      excerpt: item.excerpt,
-      dateInput: displayToDateInput(item.displayDate), // "15 MAR 2024" → "2024-03-15"
+      summary: item.excerpt,
+      displayDate: displayToDateInput(item.displayDate),
       tags: item.tags.join(", "),
       href: item.href || "",
-      imageUrl: item.imageUrl || "",
     });
     setMode("edit");
   };
 
   const handleStartAdd = () => {
     setEditingItem(null);
-    setFormData({ ...emptyForm, dateInput: todayISO() }); // pre-rellena con hoy
+    setFormData({ ...emptyForm, displayDate: todayISO() });
     setMode("add");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const tagsArray = formData.tags.split(",").map((t) => t.trim()).filter(Boolean);
-
-    // Convierte "2024-03-15" → "15 MAR 2024" para mostrar
-    const displayDate = formData.dateInput
-      ? dateInputToDisplay(formData.dateInput)
+    const tagsArray = formData.tags.split(",").map((s) => s.trim()).filter(Boolean);
+    const displayDate = formData.displayDate
+      ? dateInputToDisplay(formData.displayDate)
       : dateInputToDisplay(todayISO());
 
     if (mode === "add") {
       const newUpdate: UpdateItem = {
-        id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         title: formData.title,
-        excerpt: formData.excerpt,
+        excerpt: formData.summary,
         displayDate,
         tags: tagsArray,
         href: formData.href || "#",
-        imageUrl: formData.imageUrl || MOCK_IMAGES[Math.floor(Math.random() * MOCK_IMAGES.length)],
         borderColor: ACCENT_COLOR,
         isLocal: true,
       };
       onAdd(newUpdate);
     } else if (mode === "edit" && editingItem) {
-      const updated: UpdateItem = {
+      onEdit({
         ...editingItem,
         title: formData.title,
-        excerpt: formData.excerpt,
-        displayDate: formData.dateInput ? displayDate : editingItem.displayDate,
+        excerpt: formData.summary,
+        displayDate: formData.displayDate ? displayDate : editingItem.displayDate,
         tags: tagsArray,
         href: formData.href || editingItem.href,
-        imageUrl: formData.imageUrl || editingItem.imageUrl,
         borderColor: ACCENT_COLOR,
-      };
-      onEdit(updated);
+      });
     }
-
-    setMode("list");
-    setFormData(emptyForm);
-    setEditingItem(null);
+    resetToList();
   };
 
   if (!isOpen) return null;
 
+  const inputCls =
+    "w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white font-ubuntu focus:border-red-500/50 focus:outline-none transition-colors text-sm";
+  const labelCls = "block font-ubuntu text-xs text-white/50 uppercase tracking-wider";
+
   return (
     <>
       {/* Overlay */}
-      <div
-        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel lateral */}
       <aside className="fixed top-0 right-0 z-50 h-full w-full max-w-md bg-zinc-950 border-l border-white/10 shadow-2xl flex flex-col overflow-hidden">
@@ -177,7 +145,7 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
           <div className="flex items-center gap-3">
             {mode !== "list" && (
               <button
-                onClick={() => setMode("list")}
+                onClick={resetToList}
                 className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
               >
                 <svg className="w-4 h-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -186,9 +154,9 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
               </button>
             )}
             <h3 className="font-orbitron text-lg font-bold text-white">
-              {mode === "list" && "Gestionar noticias"}
-              {mode === "add" && "Agregar noticia"}
-              {mode === "edit" && "Editar noticia"}
+              {mode === "list" && "Gestionar actualizaciones"}
+              {mode === "add" && "Agregar actualización"}
+              {mode === "edit" && "Editar actualización"}
             </h3>
           </div>
           <button
@@ -201,13 +169,10 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
           </button>
         </div>
 
-        {/* Contenido del panel */}
         <div className="flex-1 overflow-y-auto">
-
           {/* ——— LISTA ——— */}
           {mode === "list" && (
             <div className="p-5 space-y-4">
-              {/* Botón agregar */}
               <button
                 onClick={handleStartAdd}
                 className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl border border-dashed border-red-600/40 hover:border-red-600/80 bg-red-600/5 hover:bg-red-600/10 transition-all group"
@@ -218,14 +183,13 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
                   </svg>
                 </div>
                 <span className="font-ubuntu text-sm text-white/70 group-hover:text-white transition-colors uppercase tracking-wider">
-                  Agregar nueva noticia
+                  Agregar nueva actualización
                 </span>
               </button>
 
-              {/* Lista de noticias */}
               <div className="space-y-3">
                 <p className="font-ubuntu text-xs uppercase tracking-widest text-white/30 px-1">
-                  {updates.length} noticias
+                  {updates.length} actualizaciones
                 </p>
                 {updates.map((item) => (
                   <div
@@ -233,7 +197,7 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
                     className="group flex items-start gap-3 p-4 rounded-2xl border border-white/5 bg-white/[0.02] hover:border-white/10 hover:bg-white/[0.04] transition-all"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         {item.isLocal && (
                           <span className="text-[10px] text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-ubuntu uppercase tracking-wider">
                             local
@@ -245,14 +209,17 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
                       </div>
                       <p className="font-orbitron text-sm text-white truncate">{item.title}</p>
                       <p className="font-ubuntu text-xs text-white/40 mt-1 line-clamp-2">{item.excerpt}</p>
-                      {item.imageUrl && (
-                        <p className="font-ubuntu text-[10px] text-red-400/60 mt-1 truncate">
-                          📸 {item.imageUrl.substring(0, 30)}...
-                        </p>
+                      {item.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {item.tags.slice(0, 3).map((tag) => (
+                            <span key={tag} className="text-[10px] text-white/30 border border-white/10 px-1.5 py-0.5 rounded-full">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
 
-                    {/* Acciones */}
                     <div className="flex flex-col gap-2 flex-shrink-0">
                       <button
                         onClick={() => handleStartEdit(item)}
@@ -267,12 +234,9 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
                       {confirmDeleteId === item.id ? (
                         <div className="flex flex-col gap-1">
                           <button
-                            onClick={() => {
-                              onDelete(item.id);
-                              setConfirmDeleteId(null);
-                            }}
+                            onClick={() => { onDelete(item.id); setConfirmDeleteId(null); }}
                             className="w-8 h-8 rounded-full bg-red-600/30 hover:bg-red-600/60 border border-red-600/40 flex items-center justify-center transition-colors"
-                            title="Confirmar eliminación"
+                            title="Confirmar"
                           >
                             <svg className="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -310,99 +274,74 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
           {(mode === "add" || mode === "edit") && (
             <form onSubmit={handleSubmit} className="p-5 space-y-5">
               <div className="space-y-2">
-                <label className="block font-ubuntu text-xs text-white/50 uppercase tracking-wider">
-                  Título *
-                </label>
+                <label className={labelCls}>Título *</label>
                 <input
                   type="text"
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white font-ubuntu focus:border-red-500/50 focus:outline-none transition-colors text-sm"
+                  className={inputCls}
                   placeholder="Ej: Lanzamiento del nuevo proyecto"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block font-ubuntu text-xs text-white/50 uppercase tracking-wider">
-                  Descripción *
-                </label>
+                <label className={labelCls}>Descripción *</label>
                 <textarea
                   required
-                  value={formData.excerpt}
-                  onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+                  value={formData.summary}
+                  onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
                   rows={4}
-                  className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white font-ubuntu focus:border-red-500/50 focus:outline-none transition-colors text-sm resize-none"
+                  className={`${inputCls} resize-none`}
                   placeholder="Breve descripción de la actualización..."
                 />
               </div>
 
-              {/* ——— CAMPO FECHA: solo números vía picker nativo ——— */}
               <div className="space-y-2">
-                <label className="block font-ubuntu text-xs text-white/50 uppercase tracking-wider">
-                  Fecha
-                </label>
+                <label className={labelCls}>Fecha</label>
                 <input
                   type="date"
-                  value={formData.dateInput}
-                  onChange={(e) => setFormData({ ...formData, dateInput: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white font-ubuntu focus:border-red-500/50 focus:outline-none transition-colors text-sm [color-scheme:dark]"
+                  value={formData.displayDate}
+                  onChange={(e) => setFormData({ ...formData, displayDate: e.target.value })}
+                  className={`${inputCls} [color-scheme:dark]`}
                 />
-                {/* Preview del formato final */}
-                {formData.dateInput && (
+                {formData.displayDate && (
                   <p className="text-xs text-white/40">
                     Se mostrará como:{" "}
                     <span className="text-red-400 font-semibold">
-                      {dateInputToDisplay(formData.dateInput)}
+                      {dateInputToDisplay(formData.displayDate)}
                     </span>
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <label className="block font-ubuntu text-xs text-white/50 uppercase tracking-wider">
-                  Tags (separados por coma) *
-                </label>
+                <label className={labelCls}>Tags (separados por coma) *</label>
                 <input
                   type="text"
                   required
                   value={formData.tags}
                   onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white font-ubuntu focus:border-red-500/50 focus:outline-none transition-colors text-sm"
+                  className={inputCls}
                   placeholder="evento, taller, noticia"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block font-ubuntu text-xs text-white/50 uppercase tracking-wider">
-                  Link (opcional)
-                </label>
+                <label className={labelCls}>Link (opcional)</label>
                 <input
                   type="text"
                   value={formData.href}
                   onChange={(e) => setFormData({ ...formData, href: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white font-ubuntu focus:border-red-500/50 focus:outline-none transition-colors text-sm"
+                  className={inputCls}
                   placeholder="https://..."
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block font-ubuntu text-xs text-white/50 uppercase tracking-wider">
-                  URL de la imagen (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white font-ubuntu focus:border-red-500/50 focus:outline-none transition-colors text-sm"
-                  placeholder="https://imagen.ejemplo.jpg"
                 />
               </div>
 
               <div className="flex gap-3 pt-2 border-t border-white/10">
                 <button
                   type="button"
-                  onClick={() => setMode("list")}
+                  onClick={resetToList}
                   className="flex-1 py-3 border border-white/20 hover:border-white/40 text-white/70 hover:text-white rounded-full font-ubuntu text-xs uppercase tracking-wider transition-all"
                 >
                   Cancelar
@@ -422,7 +361,7 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
   );
 }
 
-// ============ COMPONENTE PRINCIPAL ============
+// ============ PÁGINA PRINCIPAL ============
 interface UpdatesPageClientProps {
   initialData: UpdateItem[];
 }
@@ -430,26 +369,43 @@ interface UpdatesPageClientProps {
 export default function UpdatesPageClient({ initialData }: UpdatesPageClientProps) {
   const { allUpdates, addUpdate, editUpdate, deleteUpdate } = useUpdates(initialData);
   const [visibleCount, setVisibleCount] = useState(6);
+  const [isLoading, setIsLoading] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const { user } = useAuthContext();
   const canEdit = user?.role === "admin" || user?.role === "content_manager";
 
-  const highlight = allUpdates[0];
-  const timeline = allUpdates.slice(1);
-  const quickAgendaItems = allUpdates.slice(0, 12);
-  const totalUpdates = allUpdates.length;
+  const sortedUpdates = [...allUpdates].sort(
+    (a, b) => {
+      const dateA = new Date(a.displayDate);
+      const dateB = new Date(b.displayDate);
+      return dateB.getTime() - dateA.getTime();
+    }
+  );
+
+  const highlight = sortedUpdates[0];
+  const timeline = sortedUpdates.slice(1);
+  const quickPanelUpdates = sortedUpdates.slice(0, 12);
+  const totalUpdates = sortedUpdates.length;
+  const currentYear = new Date().getFullYear();
+
   const hasMore = visibleCount < timeline.length;
   const visibleTimeline = timeline.slice(0, visibleCount);
 
   const handleLoadMore = () => {
-    setVisibleCount((prev) => Math.min(prev + 6, timeline.length));
+    setIsLoading(true);
+    setTimeout(() => {
+      setVisibleCount((prev) => Math.min(prev + 6, timeline.length));
+      setIsLoading(false);
+    }, 500);
   };
 
   const handleLoadAll = () => {
-    setVisibleCount(timeline.length);
+    setIsLoading(true);
+    setTimeout(() => {
+      setVisibleCount(timeline.length);
+      setIsLoading(false);
+    }, 500);
   };
-
-  // Local updates and persistence handled by `useUpdates` hook
 
   const highlightHref = highlight?.href || "#";
   const highlightIsExternal = isExternalHref(highlightHref);
@@ -490,7 +446,7 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
 
           <div className="text-center space-y-6">
             <span className="inline-flex items-center rounded-full border border-white/10 px-6 py-2 text-sm font-ubuntu uppercase tracking-[0.2em] text-white/80 bg-black/20 backdrop-blur-sm animate-fade-in">
-              Actualizaciones del semillero
+              Actualizaciones {currentYear}
             </span>
             <h1 className="font-orbitron font-bold text-6xl md:text-8xl lg:text-9xl text-white tracking-wider text-center animate-fade-in relative">
               <span className="bg-gradient-to-r from-white via-gray-300 to-white bg-clip-text text-transparent animate-gradient-x">
@@ -524,7 +480,7 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
       </section>
 
       {/* ═══ Sección destacada + Agenda rápida ═══ */}
-      {highlight && <section className="relative bg-black py-24 -mt-px">
+      <section className="relative bg-black py-24 -mt-px">
         <div className="container mx-auto px-6 md:px-12">
           <div className="grid lg:grid-cols-[1.3fr_0.7fr] gap-16 items-start">
 
@@ -540,16 +496,19 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
                 </div>
               </div>
               <span className="inline-flex items-center rounded-full border border-white/10 px-6 py-2 text-sm font-ubuntu uppercase tracking-[0.2em] text-red-500 bg-black/20 backdrop-blur-sm">
-                Ultima Actualización
+                Última Actualización
               </span>
               <h2 className="text-6xl font-bold tracking-wider mb-6">
-                <span className="text-white">{highlight.title}</span>
+                <span className="text-white">{highlight?.title}</span>
                 <div className="h-1 w-24 bg-[#b20403] mt-2" />
               </h2>
               <div className="border-l-4 pl-6 space-y-4" style={{ borderColor: ACCENT_COLOR }}>
-                <p className="text-lg text-gray-300 leading-relaxed">{highlight.excerpt}</p>
+                <p className="text-lg text-gray-300 leading-relaxed">{highlight?.excerpt}</p>
                 <div className="flex flex-wrap gap-2 pt-2">
-                  {highlight.tags.map((tag) => (
+                  <span className="text-xs font-ubuntu uppercase tracking-wider border px-3 py-1.5 rounded-full bg-red-600/20 border-red-600/40 text-red-400">
+                    DESTACADO
+                  </span>
+                  {highlight?.tags.map((tag) => (
                     <span key={tag} className="rounded-full border border-white/10 px-4 py-1.5 text-xs text-white/70">
                       #{tag}
                     </span>
@@ -559,32 +518,36 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
               <div className="flex flex-col sm:flex-row gap-4 pt-6">
                 <div className="flex-1 rounded-2xl border border-white/10 bg-black/40 p-6 backdrop-blur-sm">
                   <p className="font-ubuntu text-xs uppercase tracking-[0.25em] text-white/50">Publicado</p>
-                  <p className="font-orbitron text-2xl text-white mt-2">{highlight.displayDate}</p>
+                  <p className="font-orbitron text-2xl text-white mt-2">{highlight?.displayDate}</p>
                 </div>
                 <div className="flex-1 rounded-2xl border border-white/10 bg-black/40 p-6 backdrop-blur-sm">
-                  <p className="font-ubuntu text-xs uppercase tracking-[0.25em] text-white/50">Total</p>
+                  <p className="font-ubuntu text-xs uppercase tracking-[0.25em] text-white/50">Total actualizaciones</p>
                   <p className="font-orbitron text-2xl text-white mt-2">{totalUpdates}</p>
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                {highlightIsExternal ? (
-                  <a href={highlightHref} target="_blank" rel="noopener noreferrer"
-                    className="group inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(178,4,3,0.5)]"
-                  >
-                    Ver detalle completo
-                    <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </a>
-                ) : (
-                  <Link href={highlightHref}
-                    className="group inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(178,4,3,0.5)]"
-                  >
-                    Ver detalle completo
-                    <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </Link>
+                {highlight?.href && (
+                  <>
+                    {highlightIsExternal ? (
+                      <a href={highlightHref} target="_blank" rel="noopener noreferrer"
+                        className="group inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(178,4,3,0.5)]"
+                      >
+                        Ver detalle completo
+                        <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                      </a>
+                    ) : (
+                      <Link href={highlightHref}
+                        className="group inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(178,4,3,0.5)]"
+                      >
+                        Ver detalle completo
+                        <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                      </Link>
+                    )}
+                  </>
                 )}
                 <a href="#historial"
                   className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:bg-white/5"
@@ -600,15 +563,15 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
               <div className="relative rounded-3xl border border-white/10 bg-black/40 p-8 backdrop-blur-sm">
                 <div className="flex flex-wrap items-end justify-between gap-3 mb-8">
                   <div>
-                    <h3 className="font-orbitron text-2xl font-bold text-white">Agenda rápida</h3>
-                    <p className="mt-2 font-ubuntu text-sm text-white/50">Ordenada por fecha más reciente</p>
+                    <h3 className="font-orbitron text-2xl font-bold text-white">Actualizaciones recientes</h3>
+                    <p className="mt-2 font-ubuntu text-sm text-white/50">Ordenado por fecha más reciente</p>
                   </div>
                   <span className="font-ubuntu text-sm text-white/60 bg-white/5 px-4 py-2 rounded-full">
-                    {quickAgendaItems.length} ítems
+                    {quickPanelUpdates.length} ítems
                   </span>
                 </div>
                 <ul className="space-y-4 max-h-[32rem] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-red-600/50 scrollbar-track-white/5">
-                  {quickAgendaItems.map((item, index) => {
+                  {quickPanelUpdates.map((item, index) => {
                     const itemHref = item?.href || "#";
                     const isExternal = isExternalHref(itemHref);
 
@@ -662,9 +625,9 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
             </aside>
           </div>
         </div>
-      </section>}
+      </section>
 
-      {/* ═══ Historial ═══ */}
+      {/* ═══ Grid de actualizaciones ═══ */}
       <section id="historial" className="relative bg-black py-24">
         <div className="container mx-auto px-6 md:px-12">
 
@@ -672,7 +635,7 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
           <div className="text-center mb-16">
             <h2 className="text-6xl md:text-7xl font-bold tracking-wider mb-6">HISTORIAL</h2>
             <p className="text-lg text-white/60 font-ubuntu max-w-2xl mx-auto">
-              Noticias anteriores y eventos que marcan el ritmo del semillero.
+              Noticias y eventos que marcan el ritmo del semillero.
             </p>
             <div className="flex items-center justify-center gap-2 mt-6">
               <div className="flex gap-1">
@@ -695,7 +658,7 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
-                <span>Editar noticias</span>
+                <span>Gestionar actualizaciones</span>
               </button>
             )}
             <div className="text-white/60 font-ubuntu text-sm">
@@ -713,45 +676,35 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
                 <article
                   className="group relative h-full flex flex-col rounded-3xl border border-white/10 bg-black/40 backdrop-blur-sm transition-all duration-500 hover:scale-[1.02] hover:border-[#b20403]/60 hover:shadow-[0_25px_60px_-20px_rgba(178,4,3,0.55)] overflow-hidden"
                 >
-                  {/* Imagen de la noticia */}
-                  <div className="relative w-full h-48 overflow-hidden">
-                    <Image
-                      src={item.imageUrl || MOCK_IMAGES[0]}
-                      alt={item.title}
-                      fill
-                      className="object-cover transition-transform duration-700 group-hover:scale-110"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-
-                    {/* Badge local */}
-                    {item.isLocal && (
-                      <div className="absolute top-4 right-4 z-10">
-                        <span className="inline-flex items-center gap-1 bg-[#b20403] text-white text-xs px-3 py-1.5 rounded-full">
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                          </svg>
-                          LOCAL
+                  {/* Header con fecha y tags */}
+                  <div className="p-6 pb-0">
+                    <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+                      <span className={`text-xs font-ubuntu uppercase tracking-wider border px-3 py-1.5 rounded-full bg-red-600/20 border-red-600/40 text-red-400`}>
+                        NOTICIA
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {item.isLocal && (
+                          <span className="text-[10px] text-red-400 border border-red-500/30 px-2 py-1 rounded-full font-ubuntu uppercase">
+                            local
+                          </span>
+                        )}
+                        <span className="text-xs font-orbitron uppercase tracking-[0.3em] text-white/50">
+                          {item.displayDate}
                         </span>
                       </div>
-                    )}
-
-                    {/* Fecha en la imagen */}
-                    <div className="absolute bottom-4 left-4">
-                      <span className="font-ubuntu text-sm font-bold text-white bg-red-600/80 px-4 py-2 rounded-full backdrop-blur-sm">
-                        {item.displayDate}
-                      </span>
                     </div>
                   </div>
 
-                  {/* Contenido de la tarjeta */}
-                  <div className="flex-1 p-6 space-y-4">
+                  {/* Contenido */}
+                  <div className="flex-1 p-6 pt-2 space-y-4">
                     <h3 className="font-orbitron text-2xl font-bold text-white group-hover:text-red-500 transition-colors line-clamp-2">
                       {item.title}
                     </h3>
                     <p className="font-ubuntu text-white/70 leading-relaxed line-clamp-3">
                       {item.excerpt}
                     </p>
+
+                    {/* Tags */}
                     <div className="flex flex-wrap gap-2 pt-2">
                       {item.tags.map((tag) => (
                         <span key={tag} className="text-xs text-white/50 border border-white/10 px-3 py-1.5 rounded-full group-hover:border-red-500/20 transition-colors">
@@ -779,7 +732,7 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
           </div>
 
           {/* Ver más */}
-          {hasMore && (
+          {timeline.length > 6 && (
             <div className="mt-16 space-y-6">
               <div className="max-w-2xl mx-auto">
                 <div className="flex justify-between text-sm text-white/60 mb-2 font-ubuntu">
@@ -794,23 +747,48 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <>
-                  <button
-                    onClick={handleLoadMore}
-                    className="group inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(178,4,3,0.5)]"
-                  >
-                    <span>Ver más</span>
-                    <svg className="w-5 h-5 transition-transform group-hover:translate-y-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={handleLoadAll}
-                    className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:bg-white/5"
-                  >
-                    Ver todas ({timeline.length - visibleCount} restantes)
-                  </button>
-                </>
+                {hasMore ? (
+                  <>
+                    <button
+                      onClick={handleLoadMore}
+                      disabled={isLoading}
+                      className="group inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(178,4,3,0.5)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    >
+                      {isLoading ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          <span>Cargando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Ver más</span>
+                          <svg className="w-5 h-5 transition-transform group-hover:translate-y-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                          </svg>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleLoadAll}
+                      disabled={isLoading}
+                      className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Ver todas ({timeline.length - visibleCount} restantes)
+                    </button>
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="inline-flex items-center gap-3 text-white/60">
+                      <svg className="w-6 h-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="font-ubuntu">Has visto todas las actualizaciones disponibles</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
