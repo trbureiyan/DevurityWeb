@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { useCsrf } from "@/hooks/useCsrf";
+import { formatDateCO } from "@/lib/utils/date";
 
 interface QRData {
   userId: string;
@@ -57,15 +58,6 @@ interface Filters {
   program: string;
 }
 
-function formatDateCO(isoDate: string): string {
-  return new Date(isoDate).toLocaleDateString("es-CO", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-}
-
 export default function AttendancesPage() {
   const _router = useRouter();
   const [scanning, setScanning] = useState(false);
@@ -79,13 +71,21 @@ export default function AttendancesPage() {
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [showCameraSelector, setShowCameraSelector] = useState(false);
   const { csrfToken, refetch: refetchCsrf } = useCsrf();
-  const [lastScanTime, setLastScanTime] = useState<number>(0);
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isStoppingRef = useRef(false);
-  const isScanLockedRef = useRef(false);
   const cooldownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const SCAN_COOLDOWN = 3000; // 3 seconds between scans
+
+  const lastScanTimeRef = useRef<number>(0);
+  const scanningRef = useRef<boolean>(false);
+  const csrfTokenRef = useRef<string | null>(null);
+  const handleRetryRef = useRef<() => Promise<void>>(async () => {});
+
+  useEffect(() => {
+    csrfTokenRef.current = csrfToken;
+  }, [csrfToken]);
+
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"scanner" | "records">("scanner");
@@ -130,7 +130,7 @@ export default function AttendancesPage() {
       }
     } finally {
       setScanning(false);
-      isScanLockedRef.current = false;
+      scanningRef.current = false;
       setCameraActive(false);
       if (clearInstance) {
         scannerRef.current = null;
@@ -144,20 +144,20 @@ export default function AttendancesPage() {
       const now = Date.now();
       
       // Check cooldown period
-      if (now - lastScanTime < SCAN_COOLDOWN) {
+      if (now - lastScanTimeRef.current < SCAN_COOLDOWN) {
         console.log("Scan cooldown active, skipping...");
         return;
       }
       
       // El estado de React tarda en actualizarse; este ref bloquea lecturas simultáneas.
-      if (isScanLockedRef.current) {
+      if (scanningRef.current) {
         console.log("Scan already in progress, skipping...");
         return;
       }
-      isScanLockedRef.current = true;
-
-      setLastScanTime(now);
+      scanningRef.current = true;
       setScanning(true);
+
+      lastScanTimeRef.current = now;
       setError("");
       setSuccess("");
       
@@ -195,8 +195,6 @@ export default function AttendancesPage() {
           setError(
             "QR inválido. El usuario debe generar un nuevo código desde su perfil.",
           );
-          setScanning(false);
-          isScanLockedRef.current = false;
           return;
         }
 
@@ -208,98 +206,57 @@ export default function AttendancesPage() {
           !qrData.expiresAt
         ) {
           setError("QR inválido - faltan datos requeridos");
-          setScanning(false);
-          isScanLockedRef.current = false;
           return;
         }
 
         // Verificar que el QR no haya expirado
-        const now = Date.now();
-        if (now > qrData.expiresAt) {
+        const scanTimeNow = Date.now();
+        if (scanTimeNow > qrData.expiresAt) {
           setError("QR expirado. Por favor, genera uno nuevo desde tu perfil.");
-          setScanning(false);
-          isScanLockedRef.current = false;
           return;
         }
 
         try {
-          try {
-            // Verificar que tengamos token CSRF
-            if (!csrfToken) {
-              setError("Token CSRF no disponible. Recargando...");
-              setTimeout(() => window.location.reload(), 2000);
-              setScanning(false);
-              isScanLockedRef.current = false;
-              return;
-            }
-            
-            // Registrar asistencia (requiere token CSRF y cookie de sesión)
-            const res = await fetch("/api/admin/attendances", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-Token": csrfToken,
-              },
-              credentials: "include",
-              body: JSON.stringify({
-                qrData: qrData,
+          // Verificar que tengamos token CSRF
+          const token = csrfTokenRef.current;
+          if (!token) {
+            setError("Token CSRF no disponible. Recargando...");
+            setTimeout(() => window.location.reload(), 2000);
+            return;
+          }
+          
+          // Registrar asistencia (requiere token CSRF y cookie de sesión)
+          const res = await fetch("/api/admin/attendances", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": token,
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              qrData: qrData,
+            }),
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            setSuccess("¡Asistencia registrada exitosamente!");
+            setLastScanned({
+              id: data.id || qrData.userId,
+              usuario: data.usuario?.nombre || "Usuario",
+              correo: data.usuario?.correo || "",
+              fecha: new Date().toLocaleString("es-CO", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
               }),
             });
-
-            const data = await res.json();
-
-            if (res.ok) {
-              setSuccess("¡Asistencia registrada exitosamente!");
-              setLastScanned({
-                id: data.id || qrData.userId,
-                usuario: data.usuario?.nombre || "Usuario",
-                correo: data.usuario?.correo || "",
-                fecha: new Date().toLocaleString("es-CO", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }),
-              });
-              
-              // Resume scanner after delay
-              setTimeout(() => {
-                isScanLockedRef.current = false;
-                if (scannerRef.current && cameraActive) {
-                  try {
-                    scannerRef.current.resume();
-                  } catch (err) {
-                    console.log("Could not resume scanner:", err);
-                  }
-                }
-              }, 2000);
-            } else {
-              if (res.status === 409) {
-                setError("Esta asistencia ya fue registrada anteriormente");
-              } else {
-                setError(data.error || "Error al registrar asistencia");
-              }
-              
-              // Resume scanner after error with delay
-              setTimeout(() => {
-                isScanLockedRef.current = false;
-                if (scannerRef.current && cameraActive) {
-                  try {
-                    scannerRef.current.resume();
-                  } catch (err) {
-                    console.log("Could not resume scanner:", err);
-                  }
-                }
-              }, 2000);
-            }
-          } catch (err) {
-            console.error("Error during fetch:", err);
-            setError("Error de conexión al registrar asistencia");
             
-            // Resume scanner after error
+            // Resume scanner after delay
             setTimeout(() => {
-              isScanLockedRef.current = false;
               if (scannerRef.current && cameraActive) {
                 try {
                   scannerRef.current.resume();
@@ -308,23 +265,48 @@ export default function AttendancesPage() {
                 }
               }
             }, 2000);
-          } finally {
-            setScanning(false);
+          } else {
+            if (res.status === 409) {
+              setError("Esta asistencia ya fue registrada anteriormente");
+            } else {
+              setError(data.error || "Error al registrar asistencia");
+            }
+            
+            // Resume scanner after error with delay
+            setTimeout(() => {
+              if (scannerRef.current && cameraActive) {
+                try {
+                  scannerRef.current.resume();
+                } catch (err) {
+                  console.log("Could not resume scanner:", err);
+                }
+              }
+            }, 2000);
           }
         } catch (err) {
-          console.error("Error scanning QR:", err);
-          setError("Error interno del servidor");
-          setScanning(false);
-          isScanLockedRef.current = false;
+          console.error("Error during fetch:", err);
+          setError("Error de conexión al registrar asistencia");
+          
+          // Resume scanner after error
+          setTimeout(() => {
+            if (scannerRef.current && cameraActive) {
+              try {
+                scannerRef.current.resume();
+              } catch (err) {
+                console.log("Could not resume scanner:", err);
+              }
+            }
+          }, 2000);
         }
       } catch (err) {
         console.error("Error scanning QR:", err);
         setError("Error interno del servidor");
+      } finally {
+        scanningRef.current = false;
         setScanning(false);
-        isScanLockedRef.current = false;
       }
     },
-    [lastScanTime, SCAN_COOLDOWN, csrfToken, cameraActive],
+    [SCAN_COOLDOWN, cameraActive],
   );
 
   const stopScanner = useCallback(() => {
@@ -402,7 +384,11 @@ export default function AttendancesPage() {
     );
 
     // Ensure we have a valid selected camera
-    if (!selectedCameraId || !cameras.includes(selectedCameraId)) {
+    let activeCameraId = selectedCameraId;
+    if (activeCameraId && cameras.includes(activeCameraId)) {
+      // already valid
+    } else if (cameras.length > 0) {
+      activeCameraId = cameras[0];
       setSelectedCameraId(cameras[0]);
     }
 
@@ -432,7 +418,7 @@ export default function AttendancesPage() {
         qrbox: getQrBoxSize(),
         aspectRatio: 1.0,
         videoConstraints: {
-          deviceId: selectedCameraId ? { exact: selectedCameraId } : undefined,
+          deviceId: activeCameraId ? { exact: activeCameraId } : undefined,
           // On mobile use lower ideal resolution to reduce camera handoffs
           width: { ideal: window.innerWidth > 720 ? 1280 : 640, min: 480 },
           height: { ideal: window.innerWidth > 720 ? 720 : 480, min: 320 },
@@ -445,7 +431,7 @@ export default function AttendancesPage() {
 
       // This is where the browser will show the permission dialog
       await scanner.start(
-        selectedCameraId || { facingMode: "environment" },
+        activeCameraId || { facingMode: "environment" },
         config,
         async (decodedText) => {
           console.log("QR detected:", decodedText.substring(0, 50) + "...");
@@ -512,7 +498,7 @@ export default function AttendancesPage() {
               setTimeout(() => {
                 if (!video.videoWidth && !video.videoHeight) {
                   console.log("Video still not playing - attempting restart");
-                  handleRetry();
+                  handleRetryRef.current();
                 }
               }, 2000);
             }
@@ -523,7 +509,7 @@ export default function AttendancesPage() {
               const stillNoVideo = document.querySelector("#reader video");
               if (!stillNoVideo) {
                 console.log("Still no video - attempting restart");
-                handleRetry();
+                handleRetryRef.current();
               }
             }, 1500);
           }
@@ -570,8 +556,7 @@ export default function AttendancesPage() {
         }, 500);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleScan, selectedCameraId, getAvailableCameras]);
+  }, [handleScan, selectedCameraId, getAvailableCameras, safeStopAndClear]);
 
   // Reinicia el flujo completo del escáner tras fallos o cambios.
   const handleRetry = useCallback(async () => {
@@ -596,6 +581,10 @@ export default function AttendancesPage() {
       startScanner();
     }, 800);
   }, [startScanner, safeStopAndClear]);
+
+  useEffect(() => {
+    handleRetryRef.current = handleRetry;
+  }, [handleRetry]);
 
   const toggleCameraSelector = useCallback(() => {
     setShowCameraSelector(!showCameraSelector);
@@ -668,17 +657,30 @@ export default function AttendancesPage() {
       if (filters.program) params.set("program", filters.program);
 
       const res = await fetch(`/api/admin/attendances/export?${params.toString()}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Error al generar el archivo");
+      if (!res.ok) {
+        let errorMsg = "Error al generar el archivo";
+        try {
+          const errorData = await res.json();
+          if (errorData && errorData.error) errorMsg = errorData.error;
+        } catch { /* ignore */ }
+        throw new Error(errorMsg);
+      }
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
+      a.style.display = "none";
       a.href = url;
       a.download = `asistencias-${new Date().toISOString().split("T")[0]}.${format}`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
     } catch (err) {
       console.error("Export error:", err);
+      setRecordsError(err instanceof Error ? err.message : "Error al exportar");
     } finally {
       setExportLoading(false);
     }
