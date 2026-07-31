@@ -112,6 +112,7 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
         const newUpdate = {
           title: formData.title,
           excerpt: formData.summary,
+          publishedAt: new Date().toISOString(),
           displayDate,
           tags: tagsArray,
           href: formData.href || "#",
@@ -422,11 +423,7 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
   const canEdit = user?.role === "admin" || user?.role === "content_manager";
 
   const sortedUpdates = [...allUpdates].sort(
-    (a, b) => {
-      const dateA = new Date(a.displayDate);
-      const dateB = new Date(b.displayDate);
-      return dateB.getTime() - dateA.getTime();
-    }
+    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
   );
 
   const highlight = sortedUpdates[0];
