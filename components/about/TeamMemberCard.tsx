@@ -82,48 +82,44 @@ export default function TeamMemberCard({
         {/* Glow Effect on Hover (CSS instead of framer-motion) */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#ca2b26]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
+        {/* Stretched Link for profile navigation */}
+        <Link href={`/profile/${profileSlug}`} className="absolute inset-0 z-10" aria-label={`Ver perfil de ${name}`} />
+
         {/* Avatar Section */}
-        <Link href={`/profile/${profileSlug}`} className="block">
-          <div className="relative aspect-square overflow-hidden bg-zinc-800">
-            {showInitials ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-900">
-                <span className="text-5xl font-bold text-white/50">{getInitials(name)}</span>
-              </div>
-            ) : (
-              <Image
-                src={avatar}
-                alt={name}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                className="object-cover transition-transform duration-500 group-hover:scale-110"
-                onError={() => setImageError(true)}
-              />
-            )}
-            
-            {/* Overlay on hover */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            
-            {/* Role badge */}
-            <div className="absolute top-3 left-3 px-3 py-1 bg-[#ca2b26]/90 backdrop-blur-sm rounded-full">
-              <span className="text-xs font-semibold text-white uppercase tracking-wider">
-                {role}
-              </span>
+        <div className="relative aspect-square overflow-hidden bg-zinc-800">
+          {showInitials ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-700 to-zinc-900">
+              <span className="text-5xl font-bold text-white/50">{getInitials(name)}</span>
             </div>
+          ) : (
+            <Image
+              src={avatar}
+              alt={name}
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+              className="object-cover transition-transform duration-500 group-hover:scale-110"
+              onError={() => setImageError(true)}
+            />
+          )}
+          
+          {/* Overlay on hover */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          
+          {/* Role badge */}
+          <div className="absolute top-3 left-3 px-3 py-1 bg-[#ca2b26]/90 backdrop-blur-sm rounded-full">
+            <span className="text-xs font-semibold text-white uppercase tracking-wider">
+              {role}
+            </span>
           </div>
-        </Link>
+        </div>
 
         {/* Content Section */}
         <div className="p-6 space-y-4 relative z-10">
           {/* Name */}
           <div>
-            <Link 
-              href={`/profile/${profileSlug}`}
-              className="block group/name"
-            >
-              <h3 className="text-xl font-bold text-white group-hover/name:text-[#ca2b26] transition-colors">
-                {name}
-              </h3>
-            </Link>
+            <h3 className="text-xl font-bold text-white group-hover:text-[#ca2b26] transition-colors">
+              {name}
+            </h3>
             {tagline && (
               <p className="text-sm text-[#ca2b26] mt-1 font-mono">
                 {tagline}
@@ -154,13 +150,14 @@ export default function TeamMemberCard({
 
           {/* Social Links - Máximo 3 */}
           {socialLinks.length > 0 && (
-            <div className="flex items-center gap-3 pt-2 border-t border-zinc-800/50">
+            <div className="relative z-20 flex items-center gap-3 pt-2 border-t border-zinc-800/50">
               {socialLinks.slice(0, 3).map((link) => (
                 <a
                   key={`${link.icon}-${link.url}`}
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                   className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white transition-all duration-300 hover:scale-110"
                   title={link.label}
                   aria-label={link.label}
