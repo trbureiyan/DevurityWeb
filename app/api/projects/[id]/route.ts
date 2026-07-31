@@ -83,7 +83,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const focusAreas = Array.isArray(body.focusAreas) ? body.focusAreas : undefined;
     const stack = Array.isArray(body.stack) ? body.stack : undefined;
     const callToAction = body.callToAction;
-    const updatedAt = body.updatedAt;
 
     const updateData: import("@/repositories/projects/projects.repositories").UpdateProjectDTO = {};
     if (title) updateData.title = title;
@@ -91,14 +90,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (stage) updateData.stage = stage;
     if (focusAreas) updateData.focus_areas = focusAreas;
     if (stack) updateData.stack = stack;
-    
+
     if (callToAction !== undefined) {
       updateData.cta_label = callToAction?.label || null;
       updateData.cta_href = callToAction?.href || null;
-    }
-    
-    if (updatedAt) {
-      updateData.start_date = new Date(updatedAt);
     }
 
     // Actualizar en base de datos
