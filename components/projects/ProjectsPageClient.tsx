@@ -107,7 +107,7 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
     const callToAction =
       formData.ctaLabel && formData.ctaHref
         ? { label: formData.ctaLabel, href: formData.ctaHref }
-        : undefined;
+        : null;
 
     try {
       if (mode === "add") {
