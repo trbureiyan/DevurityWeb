@@ -7,6 +7,7 @@ import {
 import { extractTokenFromCookies, validateAuthToken } from "@/lib/auth/utils";
 import { revalidateTag } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
+import { validateHref } from "@/lib/utils/url";
 
 interface RouteParams {
   params: Promise<{
@@ -66,6 +67,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   if (!id) {
     return NextResponse.json({ success: false, error: "ID de actualización requerido" }, { status: 400 });
   }
+  if (!/^\d+$/.test(id)) {
+    return NextResponse.json({ success: false, error: "ID de actualización inválido" }, { status: 400 });
+  }
 
   // 2. Verificar existencia de la actualización
   try {
@@ -80,7 +84,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const description = (body.description || body.excerpt || "").trim();
     const displayDate = (body.displayDate || body.display_date || "").trim();
     const tags = Array.isArray(body.tags) ? body.tags : undefined;
-    const href = body.href !== undefined ? (body.href?.trim() || null) : undefined;
+    let href: string | null | undefined = undefined;
+    if (body.href !== undefined) {
+      const hrefResult = validateHref(body.href);
+      if (!hrefResult.ok) {
+        return NextResponse.json({ success: false, error: hrefResult.error }, { status: 400 });
+      }
+      href = hrefResult.href;
+    }
     const borderColor = body.borderColor || body.border_color;
     const isFeatured = body.isFeatured ?? body.is_featured;
     const status = body.status;
@@ -138,6 +149,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   if (!id) {
     return NextResponse.json({ success: false, error: "ID de actualización requerido" }, { status: 400 });
+  }
+  if (!/^\d+$/.test(id)) {
+    return NextResponse.json({ success: false, error: "ID de actualización inválido" }, { status: 400 });
   }
 
   // 2. Verificar existencia de la actualización
