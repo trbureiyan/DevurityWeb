@@ -24,7 +24,7 @@ export interface ProjectItem {
   callToAction?: {
     label: string;
     href: string;
-  };
+  } | null;
 }
 
 export interface ProjectFilters {
