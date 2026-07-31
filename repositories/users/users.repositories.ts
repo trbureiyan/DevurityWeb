@@ -415,8 +415,10 @@ export async function findActiveUsersForTeam() {
         skillsCount: user.user_skills?.length ?? 0
       });
       
-      return {
-        ...user,
+    // roles se extrae del spread para evitar que el objeto relación crudo entre en el resultado
+    const { roles: _roles, ...rest } = user;
+    return {
+        ...rest,
         id: user.id.toString(),
         skills: user.user_skills?.map((us) => us.skills?.name ?? 'Unknown') ?? [],
         role: getFriendlyRole(user.roles?.name ?? 'member'),
