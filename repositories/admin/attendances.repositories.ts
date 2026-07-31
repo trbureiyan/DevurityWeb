@@ -1,4 +1,5 @@
 import prisma from "../../lib/postgresDriver";
+import { Prisma } from "../../lib/generated/prisma";
 
 interface AttendanceFilters {
     dateFrom?: string;
@@ -7,9 +8,12 @@ interface AttendanceFilters {
     program?: string;
 }
 
-function buildWhere(filters: AttendanceFilters) {
+// máximo de filas por exportación para evitar materializar todo el histórico en memoria
+const MAX_EXPORT_ROWS = 1000;
+
+function buildWhere(filters: AttendanceFilters): Prisma.attendancesWhereInput {
     const { dateFrom, dateTo, search, program } = filters;
-    const where: Record<string, unknown> = {};
+    const where: Prisma.attendancesWhereInput = {};
 
     if (dateFrom || dateTo) {
         where.attendance_date = {
@@ -18,7 +22,7 @@ function buildWhere(filters: AttendanceFilters) {
         };
     }
 
-    const userFilter: Record<string, unknown> = {};
+    const userFilter: Prisma.usersWhereInput = {};
 
     if (search) {
         userFilter.OR = [
@@ -39,6 +43,13 @@ function buildWhere(filters: AttendanceFilters) {
     return where;
 }
 
+/**
+ * Retorna asistencias paginadas aplicando filtros opcionales de fecha, búsqueda y programa.
+ *
+ * @param params - Filtros de búsqueda más `page` (≥ 1) y `limit` (1–100).
+ * @returns Objeto con la lista de asistencias, total, página actual, límite y totalPages.
+ * @throws Si la consulta a Prisma falla.
+ */
 export async function getAttendancesPaginated(
     params: AttendanceFilters & { page: number; limit: number }
 ) {
@@ -90,9 +101,18 @@ export async function getAttendancesPaginated(
     };
 }
 
+/**
+ * Retorna hasta MAX_EXPORT_ROWS asistencias para exportación.
+ * Si hay más registros que el límite, `isTruncated` es `true`.
+ *
+ * @param filters - Filtros opcionales de fecha, búsqueda y programa.
+ * @returns `{ data, isTruncated }` donde `data` es el listado serializado.
+ * @throws Si la consulta a Prisma falla.
+ */
 export async function getAttendancesForExport(filters: AttendanceFilters) {
     const where = buildWhere(filters);
 
+    // pedimos un registro extra para detectar truncamiento sin contar toda la tabla
     const attendances = await prisma.attendances.findMany({
         where,
         include: {
@@ -108,20 +128,27 @@ export async function getAttendancesForExport(filters: AttendanceFilters) {
             },
         },
         orderBy: { attendance_date: "desc" },
+        take: MAX_EXPORT_ROWS + 1,
     });
 
-    return attendances.map((a) => ({
-        id: a.id.toString(),
-        attendance_date: a.attendance_date.toISOString(),
-        user: a.users
-            ? {
-                  id: a.users.id.toString(),
-                  name: a.users.name,
-                  last_name: a.users.last_name,
-                  email: a.users.email,
-                  semester: a.users.semester,
-                  program: a.users.programs?.name ?? null,
-              }
-            : null,
-    }));
+    const isTruncated = attendances.length > MAX_EXPORT_ROWS;
+    const rows = isTruncated ? attendances.slice(0, MAX_EXPORT_ROWS) : attendances;
+
+    return {
+        data: rows.map((a) => ({
+            id: a.id.toString(),
+            attendance_date: a.attendance_date.toISOString(),
+            user: a.users
+                ? {
+                      id: a.users.id.toString(),
+                      name: a.users.name,
+                      last_name: a.users.last_name,
+                      email: a.users.email,
+                      semester: a.users.semester,
+                      program: a.users.programs?.name ?? null,
+                  }
+                : null,
+        })),
+        isTruncated,
+    };
 }
