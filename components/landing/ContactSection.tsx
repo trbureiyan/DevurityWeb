@@ -174,6 +174,15 @@ export default function ContactSection() {
       return;
     }
 
+    // No enviar sin verificación anti-bot completada
+    if (!altchaPayload) {
+      setSubmitStatus({
+        type: "error",
+        message: "Completa la verificación de seguridad antes de enviar.",
+      });
+      return;
+    }
+
     // Iniciar estado de carga
     setIsSubmitting(true);
     setSubmitStatus({ type: null, message: "" });
