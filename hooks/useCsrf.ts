@@ -42,11 +42,16 @@ export function useCsrf() {
   // Función para hacer requests con CSRF
   const fetchWithCsrf = useCallback(
     async (url: string, options: RequestInit = {}): Promise<Response> => {
+      const isMutating = shouldUseCsrf(options.method);
       let token = csrfToken;
 
       // Solo obtener token si no lo tenemos y es una request que lo requiere
-      if (!token && shouldUseCsrf(options.method)) {
+      if (!token && isMutating) {
         token = await fetchCsrfToken();
+      }
+
+      if (isMutating && !token) {
+        throw new Error("No se pudo obtener el token CSRF para realizar la acción mutadora.");
       }
 
       // Si tenemos token, agregarlo a los headers
