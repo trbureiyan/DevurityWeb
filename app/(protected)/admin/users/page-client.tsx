@@ -1,7 +1,14 @@
 "use client"
 
+/**
+ * @deprecated
+ * Este archivo es legado / inactivo. El enrutamiento y la renderización de la
+ * administración de usuarios se realiza exclusivamente a través de page.tsx.
+ */
+
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import { useCsrf } from "@/hooks/useCsrf"
 
 type User = {
     id: string
@@ -25,6 +32,7 @@ type PaginatedResponse = {
 
 export default function AdminUsersClientPage() {
     const router = useRouter()
+    const { fetchWithCsrf } = useCsrf()
     const [data, setData] = useState<PaginatedResponse | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -91,7 +99,7 @@ export default function AdminUsersClientPage() {
 
     const handleRoleChange = async (userId: string, newRole: string) => {
         try {
-            const res = await fetch(`/api/admin/users/${userId}/role`, {
+            const res = await fetchWithCsrf(`/api/admin/users/${userId}/role`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ role: newRole })
@@ -110,7 +118,7 @@ export default function AdminUsersClientPage() {
     const handleStatusToggle = async (userId: string, currentStatus: boolean) => {
         if (userId === currentUserId) return;
         try {
-            const res = await fetch(`/api/admin/users/${userId}/status`, {
+            const res = await fetchWithCsrf(`/api/admin/users/${userId}/status`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ is_active: !currentStatus })
@@ -137,7 +145,7 @@ export default function AdminUsersClientPage() {
         }
 
         try {
-            const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' })
+            const res = await fetchWithCsrf(`/api/admin/users/${userId}`, { method: 'DELETE' })
             if (!res.ok) throw new Error("Error al eliminar el usuario")
             fetchUsers() // Refresh list since pagination changed
         } catch (err: unknown) {
