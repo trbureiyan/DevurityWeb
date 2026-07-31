@@ -8,6 +8,7 @@ export type UpdateItem = {
   id: string;
   title: string;
   excerpt: string;
+  publishedAt: string;
   displayDate: string;
   href?: string;
   tags: string[];
