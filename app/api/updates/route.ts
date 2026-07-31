@@ -3,6 +3,7 @@ import { createUpdate, slugExists } from "@/repositories/updates/updates.reposit
 import { extractTokenFromCookies, validateAuthToken } from "@/lib/auth/utils";
 import { revalidateTag } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
+import { validateHref } from "@/lib/utils/url";
 
 // Sanitiza una cadena para generar un slug amigable y válido
 function slugify(text: string): string {
@@ -95,7 +96,11 @@ export async function POST(request: NextRequest) {
     const description = (body.description || body.excerpt || "").trim();
     const displayDate = (body.displayDate || body.display_date || "").trim();
     const tags = Array.isArray(body.tags) ? body.tags : [];
-    const href = body.href?.trim() || null;
+    const hrefResult = validateHref(body.href);
+    if (!hrefResult.ok) {
+      return NextResponse.json({ success: false, error: hrefResult.error }, { status: 400 });
+    }
+    const href = hrefResult.href;
     const borderColor = body.borderColor || body.border_color || "#b20403";
     const isFeatured = body.isFeatured ?? body.is_featured ?? false;
     const status = body.status || "published";
