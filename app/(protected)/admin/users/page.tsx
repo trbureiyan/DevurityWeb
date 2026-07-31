@@ -184,8 +184,6 @@ export default function AdminUsersClientPage() {
     return (
         <>
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
-
                 .au-wrap { font-family: var(--font-dm-sans), 'DM Sans', sans-serif; }
 
                 .au-filter-bar {
@@ -419,7 +417,7 @@ export default function AdminUsersClientPage() {
                 .au-sliders-icon { color: rgba(255,255,255,0.2); flex-shrink: 0; }
             `}</style>
 
-            <div className={`${dmSans.className} ${syne.variable} au-wrap`}>
+            <div className={`${dmSans.variable} ${syne.variable} au-wrap`}>
                 {/* ── Filter Bar ─────────────────────────────────────────── */}
                 <div className="au-filter-bar">
                     <SlidersIcon size={15} className="au-sliders-icon" />
