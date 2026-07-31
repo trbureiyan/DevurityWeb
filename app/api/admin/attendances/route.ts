@@ -1,19 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/postgresDriver";
+import { extractTokenFromCookies } from "@/lib/auth/utils";
+import { verifyJwtPayload } from "@/lib/auth/jwt-edge";
 import { getAttendancesPaginated } from "@/repositories/admin/attendances.repositories";
 
 export async function GET(request: NextRequest) {
+  // autenticación y autorización antes de procesar parámetros
+  const token = extractTokenFromCookies(request);
+  if (!token) {
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  }
+  const decoded = await verifyJwtPayload(token);
+  if (!decoded || decoded.role !== "admin") {
+    return NextResponse.json({ error: "Acceso restringido" }, { status: 403 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    // radix 10 explícito; NaN, cero o negativos caen en 1
+    const rawPage = parseInt(searchParams.get("page") ?? "1", 10);
+    const page = isNaN(rawPage) || rawPage < 1 ? 1 : rawPage;
+    const limit = parseInt(searchParams.get("limit") ?? "20", 10);
     const dateFrom = searchParams.get("dateFrom") || undefined;
     const dateTo = searchParams.get("dateTo") || undefined;
     const search = searchParams.get("search") || undefined;
     const program = searchParams.get("program") || undefined;
 
     const result = await getAttendancesPaginated({
-      page: isNaN(page) ? 1 : page,
+      page,
       limit: Math.max(1, Math.min(isNaN(limit) ? 20 : limit, 100)),
       dateFrom,
       dateTo,
@@ -34,6 +47,8 @@ interface _QRData {
   token: string;
   expiresAt: number;
 }
+
+import prisma from "@/lib/postgresDriver";
 
 export async function POST(req: NextRequest) {
   try {
