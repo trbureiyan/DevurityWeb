@@ -62,7 +62,6 @@ export async function POST(request: NextRequest) {
     const focusAreas = Array.isArray(body.focusAreas) ? body.focusAreas : [];
     const stack = Array.isArray(body.stack) ? body.stack : [];
     const callToAction = body.callToAction;
-    const updatedAt = body.updatedAt;
 
     if (!title) {
       return NextResponse.json({ success: false, error: "El título es requerido" }, { status: 400 });
@@ -83,7 +82,6 @@ export async function POST(request: NextRequest) {
       stack,
       cta_label: callToAction?.label || null,
       cta_href: callToAction?.href || null,
-      start_date: updatedAt ? new Date(updatedAt) : new Date(),
     });
 
     // Revalidar la caché de proyectos
