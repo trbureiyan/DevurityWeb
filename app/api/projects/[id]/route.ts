@@ -8,6 +8,7 @@ import { extractTokenFromCookies, validateAuthToken } from "@/lib/auth/utils";
 import { revalidateTag } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import type { ProjectStage } from "@/hooks/useProjects";
+import { validateHref } from "@/lib/utils/url";
 
 interface RouteParams {
   params: Promise<{
@@ -87,13 +88,22 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const updateData: import("@/repositories/projects/projects.repositories").UpdateProjectDTO = {};
     if (title) updateData.title = title;
     if (description !== undefined) updateData.description = description;
-    if (stage) updateData.stage = stage;
+    if (stage !== undefined) {
+      if (typeof stage !== "string" || !VALID_STAGES.includes(stage)) {
+        return NextResponse.json({ success: false, error: "Etapa inválida" }, { status: 400 });
+      }
+      updateData.stage = stage;
+    }
     if (focusAreas) updateData.focus_areas = focusAreas;
     if (stack) updateData.stack = stack;
 
     if (callToAction !== undefined) {
+      const hrefResult = validateHref(callToAction?.href);
+      if (!hrefResult.ok) {
+        return NextResponse.json({ success: false, error: hrefResult.error }, { status: 400 });
+      }
       updateData.cta_label = callToAction?.label || null;
-      updateData.cta_href = callToAction?.href || null;
+      updateData.cta_href = hrefResult.href;
     }
 
     // Actualizar en base de datos

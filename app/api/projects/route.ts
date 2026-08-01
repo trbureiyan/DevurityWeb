@@ -4,6 +4,7 @@ import { extractTokenFromCookies, validateAuthToken } from "@/lib/auth/utils";
 import { revalidateTag } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import type { ProjectStage } from "@/hooks/useProjects";
+import { validateHref } from "@/lib/utils/url";
 
 const VALID_STAGES = ["incubacion", "desarrollo", "validacion", "produccion", "experimentacion", "pausa"];
 
@@ -63,6 +64,15 @@ export async function POST(request: NextRequest) {
     const stack = Array.isArray(body.stack) ? body.stack : [];
     const callToAction = body.callToAction;
 
+    if (typeof stage !== "string" || !VALID_STAGES.includes(stage)) {
+      return NextResponse.json({ success: false, error: "Etapa inválida" }, { status: 400 });
+    }
+
+    const hrefResult = validateHref(callToAction?.href);
+    if (!hrefResult.ok) {
+      return NextResponse.json({ success: false, error: hrefResult.error }, { status: 400 });
+    }
+
     if (!title) {
       return NextResponse.json({ success: false, error: "El título es requerido" }, { status: 400 });
     }
@@ -81,7 +91,7 @@ export async function POST(request: NextRequest) {
       focus_areas: focusAreas,
       stack,
       cta_label: callToAction?.label || null,
-      cta_href: callToAction?.href || null,
+      cta_href: hrefResult.href,
     });
 
     // Revalidar la caché de proyectos
