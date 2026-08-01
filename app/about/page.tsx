@@ -31,6 +31,8 @@ const getTeamMembersCached = unstable_cache(
             ? user.skills.slice(0, 3).join(" \u2022 ")
             : undefined,
         socialLinks: socialLinks.slice(0, 3),
+        program: user.program ?? undefined,
+        semester: user.semester ?? undefined,
       };
     });
   },

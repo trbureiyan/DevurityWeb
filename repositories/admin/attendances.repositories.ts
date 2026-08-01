@@ -74,7 +74,7 @@ export async function getAttendancesPaginated(
             },
             skip,
             take: limit,
-            orderBy: { attendance_date: "desc" },
+            orderBy: [{ attendance_date: "desc" }, { id: "desc" }],
         }),
         prisma.attendances.count({ where }),
     ]);
@@ -127,7 +127,7 @@ export async function getAttendancesForExport(filters: AttendanceFilters) {
                 },
             },
         },
-        orderBy: { attendance_date: "desc" },
+        orderBy: [{ attendance_date: "desc" }, { id: "desc" }],
         take: MAX_EXPORT_ROWS + 1,
     });
 
