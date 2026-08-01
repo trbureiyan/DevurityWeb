@@ -77,14 +77,7 @@ async function ensureBackupDir(): Promise<void> {
   await fs.mkdir(BACKUP_DIR, { recursive: true });
 }
 
-/**
- * Crea un snapshot JSON de las tablas dinámicas (users, attendances, etc.).
- *
- * @param prisma - Cliente Prisma activo.
- * @param label - Etiqueta opcional para el nombre del archivo (se sanitiza).
- * @returns Nombre del archivo de backup creado en `backups/`.
- * @throws Si falla la escritura del archivo o la lectura de las tablas.
- */
+/** Create a JSON snapshot of the dynamic tables. */
 export async function createBackup(prisma: PrismaClient, label?: string): Promise<string> {
   await ensureBackupDir();
 
@@ -132,15 +125,7 @@ export async function listBackups(): Promise<string[]> {
     });
 }
 
-/**
- * Restaura las tablas dinámicas de la base de datos desde un snapshot JSON.
- * Ejecuta deleteMany + recreate en una sola transacción con timeout de 60s.
- *
- * @param prisma - Cliente Prisma activo.
- * @param filename - Nombre del archivo de backup dentro de `backups/`.
- * @returns Mapa de nombre de tabla a conteo de registros restaurados.
- * @throws Si el archivo no existe, no es JSON válido, o la transacción excede el timeout.
- */
+/** Restore database dynamic tables from a JSON backup. */
 export async function restoreBackup(
   prisma: PrismaClient,
   filename: string
@@ -155,8 +140,7 @@ export async function restoreBackup(
   const user_skills = (data.user_skills ?? []).map(reviveUserSkill);
   const user_platforms = (data.user_platforms ?? []).map(reviveUserPlatform);
 
-  // Restore everything in a single safe transaction with explicit timeouts
-  // (maxWait: time to acquire connection, timeout: max transaction duration)
+  // Restore everything in a single safe transaction
   await prisma.$transaction(async (tx) => {
     // 1. Clear dynamic tables in order of dependency (dependents first)
     await tx.attendances.deleteMany({});
@@ -190,9 +174,6 @@ export async function restoreBackup(
         `SELECT setval(pg_get_serial_sequence('${table}', 'id'), COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM "${table}";`
       );
     }
-  }, {
-    maxWait: 10000,  // 10s para adquirir conexión
-    timeout: 60000,  // 60s para completar la transacción completa
   });
 
   return {

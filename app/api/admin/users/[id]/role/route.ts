@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateUserRole } from "@/repositories/admin/users.repositories";
+import { csrfAdapter } from "@/lib/csrf";
+import { extractTokenFromCookies, validateAuthToken } from "@/lib/auth/utils";
 
 export async function PATCH(
     request: NextRequest,
@@ -7,6 +9,29 @@ export async function PATCH(
 ) {
     try {
         const { id } = await params;
+
+        // el middleware ya verifica CSRF; este guard añade rechazo explícito si llega sin token
+        const csrfHeader = request.headers.get("x-csrf-token");
+        const csrfCookie = request.cookies.get("csrf_token")?.value;
+        if (!csrfHeader || !csrfCookie || !csrfAdapter.validateToken(csrfHeader, csrfCookie)) {
+            return NextResponse.json({ error: "Token CSRF requerido" }, { status: 403 });
+        }
+
+        const token = extractTokenFromCookies(request);
+        if (!token) {
+            return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+        }
+        let decoded: Awaited<ReturnType<typeof validateAuthToken>>;
+        try {
+            decoded = await validateAuthToken(token);
+        } catch (error) {
+            console.error("Error de autenticación al actualizar el rol:", error);
+            return NextResponse.json({ error: "Sesión inválida" }, { status: 401 });
+        }
+        if (decoded.role !== "admin") {
+            return NextResponse.json({ error: "Acceso restringido" }, { status: 403 });
+        }
+
         const body = await request.json();
         const { role } = body;
 

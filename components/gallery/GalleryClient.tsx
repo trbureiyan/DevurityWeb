@@ -1,23 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import NextImage from "next/image";
-import { PencilIcon, PhotoIcon, XMarkIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from "@heroicons/react/24/outline";
+import { PhotoIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { IMAGES } from "@/public/images";
 
 // ============ COLOR UNIFICADO ============
 const ACCENT_COLOR = "#b20403";
-
-// ============ IMÁGENES DE EJEMPLO ============
-const MOCK_IMAGES = [
-  "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop",
-];
 
 // ============ INTERFACES ============
 interface GalleryClientProps {
@@ -34,14 +23,6 @@ interface ImageModalProps {
   onClose: () => void;
 }
 
-interface EditGalleryModalProps {
-  images: string[];
-  onClose: () => void;
-  onAddImages: (newImages: string[]) => void;
-  onDeleteImage: (image: string) => void;
-  onReorderImages: (reorderedImages: string[]) => void;
-}
-
 // ============ COMPONENTE GALLERY GRID ============
 function GalleryGrid({ images, onImageClick }: GalleryGridProps) {
   if (!images || images.length === 0) {
@@ -56,7 +37,7 @@ function GalleryGrid({ images, onImageClick }: GalleryGridProps) {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {images.map((src, index) => (
         <div
-          key={index}
+          key={`${src}-${index}`}
           className="group relative aspect-square overflow-hidden rounded-2xl cursor-pointer border border-white/10 hover:border-red-600/50 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_25px_60px_-20px_rgba(178,4,3,0.55)]"
           onClick={() => onImageClick(src)}
         >
@@ -67,17 +48,17 @@ function GalleryGrid({ images, onImageClick }: GalleryGridProps) {
             className="object-cover transition-transform duration-700 group-hover:scale-110"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
           />
-          
+         
           {/* Overlay gradient */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          
+         
           {/* Número de imagen */}
           <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
             <span className="bg-red-600/80 text-white text-xs font-ubuntu px-3 py-1.5 rounded-full backdrop-blur-sm">
               #{String(index + 1).padStart(2, '0')}
             </span>
           </div>
-          
+         
           {/* Icono de zoom */}
           <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
             <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-full p-2">
@@ -134,207 +115,19 @@ function ImageModal({ imageSrc, onClose }: ImageModalProps) {
   );
 }
 
-// ============ COMPONENTE EDIT GALLERY MODAL ============
-function EditGalleryModal({
-  images,
-  onClose,
-  onAddImages,
-  onDeleteImage,
-  onReorderImages
-}: EditGalleryModalProps) {
-  const [localImages, setLocalImages] = useState(images);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-
-  const handleAddSampleImages = () => {
-    const newImages = [...MOCK_IMAGES];
-    onAddImages(newImages);
-    setLocalImages([...localImages, ...newImages]);
-  };
-
-  const handleMoveImage = (index: number, direction: 'up' | 'down') => {
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= localImages.length) return;
-
-    const reordered = [...localImages];
-    [reordered[index], reordered[newIndex]] = [reordered[newIndex], reordered[index]];
-    
-    setLocalImages(reordered);
-    onReorderImages(reordered);
-  };
-
-  const handleDelete = (image: string) => {
-    setLocalImages(localImages.filter(img => img !== image));
-    onDeleteImage(image);
-    if (selectedImage === image) {
-      setSelectedImage(null);
-    }
-  };
-
-  return (
-    <>
-      {/* Overlay */}
-      <div
-        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div
-          className="bg-zinc-950 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-white/10 shadow-2xl animate-in zoom-in-95 duration-200"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="flex justify-between items-center px-6 py-5 border-b border-white/10 bg-zinc-900/80">
-            <h2 className="font-orbitron text-xl font-bold text-white">
-              Editar Galería
-            </h2>
-            <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-            >
-              <XMarkIcon className="w-5 h-5 text-white/60" />
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="p-6 overflow-y-auto max-h-[calc(90vh-160px)]">
-            {/* Add images section */}
-            <div className="mb-8">
-              <h3 className="font-orbitron text-lg font-bold text-white mb-4">
-                Agregar Imágenes
-              </h3>
-              <div className="flex gap-4">
-                <button
-                  onClick={handleAddSampleImages}
-                  className="flex-1 p-8 border-2 border-dashed border-white/10 rounded-xl hover:border-red-600/50 hover:bg-red-600/5 transition-all group"
-                >
-                  <PhotoIcon className="w-12 h-12 mx-auto text-white/20 group-hover:text-red-500 mb-2" />
-                  <p className="text-white/60 group-hover:text-white font-ubuntu">Agregar imágenes de ejemplo</p>
-                  <p className="text-sm text-white/30 mt-1">(Demo - En producción sería upload)</p>
-                </button>
-              </div>
-            </div>
-
-            {/* Images list */}
-            {localImages.length > 0 && (
-              <div>
-                <h3 className="font-orbitron text-lg font-bold text-white mb-4">
-                  Administrar Imágenes ({localImages.length})
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {localImages.map((image, index) => (
-                    <div
-                      key={index}
-                      className={`relative group rounded-xl overflow-hidden border-2 transition-all ${
-                        selectedImage === image ? 'border-red-600' : 'border-white/10'
-                      }`}
-                      onClick={() => setSelectedImage(image)}
-                    >
-                      <div className="aspect-square relative">
-                        <NextImage
-                          src={image}
-                          alt={`Gallery image ${index + 1}`}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 50vw, 33vw"
-                        />
-                      </div>
-                      
-                      {/* Overlay con controles */}
-                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMoveImage(index, 'up');
-                          }}
-                          disabled={index === 0}
-                          className={`p-2 rounded-full ${
-                            index === 0 
-                              ? 'bg-gray-800 cursor-not-allowed' 
-                              : 'bg-white/10 hover:bg-white/20 border border-white/20'
-                          }`}
-                        >
-                          <ArrowUpIcon className="w-4 h-4 text-white" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMoveImage(index, 'down');
-                          }}
-                          disabled={index === localImages.length - 1}
-                          className={`p-2 rounded-full ${
-                            index === localImages.length - 1
-                              ? 'bg-gray-800 cursor-not-allowed'
-                              : 'bg-white/10 hover:bg-white/20 border border-white/20'
-                          }`}
-                        >
-                          <ArrowDownIcon className="w-4 h-4 text-white" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(image);
-                          }}
-                          className="p-2 rounded-full bg-red-600/80 hover:bg-red-600 border border-red-500/50"
-                        >
-                          <TrashIcon className="w-4 h-4 text-white" />
-                        </button>
-                      </div>
-
-                      {/* Número de orden */}
-                      <div className="absolute top-2 left-2 bg-black/60 text-white text-xs font-ubuntu px-2 py-1 rounded-full border border-white/10">
-                        #{index + 1}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="flex justify-end gap-3 p-6 border-t border-white/10 bg-zinc-900/80">
-            <button
-              onClick={onClose}
-              className="px-6 py-3 border border-white/20 hover:border-white/40 text-white/70 hover:text-white rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={onClose}
-              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(178,4,3,0.5)]"
-            >
-              Guardar Cambios
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
 // ============ COMPONENTE PRINCIPAL ============
 export default function GalleryClient({ images }: GalleryClientProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [galleryImages, setGalleryImages] = useState(images);
   const [visibleCount, setVisibleCount] = useState(8);
 
-  const handleAddImages = (newImages: string[]) => {
-    setGalleryImages([...galleryImages, ...newImages]);
-  };
-
-  const handleDeleteImage = (imageToDelete: string) => {
-    setGalleryImages(galleryImages.filter(img => img !== imageToDelete));
-  };
-
-  const handleReorderImages = (reorderedImages: string[]) => {
-    setGalleryImages(reorderedImages);
-  };
+  // Actualizar galería cuando cambien las props iniciales
+  useEffect(() => {
+    setGalleryImages(images);
+  }, [images]);
 
   const handleViewMore = () => {
-    setVisibleCount(prev => Math.min(prev + 8, galleryImages.length));
+    setVisibleCount((prev) => Math.min(prev + 8, galleryImages.length));
   };
 
   const handleLoadAll = () => {
@@ -437,7 +230,7 @@ export default function GalleryClient({ images }: GalleryClientProps) {
               </h2>
               <div className="border-l-4 pl-6 space-y-4" style={{ borderColor: ACCENT_COLOR }}>
                 <p className="text-lg text-gray-300 leading-relaxed">
-                  Explora los momentos más destacados de nuestras actividades, eventos y proyectos. 
+                  Explora los momentos más destacados de nuestras actividades, eventos y proyectos.
                   Cada imagen cuenta una historia de aprendizaje y colaboración.
                 </p>
               </div>
@@ -448,13 +241,6 @@ export default function GalleryClient({ images }: GalleryClientProps) {
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <button
-                  onClick={() => setShowEditModal(true)}
-                  className="group inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(178,4,3,0.5)]"
-                >
-                  <PencilIcon className="w-4 h-4" />
-                  Editar galería
-                </button>
                 <a href="#galeria"
                   className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:bg-white/5"
                 >
@@ -476,7 +262,7 @@ export default function GalleryClient({ images }: GalleryClientProps) {
                 <div className="grid grid-cols-2 gap-4">
                   {galleryImages.slice(0, 4).map((src, index) => (
                     <div
-                      key={index}
+                      key={`featured-${src}-${index}`}
                       className="relative aspect-square rounded-xl overflow-hidden border border-white/10 group cursor-pointer"
                       onClick={() => setSelectedImage(src)}
                     >
@@ -521,9 +307,9 @@ export default function GalleryClient({ images }: GalleryClientProps) {
           {/* Grid de imágenes */}
           {galleryImages.length > 0 ? (
             <>
-              <GalleryGrid 
-                images={galleryImages.slice(0, visibleCount)} 
-                onImageClick={setSelectedImage} 
+              <GalleryGrid
+                images={galleryImages.slice(0, visibleCount)}
+                onImageClick={setSelectedImage}
               />
 
               {/* Ver más */}
@@ -577,15 +363,8 @@ export default function GalleryClient({ images }: GalleryClientProps) {
                 No hay imágenes disponibles
               </h3>
               <p className="text-white/60 font-ubuntu mb-8">
-                Comienza agregando imágenes a tu galería
+                Las imágenes se cargarán desde el servidor.
               </p>
-              <button
-                onClick={() => setShowEditModal(true)}
-                className="group inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(178,4,3,0.5)]"
-              >
-                <PencilIcon className="w-4 h-4" />
-                Agregar imágenes
-              </button>
             </div>
           )}
         </div>
@@ -593,20 +372,9 @@ export default function GalleryClient({ images }: GalleryClientProps) {
 
       {/* ═══ Modal de imagen ═══ */}
       {selectedImage && (
-        <ImageModal 
-          imageSrc={selectedImage} 
-          onClose={() => setSelectedImage(null)} 
-        />
-      )}
-
-      {/* ═══ Modal de edición ═══ */}
-      {showEditModal && (
-        <EditGalleryModal
-          images={galleryImages}
-          onClose={() => setShowEditModal(false)}
-          onAddImages={handleAddImages}
-          onDeleteImage={handleDeleteImage}
-          onReorderImages={handleReorderImages}
+        <ImageModal
+          imageSrc={selectedImage}
+          onClose={() => setSelectedImage(null)}
         />
       )}
     </main>

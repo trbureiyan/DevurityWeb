@@ -3,6 +3,20 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useDebounce } from "@/hooks/useDebounce"
+import { useCsrf } from "@/hooks/useCsrf"
+import { Syne, DM_Sans } from "next/font/google"
+
+const syne = Syne({
+    subsets: ["latin"],
+    weight: ["400", "500", "600", "700", "800"],
+    variable: "--font-syne",
+})
+
+const dmSans = DM_Sans({
+    subsets: ["latin"],
+    weight: ["300", "400", "500"],
+    variable: "--font-dm-sans",
+})
 
 // ─── Inline SVG Icons ────────────────────────────────────────────────────────
 const SearchIcon = ({ size = 16, className = "" }: { size?: number; className?: string }) => (
@@ -51,9 +65,18 @@ type PaginatedResponse = {
     totalPages: number
 }
 
+// ─── Roles únicos y consistentes ─────────────────────────────────────────────
+const ROLES = [
+    { value: "admin", label: "Admin" },
+    { value: "content_manager", label: "Content Mgr." },
+    { value: "lead_project", label: "Project Lead" },
+    { value: "user", label: "Member" },
+] as const
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function AdminUsersClientPage() {
     const router = useRouter()
+    const { fetchWithCsrf } = useCsrf()
     const [data, setData] = useState<PaginatedResponse | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -66,7 +89,6 @@ export default function AdminUsersClientPage() {
 
     const debouncedSearch = useDebounce(search, 500)
 
-    // Resetear pagina al cambiar busqueda debounced
     useEffect(() => {
         setCurrentPage(1)
     }, [debouncedSearch])
@@ -105,51 +127,64 @@ export default function AdminUsersClientPage() {
 
     const handleRoleChange = async (userId: string, newRole: string) => {
         try {
-            const res = await fetch(`/api/admin/users/${userId}/role`, {
+            const res = await fetchWithCsrf(`/api/admin/users/${userId}/role`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ role: newRole })
             })
-            if (!res.ok) throw new Error("No se pudo actualizar el rol")
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}))
+                throw new Error(errData.error || "No se pudo actualizar el rol")
+            }
             setData(prev => prev ? {
                 ...prev,
                 users: prev.users.map(u => u.id === userId ? { ...u, roles: { ...u.roles, name: newRole } } : u)
             } : null)
-        } catch (err: unknown) { alert(err instanceof Error ? err.message : "Error desconocido") }
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : "Error desconocido")
+        }
     }
 
     const handleStatusToggle = async (userId: string, currentStatus: boolean) => {
         if (userId === currentUserId) return
         try {
-            const res = await fetch(`/api/admin/users/${userId}/status`, {
+            const res = await fetchWithCsrf(`/api/admin/users/${userId}/status`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ is_active: !currentStatus })
             })
-            if (!res.ok) throw new Error("No se pudo actualizar el estado")
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}))
+                throw new Error(errData.error || "No se pudo actualizar el estado")
+            }
             setData(prev => prev ? {
                 ...prev,
                 users: prev.users.map(u => u.id === userId ? { ...u, is_active: !currentStatus } : u)
             } : null)
-        } catch (err: unknown) { alert(err instanceof Error ? err.message : "Error desconocido") }
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : "Error desconocido")
+        }
     }
 
     const handleDelete = async (userId: string) => {
         if (userId === currentUserId) { alert("No puedes eliminar tu propia cuenta."); return }
         if (!window.confirm("¿Estás seguro de que deseas eliminar permanentemente a este usuario? Esta acción no se puede deshacer.")) return
         try {
-            const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' })
-            if (!res.ok) throw new Error("Error al eliminar el usuario")
+            const res = await fetchWithCsrf(`/api/admin/users/${userId}`, { method: 'DELETE' })
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}))
+                throw new Error(errData.error || "Error al eliminar el usuario")
+            }
             fetchUsers()
-        } catch (err: unknown) { alert(err instanceof Error ? err.message : "Error desconocido") }
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : "Error desconocido")
+        }
     }
 
     return (
         <>
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
-
-                .au-wrap { font-family: 'DM Sans', sans-serif; }
+                .au-wrap { font-family: var(--font-dm-sans), 'DM Sans', sans-serif; }
 
                 .au-filter-bar {
                     background: rgba(255,255,255,0.03);
@@ -178,7 +213,7 @@ export default function AdminUsersClientPage() {
                     padding: 9px 13px 9px 40px;
                     color: rgba(255,255,255,0.85);
                     font-size: 13px;
-                    font-family: 'DM Sans', sans-serif;
+                    font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
                     outline: none;
                     transition: all 0.2s;
                 }
@@ -196,7 +231,7 @@ export default function AdminUsersClientPage() {
                     padding: 9px 13px;
                     color: rgba(255,255,255,0.55);
                     font-size: 13px;
-                    font-family: 'DM Sans', sans-serif;
+                    font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
                     outline: none;
                     cursor: pointer;
                     transition: all 0.2s;
@@ -223,7 +258,7 @@ export default function AdminUsersClientPage() {
                     background: rgba(255,255,255,0.02);
                 }
                 .au-th {
-                    font-family: 'Syne', sans-serif;
+                    font-family: var(--font-syne), 'Syne', sans-serif;
                     font-size: 10px;
                     font-weight: 600;
                     letter-spacing: 0.1em;
@@ -268,7 +303,7 @@ export default function AdminUsersClientPage() {
                     padding: 6px 10px;
                     color: rgba(255,255,255,0.7);
                     font-size: 12px;
-                    font-family: 'DM Sans', sans-serif;
+                    font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
                     outline: none;
                     cursor: pointer;
                     transition: all 0.15s;
@@ -319,7 +354,7 @@ export default function AdminUsersClientPage() {
                     border-radius: 8px;
                     padding: 6px 10px;
                     font-size: 12px;
-                    font-family: 'DM Sans', sans-serif;
+                    font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
                     color: rgba(255,255,255,0.35);
                     cursor: pointer;
                     transition: all 0.15s;
@@ -345,7 +380,7 @@ export default function AdminUsersClientPage() {
                     color: rgba(255,255,255,0.18); margin-bottom: 4px;
                 }
                 .au-empty-title {
-                    font-family: 'Syne', sans-serif;
+                    font-family: var(--font-syne), 'Syne', sans-serif;
                     font-size: 14px; font-weight: 600;
                     color: rgba(255,255,255,0.35);
                 }
@@ -368,7 +403,7 @@ export default function AdminUsersClientPage() {
                     border-radius: 8px;
                     padding: 6px 14px;
                     font-size: 12px;
-                    font-family: 'DM Sans', sans-serif;
+                    font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
                     color: rgba(255,255,255,0.5);
                     cursor: pointer;
                     transition: all 0.15s;
@@ -382,7 +417,7 @@ export default function AdminUsersClientPage() {
                 .au-sliders-icon { color: rgba(255,255,255,0.2); flex-shrink: 0; }
             `}</style>
 
-            <div className="au-wrap">
+            <div className={`${dmSans.variable} ${syne.variable} au-wrap`}>
                 {/* ── Filter Bar ─────────────────────────────────────────── */}
                 <div className="au-filter-bar">
                     <SlidersIcon size={15} className="au-sliders-icon" />
@@ -402,10 +437,9 @@ export default function AdminUsersClientPage() {
                         className="au-select"
                     >
                         <option value="">Todos los roles</option>
-                        <option value="admin">Admin</option>
-                        <option value="content_manager">Content Manager</option>
-                        <option value="project_lead">Project Lead</option>
-                        <option value="member">Member</option>
+                        {ROLES.map(r => (
+                            <option key={r.value} value={r.value}>{r.label}</option>
+                        ))}
                     </select>
                     <select
                         value={statusFilter}
@@ -465,10 +499,9 @@ export default function AdminUsersClientPage() {
                                         disabled={user.id === currentUserId}
                                         className="au-role-select"
                                     >
-                                        <option value="admin">Admin</option>
-                                        <option value="content_manager">Content Mgr.</option>
-                                        <option value="project_lead">Project Lead</option>
-                                        <option value="member">Member</option>
+                                        {ROLES.map(r => (
+                                            <option key={r.value} value={r.value}>{r.label}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 {/* Estado */}

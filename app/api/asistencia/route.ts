@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/postgresDriver";
 import { csrfAdapter } from "@/lib/csrf";
+import { extractTokenFromCookies } from "@/lib/auth/utils";
+import { verifyJwtPayload } from "@/lib/auth/jwt-edge";
 
 /**
  * Registra asistencia mediante escaneo de QR.
@@ -35,6 +37,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const authToken = extractTokenFromCookies(request);
+    const decoded = authToken ? await verifyJwtPayload(authToken) : null;
+    if (!decoded) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+    if (decoded.role !== "admin") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
+
     const { qrData } = await request.json();
 
     if (!qrData) {
@@ -55,13 +66,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validar que tenga los campos requeridos
+    // Validar que tenga los campos requeridos con el tipo correcto
+    const { userId, timestamp, token, expiresAt, signature } = qrData as Record<string, unknown>;
     if (
-      !qrData.userId ||
-      !qrData.timestamp ||
-      !qrData.token ||
-      !qrData.expiresAt ||
-      !qrData.signature
+      typeof userId !== "string" ||
+      !userId ||
+      typeof token !== "string" ||
+      !token ||
+      typeof signature !== "string" ||
+      !signature ||
+      typeof timestamp !== "number" ||
+      !Number.isFinite(timestamp) ||
+      typeof expiresAt !== "number" ||
+      !Number.isFinite(expiresAt)
     ) {
       return NextResponse.json(
         { error: "QR inválido - faltan datos requeridos o firma de seguridad" },
@@ -77,17 +94,11 @@ export async function POST(request: NextRequest) {
     const cryptoMod = await import("crypto");
     const expectedSignature = cryptoMod.default
       .createHmac("sha256", jwtSecret)
-      .update(`${qrData.userId}:${qrData.timestamp}:${qrData.token}:${qrData.expiresAt}`)
+      .update(`${userId}:${timestamp}:${token}:${expiresAt}`)
       .digest("hex");
 
     // Comparación de tiempo constante para evitar timing attacks
-    if (typeof qrData.signature !== "string") {
-      return NextResponse.json(
-        { error: "QR inválido - firma corrupta o no autorizada" },
-        { status: 400 },
-      );
-    }
-    const sigBuffer = Buffer.from(qrData.signature, "hex");
+    const sigBuffer = Buffer.from(signature, "hex");
     const expectedBuffer = Buffer.from(expectedSignature, "hex");
     if (sigBuffer.length !== expectedBuffer.length || !cryptoMod.default.timingSafeEqual(sigBuffer, expectedBuffer)) {
       return NextResponse.json(
@@ -98,14 +109,12 @@ export async function POST(request: NextRequest) {
 
     // Verificar que el QR no haya expirado
     const now = Date.now();
-    if (now > qrData.expiresAt) {
+    if (now > expiresAt) {
       return NextResponse.json(
         { error: "QR expirado. Por favor, genera uno nuevo desde tu perfil." },
         { status: 410 }, // 410 Gone - recurso ya no disponible
       );
     }
-
-    const userId = qrData.userId;
 
     // Verificar que el usuario existe
     const usuario = await prisma.users.findUnique({

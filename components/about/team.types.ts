@@ -19,6 +19,8 @@ export type TeamMember = {
   bio?: string;
   avatar?: string;
   socialLinks?: SocialLink[];
+  program?: string;
+  semester?: number;
 };
 
 export type RoleGroup = "admin" | "lead_project" | "content_manager" | "user";

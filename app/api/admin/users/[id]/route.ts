@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteUserCompletely } from "@/repositories/admin/users.repositories";
 import { extractTokenFromCookies, validateAuthToken } from "@/lib/auth/utils";
+import { csrfAdapter } from "@/lib/csrf";
 
 export async function DELETE(
     request: NextRequest,
@@ -9,6 +10,13 @@ export async function DELETE(
     try {
         const { id } = await params;
 
+        // el middleware ya verifica CSRF; este guard añade rechazo explícito si llega sin token
+        const csrfHeader = request.headers.get("x-csrf-token");
+        const csrfCookie = request.cookies.get("csrf_token")?.value;
+        if (!csrfHeader || !csrfCookie || !csrfAdapter.validateToken(csrfHeader, csrfCookie)) {
+            return NextResponse.json({ error: "Token CSRF requerido" }, { status: 403 });
+        }
+
         // Prevent self-deletion
         const token = extractTokenFromCookies(request);
         if (!token) {
@@ -16,6 +24,9 @@ export async function DELETE(
         }
 
         const decoded = await validateAuthToken(token);
+        if (decoded.role !== "admin") {
+            return NextResponse.json({ error: "Acceso restringido" }, { status: 403 });
+        }
         if (decoded.sub === id) {
             return NextResponse.json({ error: "No puedes eliminar tu propia cuenta" }, { status: 403 });
         }

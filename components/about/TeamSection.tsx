@@ -45,11 +45,6 @@ export default function TeamSection({ members }: TeamSectionProps) {
   const safePage = Math.max(1, Math.min(page, totalPages || 1));
   const currentMembers = getPaginatedMembers(activeMembers, safePage);
 
-  // Sync page state when safePage corrects it (e.g. after tab/data changes)
-  useEffect(() => {
-    if (page !== safePage) setPage(safePage);
-  }, [page, safePage]);
-
   const handleTabChange = (tab: RoleGroup) => {
     if (tab !== activeTab) {
       setActiveTab(tab);
@@ -58,7 +53,7 @@ export default function TeamSection({ members }: TeamSectionProps) {
   };
 
   return (
-    <section className="relative bg-black py-24">
+    <section className="relative bg-black py-24 border-t border-zinc-900">
       <div className="container mx-auto px-6 md:px-12">
         {/* Section Title */}
         <div className="text-center mb-16">
@@ -123,11 +118,23 @@ export default function TeamSection({ members }: TeamSectionProps) {
               animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
               exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
               transition={shouldReduceMotion ? { duration: 0.05 } : { duration: 0.3 }}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8"
               role="tabpanel"
               id="team-members-panel"
               aria-labelledby={`team-tab-${activeTab}`}
             >
+              {/* Role header con separador y contador */}
+              {activeMembers.length > 0 && (
+                <div className="flex items-center gap-4 mb-8">
+                  <h3 className="font-orbitron text-2xl md:text-3xl font-bold tracking-widest text-white uppercase">
+                    {ROLE_SINGULAR_LABELS[activeTab]}
+                  </h3>
+                  <div className="h-px flex-1 bg-gradient-to-r from-[#ca2b26]/50 via-zinc-800 to-transparent"></div>
+                  <span className="font-mono text-xs text-zinc-500 bg-zinc-900 px-3 py-1 rounded border border-zinc-800">
+                    {activeMembers.length} {activeMembers.length === 1 ? 'integrante' : 'integrantes'}
+                  </span>
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
               {currentMembers.length > 0 ? (
                 currentMembers.map((member) => (
                   <TeamMemberCard
@@ -140,6 +147,8 @@ export default function TeamSection({ members }: TeamSectionProps) {
                     avatar={member.avatar}
                     socialLinks={member.socialLinks}
                     tagline={member.tagline}
+                    program={member.program}
+                    semester={member.semester}
                   />
                 ))
               ) : (
@@ -147,6 +156,7 @@ export default function TeamSection({ members }: TeamSectionProps) {
                   <p className="text-lg">No hay miembros disponibles en esta categoría.</p>
                 </div>
               )}
+              </div>
             </m.div>
           </div>
         </LazyMotion>

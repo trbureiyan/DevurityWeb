@@ -97,27 +97,16 @@ export default function ContactSection() {
 
   // Cargar el Web Component y el CSS de ALTCHA desde CDN — solo en el cliente
   useEffect(() => {
-    const existingScript = document.querySelector("script[data-altcha]") as HTMLScriptElement | null;
-    if (existingScript) {
-      // Si el script previo falló (onerror ya disparado), eliminarlo para reintentar
-      if (existingScript.dataset.altchaFailed === "true") {
-        existingScript.remove();
-      } else {
-        return; // Ya existe y no falló — no recrear
-      }
+    if (!document.querySelector("script[data-altcha]")) {
+      const script = document.createElement("script");
+      script.type = "module";
+      script.dataset.altcha = "true";
+      script.src = "https://cdn.jsdelivr.net/npm/altcha@2.3.0/dist/altcha.min.js";
+      script.integrity = "sha384-8I1KL049hNSwGKuCu/6NlGM1rfkVTfw/5bVzUFNvxO3XLV3isCJR1s5pTyuE2Zuo";
+      script.crossOrigin = "anonymous";
+      script.onerror = () => setAltchaLoadError(true);
+      document.head.appendChild(script);
     }
-
-    const script = document.createElement("script");
-    script.type = "module";
-    script.dataset.altcha = "true";
-    script.src = "https://cdn.jsdelivr.net/npm/altcha@2.3.0/dist/altcha.min.js";
-    script.integrity = "sha384-8I1KL049hNSwGKuCu/6NlGM1rfkVTfw/5bVzUFNvxO3XLV3isCJR1s5pTyuE2Zuo";
-    script.crossOrigin = "anonymous";
-    script.onerror = () => {
-      script.dataset.altchaFailed = "true";
-      setAltchaLoadError(true);
-    };
-    document.head.appendChild(script);
 
     if (!document.querySelector("link[data-altcha-css]")) {
       const link = document.createElement("link");
@@ -181,6 +170,15 @@ export default function ContactSection() {
       setSubmitStatus({
         type: "error",
         message: "Ingresa un correo electrónico válido.",
+      });
+      return;
+    }
+
+    // No enviar sin verificación anti-bot completada
+    if (!altchaPayload) {
+      setSubmitStatus({
+        type: "error",
+        message: "Completa la verificación de seguridad antes de enviar.",
       });
       return;
     }

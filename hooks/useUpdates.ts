@@ -1,98 +1,157 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useReducer, useEffect } from "react";
+import { useCsrf } from "@/hooks/useCsrf";
 
 // ============ TIPOS ============
 export type UpdateItem = {
   id: string;
   title: string;
   excerpt: string;
+  publishedAt: string;
   displayDate: string;
   href?: string;
   tags: string[];
   borderColor: string;
-  isLocal?: boolean;
   imageUrl?: string;
 };
 
 // Mantenido para compatibilidad con imports existentes — datos reales provienen de la DB
 export const MOCK_UPDATES: UpdateItem[] = [];
 
-const STORAGE_KEY = "devurity-local-updates";
+type UpdateAction =
+  | { type: "SET_ALL"; payload: UpdateItem[] }
+  | { type: "ADD"; payload: UpdateItem }
+  | { type: "EDIT"; payload: UpdateItem }
+  | { type: "DELETE"; payload: string };
 
 /**
- * Hook que fusiona datos de la base de datos (initialData) con adiciones locales
- * guardadas en localStorage.
+ * Reducer para centralizar los cambios de estado de las actualizaciones.
+ *
+ * @param state - El estado actual de los elementos de actualización.
+ * @param action - La acción a ejecutar.
+ * @returns El nuevo estado de los elementos.
+ */
+function updatesReducer(state: UpdateItem[], action: UpdateAction): UpdateItem[] {
+  switch (action.type) {
+    case "SET_ALL":
+      return action.payload;
+    case "ADD":
+      return [action.payload, ...state];
+    case "EDIT":
+      return state.map((u) => (u.id === action.payload.id ? action.payload : u));
+    case "DELETE":
+      return state.filter((u) => u.id !== action.payload);
+    default:
+      return state;
+  }
+}
+
+/**
+ * Hook que gestiona las actualizaciones (noticias y eventos) conectándose
+ * con la base de datos a través de la API REST del backend con tokens CSRF.
+ * Centraliza las actualizaciones de estado mediante un reductor dedicado.
  *
  * @param initialData - Datos precargados desde la DB por el Server Component padre.
+ * @returns Un objeto con el estado actual de las actualizaciones y las funciones mutadoras.
  */
 export function useUpdates(initialData: UpdateItem[] = []) {
-  const [allUpdates, setAllUpdates] = useState<UpdateItem[]>(initialData);
+  const [allUpdates, dispatch] = useReducer(updatesReducer, initialData);
+  const { fetchWithCsrf } = useCsrf();
 
+  // Sincronizar el estado interno si initialData cambia
   useEffect(() => {
-    const load = () => {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) {
-          setAllUpdates(initialData);
-          return;
-        }
-        const parsed: UpdateItem[] = JSON.parse(raw);
-        // Solo los items marcados como locales se persisten en localStorage
-        const localItems = parsed.filter((u) => u.isLocal);
-        if (localItems.length > 0) {
-          setAllUpdates([...localItems, ...initialData]);
-        } else {
-          setAllUpdates(initialData);
-        }
-      } catch {
-        // localStorage corrupto, ignorar
-        setAllUpdates(initialData);
-      }
-    };
+    dispatch({ type: "SET_ALL", payload: initialData });
+  }, [initialData]);
 
-    load();
+  /**
+   * Crea una nueva actualización en la base de datos y la agrega al estado local.
+   *
+   * @param item - Los datos de la nueva actualización, omitiendo la ID generada automáticamente.
+   * @returns Una promesa que resuelve al elemento creado devuelto por la API.
+   * @throws {Error} Si el token CSRF no se puede obtener, el servidor devuelve un error, o hay un fallo de red.
+   */
+  const addUpdate = async (item: Omit<UpdateItem, "id">): Promise<UpdateItem> => {
+    const response = await fetchWithCsrf("/api/updates", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: item.title,
+        excerpt: item.excerpt,
+        displayDate: item.displayDate,
+        tags: item.tags,
+        href: item.href,
+        borderColor: item.borderColor,
+      }),
+    });
 
-    // Escuchar cambios en otras pestañas / componentes
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) load();
-    };
-    const handleCustom = () => load();
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || "Error al crear la actualización");
+    }
 
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("devurity-updates-changed", handleCustom);
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("devurity-updates-changed", handleCustom);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const persistLocal = (updates: UpdateItem[]) => {
-    const localItems = updates.filter((u) => u.isLocal);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(localItems));
-    // Disparar evento para que otros componentes en la misma pestaña se actualicen
-    window.dispatchEvent(new Event("devurity-updates-changed"));
+    dispatch({ type: "ADD", payload: result.data });
+    return result.data;
   };
 
-  const addUpdate = (newUpdate: UpdateItem) => {
-    const updated = [newUpdate, ...allUpdates];
-    setAllUpdates(updated);
-    persistLocal(updated);
+  /**
+   * Modifica una actualización existente en el servidor y sincroniza el estado local.
+   *
+   * @param item - La actualización completa incluyendo su ID.
+   * @returns Una promesa que resuelve al elemento editado.
+   * @throws {Error} Si el token CSRF no está disponible, el servidor retorna error, o hay problemas de red.
+   */
+  const editUpdate = async (item: UpdateItem): Promise<UpdateItem> => {
+    const response = await fetchWithCsrf(`/api/updates/${item.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: item.title,
+        excerpt: item.excerpt,
+        displayDate: item.displayDate,
+        tags: item.tags,
+        href: item.href,
+        borderColor: item.borderColor,
+      }),
+    });
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || "Error al actualizar la actualización");
+    }
+
+    dispatch({ type: "EDIT", payload: result.data });
+    return result.data;
   };
 
-  const editUpdate = (edited: UpdateItem) => {
-    const marked = { ...edited, isLocal: true };
-    const updated = allUpdates.map((u) => (u.id === edited.id ? marked : u));
-    setAllUpdates(updated);
-    persistLocal(updated);
+  /**
+   * Elimina una actualización de la base de datos por su ID y actualiza el estado local.
+   *
+   * @param id - Identificador de la actualización a eliminar.
+   * @returns Una promesa que resuelve una vez completada la eliminación en el servidor y en local.
+   * @throws {Error} Si falla la validación CSRF, la API da error, o hay un fallo de red.
+   */
+  const deleteUpdate = async (id: string): Promise<void> => {
+    const response = await fetchWithCsrf(`/api/updates/${id}`, {
+      method: "DELETE",
+    });
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || "Error al eliminar la actualización");
+    }
+
+    dispatch({ type: "DELETE", payload: id });
   };
 
-  const deleteUpdate = (id: string) => {
-    const updated = allUpdates.filter((u) => u.id !== id);
-    setAllUpdates(updated);
-    persistLocal(updated);
+  return {
+    allUpdates,
+    addUpdate,
+    editUpdate,
+    deleteUpdate,
   };
-
-  return { allUpdates, setAllUpdates, addUpdate, editUpdate, deleteUpdate };
 }
