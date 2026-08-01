@@ -78,8 +78,10 @@ Never bypass layers — route handlers should not query Prisma directly.
   from `hooks/useCsrf.ts` on the client. Public exemptions are hardcoded in `middleware.ts`.
 
 ### RBAC
-Four roles: `admin`, `content_manager`, `project_lead`, `user`. Role lives in JWT claim,
-verified by `verifyJwtPayload()` in middleware. Changes propagate on next token refresh.
+- **RBAC**: Four roles: `admin`, `content_manager`, `lead_project`, `user`. Role lives in the JWT claim,
+  verified by `verifyJwtPayload()` in middleware. `/api/auth/refresh` re-reads the active role
+  from PostgreSQL before issuing a new token; `useAuth` triggers that refresh during initial
+  synchronization and when the window regains focus.
 
 ---
 
@@ -116,12 +118,15 @@ A task without an owner is not a task — it is a risk.
 
 ## Known Technical Debt
 
-- Tests use node:test. The suite has active coverage on JWT, CSRF, regex, and QR sign.
-  Coverage targets `lib/` and `repositories/`.
+- Tests use node:test. The suite has active coverage on auth refresh, JWT, CSRF, profiles,
+  projects, updates, URL validation, regex, and QR attendance. Coverage targets `lib/` and
+  `repositories/`.
 - Rate limiting uses in-memory `Map` — resets on restart, does not scale across serverless
   instances. Known limitation, not to be solved until Category A is complete.
-- `app/page.tsx` landing uses `force-dynamic` after a prerender failure post-deploy.
-  Investigate ISR restoration after production stabilizes.
+- `app/page.tsx` landing uses `force-dynamic` after a prerender failure post-deploy. Public
+  data uses `unstable_cache`: the updates feed revalidates every six hours and the three
+  landing news items every hour; revisit page-level ISR only after production behavior
+  stabilizes.
 - Several god components remain in the admin and auth flows (DVW-ARCH-E01 in progress).
 
 ---
