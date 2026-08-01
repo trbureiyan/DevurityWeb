@@ -62,12 +62,13 @@ export const getLatestNewsForLanding = unstable_cache(
       return await getLatestUpdates(count);
     } catch (error) {
       console.error("[getLatestNewsForLanding] Error fetching latest news from DB:", error);
-      return [];
+      // no cachear un fallo como si la base estuviera vacía
+      throw error;
     }
   },
-  ["latest-news-landing"],
+  ["latest-news-landing-v2"],
   {
     tags:       [CACHE_TAGS.updates],
-    revalidate: activeTTL(CACHE_TTL.long),
+    revalidate: activeTTL(CACHE_TTL.medium),
   }
 );
