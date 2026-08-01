@@ -21,7 +21,13 @@ export async function PATCH(
         if (!token) {
             return NextResponse.json({ error: "No autenticado" }, { status: 401 });
         }
-        const decoded = await validateAuthToken(token);
+        let decoded: Awaited<ReturnType<typeof validateAuthToken>>;
+        try {
+            decoded = await validateAuthToken(token);
+        } catch (error) {
+            console.error("Error de autenticación al actualizar el rol:", error);
+            return NextResponse.json({ error: "Sesión inválida" }, { status: 401 });
+        }
         if (decoded.role !== "admin") {
             return NextResponse.json({ error: "Acceso restringido" }, { status: 403 });
         }

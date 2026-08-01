@@ -117,6 +117,30 @@ test("QR Dynamic Route - Token Validation and UUID check", async (t) => {
     const data = await res.json() as { error: string };
     strictEqual(data.error, "Usuario no encontrado");
   });
+
+  await t.test("Rejects a non-admin before resolving another username", async () => {
+    const userToken = await generateToken({ sub: "2", role: "user" });
+    const req = new NextRequest("http://localhost/api/qr-dinamico", {
+      method: "POST",
+      headers: { cookie: `auth_token=${userToken}` },
+      body: JSON.stringify({ userId: "testuser" }),
+    });
+
+    const res = await generateQrHandler(req);
+    strictEqual(res.status, 403);
+  });
+
+  await t.test("Rejects a non-admin targeting another numeric user", async () => {
+    const userToken = await generateToken({ sub: "2", role: "user" });
+    const req = new NextRequest("http://localhost/api/qr-dinamico", {
+      method: "POST",
+      headers: { cookie: `auth_token=${userToken}` },
+      body: JSON.stringify({ userId: "1" }),
+    });
+
+    const res = await generateQrHandler(req);
+    strictEqual(res.status, 403);
+  });
 });
 
 test("Attendance GET Route - Authentication and Authorization security", async (t) => {

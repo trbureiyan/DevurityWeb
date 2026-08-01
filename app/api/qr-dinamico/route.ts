@@ -27,6 +27,12 @@ export async function POST(request: NextRequest) {
     // Verificar si userId es un número o un username
     const isNumericId = /^\d+$/.test(userId);
     let userIdBigInt: bigint;
+
+    if (decoded.role !== "admin") {
+      if (!isNumericId || !/^\d+$/.test(decoded.sub) || BigInt(userId) !== BigInt(decoded.sub)) {
+        return NextResponse.json({ error: "No puedes generar el QR de otro usuario" }, { status: 403 });
+      }
+    }
     
     if (isNumericId) {
       userIdBigInt = BigInt(userId);
