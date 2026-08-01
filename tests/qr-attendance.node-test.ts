@@ -60,10 +60,24 @@ process.env.JWT_SECRET = "supersecretkeyfortestingpurposesonly";
 test("QR Dynamic Route - Token Validation and UUID check", async (t) => {
   // Use dynamic imports to prevent ES module hoisting from initializing Prisma too early
   const { POST: generateQrHandler } = await import("../app/api/qr-dinamico/route");
+  const { generateToken } = await import("../lib/jwt");
+  const adminToken = await generateToken({ sub: "1", role: "admin" });
+  const authHeaders = { cookie: `auth_token=${adminToken}` };
+
+  await t.test("Rejects QR generation without authentication", async () => {
+    const req = new NextRequest("http://localhost/api/qr-dinamico", {
+      method: "POST",
+      body: JSON.stringify({ userId: "1" }),
+    });
+
+    const res = await generateQrHandler(req);
+    strictEqual(res.status, 401);
+  });
 
   await t.test("Generates QR successfully with a secure UUID token", async () => {
     const req = new NextRequest("http://localhost/api/qr-dinamico", {
       method: "POST",
+      headers: authHeaders,
       body: JSON.stringify({ userId: "1" }),
     });
 
@@ -81,6 +95,7 @@ test("QR Dynamic Route - Token Validation and UUID check", async (t) => {
   await t.test("Fails when userId is missing", async () => {
     const req = new NextRequest("http://localhost/api/qr-dinamico", {
       method: "POST",
+      headers: authHeaders,
       body: JSON.stringify({}),
     });
 
@@ -93,6 +108,7 @@ test("QR Dynamic Route - Token Validation and UUID check", async (t) => {
   await t.test("Fails when user does not exist", async () => {
     const req = new NextRequest("http://localhost/api/qr-dinamico", {
       method: "POST",
+      headers: authHeaders,
       body: JSON.stringify({ userId: "999" }),
     });
 
@@ -171,8 +187,26 @@ test("Attendance GET Route - Authentication and Authorization security", async (
 test("Attendance POST Route - Cryptographic Signature, Expiration, and CSRF checks", async (t) => {
   const { POST: postAttendanceHandler } = await import("../app/api/asistencia/route");
   const crypto = await import("crypto");
+  const { generateToken } = await import("../lib/jwt");
   const secret = process.env.JWT_SECRET || "supersecretkeyfortestingpurposesonly";
   const csrfToken = "test-csrf-token-32-chars-long-abc";
+  const adminToken = await generateToken({ sub: "1", role: "admin" });
+  const authCookie = `csrf_token=${csrfToken}; auth_token=${adminToken}`;
+
+  await t.test("Fails when authenticated user is not an admin", async () => {
+    const userToken = await generateToken({ sub: "2", role: "user" });
+    const req = new NextRequest("http://localhost/api/asistencia", {
+      method: "POST",
+      headers: {
+        "x-csrf-token": csrfToken,
+        cookie: `csrf_token=${csrfToken}; auth_token=${userToken}`,
+      },
+      body: JSON.stringify({ qrData: {} }),
+    });
+
+    const res = await postAttendanceHandler(req);
+    strictEqual(res.status, 403);
+  });
 
   await t.test("Fails when CSRF tokens are missing", async () => {
     const req = new NextRequest("http://localhost/api/asistencia", {
@@ -233,7 +267,7 @@ test("Attendance POST Route - Cryptographic Signature, Expiration, and CSRF chec
       method: "POST",
       headers: {
         "x-csrf-token": csrfToken,
-        cookie: `csrf_token=${csrfToken}`,
+        cookie: authCookie,
       },
       body: JSON.stringify({
         qrData: {
@@ -263,7 +297,7 @@ test("Attendance POST Route - Cryptographic Signature, Expiration, and CSRF chec
       method: "POST",
       headers: {
         "x-csrf-token": csrfToken,
-        cookie: `csrf_token=${csrfToken}`,
+        cookie: authCookie,
       },
       body: JSON.stringify({
         qrData: {
@@ -291,7 +325,7 @@ test("Attendance POST Route - Cryptographic Signature, Expiration, and CSRF chec
       method: "POST",
       headers: {
         "x-csrf-token": csrfToken,
-        cookie: `csrf_token=${csrfToken}`,
+        cookie: authCookie,
       },
       body: JSON.stringify({
         qrData: {
@@ -325,7 +359,7 @@ test("Attendance POST Route - Cryptographic Signature, Expiration, and CSRF chec
       method: "POST",
       headers: {
         "x-csrf-token": csrfToken,
-        cookie: `csrf_token=${csrfToken}`,
+        cookie: authCookie,
       },
       body: JSON.stringify({
         qrData: {
@@ -342,5 +376,54 @@ test("Attendance POST Route - Cryptographic Signature, Expiration, and CSRF chec
     strictEqual(res.status, 410);
     const data = await res.json();
     ok(data.error.includes("QR expirado"));
+  });
+});
+
+test("Admin attendance POST Route - Authentication, CSRF, and signature checks", async (t) => {
+  const { POST: postAttendanceHandler } = await import("../app/api/admin/attendances/route");
+  const { generateToken } = await import("../lib/jwt");
+  const crypto = await import("crypto");
+  const secret = process.env.JWT_SECRET || "supersecretkeyfortestingpurposesonly";
+  const csrfToken = "test-csrf-token-32-chars-long-abc";
+  const adminToken = await generateToken({ sub: "1", role: "admin" });
+  const headers = {
+    "x-csrf-token": csrfToken,
+    cookie: `csrf_token=${csrfToken}; auth_token=${adminToken}`,
+  };
+
+  await t.test("Rejects a QR without a valid signature", async () => {
+    const req = new NextRequest("http://localhost/api/admin/attendances", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        qrData: {
+          userId: "1",
+          timestamp: Date.now(),
+          token: "some-token",
+          expiresAt: Date.now() + 60000,
+          signature: "forged",
+        },
+      }),
+    });
+
+    strictEqual((await postAttendanceHandler(req)).status, 400);
+  });
+
+  await t.test("Accepts a valid signed QR for an authenticated admin", async () => {
+    const timestamp = Date.now();
+    const expiresAt = timestamp + 120000;
+    const token = "some-secure-uuid";
+    const userId = "1";
+    const signature = crypto.default
+      .createHmac("sha256", secret)
+      .update(`${userId}:${timestamp}:${token}:${expiresAt}`)
+      .digest("hex");
+    const req = new NextRequest("http://localhost/api/admin/attendances", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ qrData: { userId, timestamp, token, expiresAt, signature } }),
+    });
+
+    strictEqual((await postAttendanceHandler(req)).status, 200);
   });
 });

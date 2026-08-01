@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { extractTokenFromCookies } from "@/lib/auth/utils";
 import { verifyJwtPayload } from "@/lib/auth/jwt-edge";
 import { getAttendancesPaginated } from "@/repositories/admin/attendances.repositories";
+import prisma from "@/lib/postgresDriver";
+import { csrfAdapter } from "@/lib/csrf";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export async function GET(request: NextRequest) {
   // autenticación y autorización antes de procesar parámetros
@@ -46,12 +49,26 @@ interface _QRData {
   timestamp: number;
   token: string;
   expiresAt: number;
+  signature: string;
 }
-
-import prisma from "@/lib/postgresDriver";
 
 export async function POST(req: NextRequest) {
   try {
+    const authToken = extractTokenFromCookies(req);
+    const decoded = authToken ? await verifyJwtPayload(authToken) : null;
+    if (!decoded) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+    if (decoded.role !== "admin") {
+      return NextResponse.json({ error: "Acceso restringido" }, { status: 403 });
+    }
+
+    const csrfHeader = req.headers.get("x-csrf-token");
+    const csrfCookie = req.cookies.get("csrf_token")?.value;
+    if (!csrfHeader || !csrfCookie || !csrfAdapter.validateToken(csrfHeader, csrfCookie)) {
+      return NextResponse.json({ error: "Token CSRF inválido" }, { status: 403 });
+    }
+
     console.log("[Attendances API] POST /api/admin/attendances start");
     const { qrData } = await req.json();
 
@@ -75,33 +92,50 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validar estructura del QR
+    const { userId, timestamp, token, expiresAt, signature } = qrData as Partial<_QRData>;
     if (
-      !qrData.userId ||
-      !qrData.timestamp ||
-      !qrData.token ||
-      !qrData.expiresAt
+      typeof userId !== "string" || !userId ||
+      typeof timestamp !== "number" || !Number.isFinite(timestamp) ||
+      typeof token !== "string" || !token ||
+      typeof expiresAt !== "number" || !Number.isFinite(expiresAt) ||
+      typeof signature !== "string" || !/^[0-9a-f]{64}$/i.test(signature)
     ) {
       return NextResponse.json(
-        { error: "QR inválido - faltan datos requeridos" },
+        { error: "QR inválido - faltan datos requeridos o firma de seguridad" },
         { status: 400 },
       );
     }
 
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      return NextResponse.json({ error: "Configuración del servidor incompleta" }, { status: 500 });
+    }
+    const expectedSignature = createHmac("sha256", jwtSecret)
+      .update(`${userId}:${timestamp}:${token}:${expiresAt}`)
+      .digest("hex");
+    if (!timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(expectedSignature, "hex"))) {
+      return NextResponse.json({ error: "QR inválido - firma no autorizada" }, { status: 400 });
+    }
+
     // Verificar que el QR no haya expirado
     const now = Date.now();
-    if (now > qrData.expiresAt) {
+    if (now > expiresAt) {
       return NextResponse.json(
         { error: "QR expirado. Por favor, genera uno nuevo desde tu perfil." },
         { status: 410 },
       );
     }
 
-    const userId = BigInt(qrData.userId);
+    let numericUserId: bigint;
+    try {
+      numericUserId = BigInt(userId);
+    } catch {
+      return NextResponse.json({ error: "QR inválido - identificador de usuario" }, { status: 400 });
+    }
 
     // Verificar que el usuario existe
     const user = await prisma.users.findUnique({
-      where: { id: userId },
+      where: { id: numericUserId },
       select: {
         id: true,
         name: true,
@@ -124,7 +158,7 @@ export async function POST(req: NextRequest) {
     // Verificar si ya existe una asistencia para este usuario hoy
     const existingAttendance = await prisma.attendances.findFirst({
       where: {
-        user_id: userId,
+         user_id: numericUserId,
         attendance_date: {
           gte: today,
           lt: new Date(today.getTime() + 24 * 60 * 60 * 1000), // Siguiente día
@@ -134,7 +168,7 @@ export async function POST(req: NextRequest) {
 
     if (existingAttendance) {
       console.log("[Attendances API] Duplicate attendance detected", {
-        userId: qrData.userId,
+        userId,
         existingDate: existingAttendance.attendance_date,
       });
       return NextResponse.json(
@@ -154,13 +188,13 @@ export async function POST(req: NextRequest) {
     const attendance = await prisma.attendances.create({
       data: {
         attendance_date: attendanceDate,
-        user_id: userId,
+        user_id: numericUserId,
       },
     });
 
     console.log("[Attendances API] Attendance created", {
       attendanceId: attendance.id,
-      userId: qrData.userId,
+      userId,
     });
 
     return NextResponse.json({

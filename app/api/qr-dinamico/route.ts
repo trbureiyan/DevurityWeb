@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import QRCode from "qrcode";
 import prisma from "@/lib/postgresDriver";
+import { extractTokenFromCookies } from "@/lib/auth/utils";
+import { verifyJwtPayload } from "@/lib/auth/jwt-edge";
 
 // Tiempo de expiración del QR en minutos (configurable)
 const QR_EXPIRATION_MINUTES = 2;
 
 export async function POST(request: NextRequest) {
   try {
+    const authToken = extractTokenFromCookies(request);
+    const decoded = authToken ? await verifyJwtPayload(authToken) : null;
+    if (!decoded) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+
     const { userId } = await request.json();
 
-    if (!userId) {
+    if (typeof userId !== "string" || !userId) {
       return NextResponse.json(
         { error: "ID de usuario requerido" },
         { status: 400 },
@@ -59,6 +67,10 @@ export async function POST(request: NextRequest) {
         { error: "Usuario no encontrado" },
         { status: 404 },
       );
+    }
+
+    if (decoded.role !== "admin" && decoded.sub !== userIdBigInt.toString()) {
+      return NextResponse.json({ error: "No puedes generar el QR de otro usuario" }, { status: 403 });
     }
 
     // Generar timestamp actual y de expiración

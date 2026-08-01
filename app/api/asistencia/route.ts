@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/postgresDriver";
 import { csrfAdapter } from "@/lib/csrf";
+import { extractTokenFromCookies } from "@/lib/auth/utils";
+import { verifyJwtPayload } from "@/lib/auth/jwt-edge";
 
 /**
  * Registra asistencia mediante escaneo de QR.
@@ -33,6 +35,15 @@ export async function POST(request: NextRequest) {
         { error: "Token CSRF inválido" },
         { status: 403 }
       );
+    }
+
+    const authToken = extractTokenFromCookies(request);
+    const decoded = authToken ? await verifyJwtPayload(authToken) : null;
+    if (!decoded) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+    if (decoded.role !== "admin") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
     }
 
     const { qrData } = await request.json();
