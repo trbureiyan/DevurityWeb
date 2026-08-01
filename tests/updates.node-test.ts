@@ -220,6 +220,20 @@ test("Updates API Route - PUT /api/updates/[id]", async (t) => {
     strictEqual(body.data.title, "Updated Title");
     strictEqual(body.data.excerpt, "Updated description text.");
   });
+
+  await t.test("Rejects explicitly empty title and description", async () => {
+    const token = await generateToken({ sub: "1", role: "admin" });
+    const req = new NextRequest("http://localhost/api/updates/99", {
+      method: "PUT",
+      headers: {
+        cookie: `auth_token=${token}`,
+      },
+      body: JSON.stringify({ title: "   " }),
+    });
+
+    const res = await PUT(req, { params: Promise.resolve({ id: "99" }) });
+    strictEqual(res.status, 400);
+  });
 });
 
 test("Updates API Route - DELETE /api/updates/[id]", async (t) => {

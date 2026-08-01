@@ -80,8 +80,24 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // 3. Procesar cuerpo de la petición
     const body = await request.json();
-    const title = body.title?.trim();
-    const description = (body.description || body.excerpt || "").trim();
+    const rawTitle = body.title;
+    const title = rawTitle === undefined
+      ? undefined
+      : typeof rawTitle === "string"
+        ? rawTitle.trim()
+        : "";
+    const rawDescription = body.description !== undefined ? body.description : body.excerpt;
+    const description = rawDescription === undefined
+      ? undefined
+      : typeof rawDescription === "string"
+        ? rawDescription.trim()
+        : "";
+    if (rawTitle !== undefined && !title) {
+      return NextResponse.json({ success: false, error: "El título es requerido" }, { status: 400 });
+    }
+    if (rawDescription !== undefined && !description) {
+      return NextResponse.json({ success: false, error: "La descripción es requerida" }, { status: 400 });
+    }
     const displayDate = (body.displayDate || body.display_date || "").trim();
     const tags = Array.isArray(body.tags) ? body.tags : undefined;
     let href: string | null | undefined = undefined;
@@ -97,8 +113,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const status = body.status;
 
     const updateData: import("@/lib/types/update.types").UpdateUpdateDTO = {};
-    if (title) updateData.title = title;
-    if (description) updateData.description = description;
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
     if (displayDate) updateData.display_date = displayDate;
     if (tags) updateData.tags = tags;
     if (href !== undefined) updateData.href = href;
