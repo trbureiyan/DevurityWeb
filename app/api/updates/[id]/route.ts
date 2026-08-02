@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getUpdateById,
   updateUpdate,
-  hardDeleteUpdate,
+  archiveUpdate,
 } from "@/repositories/updates/updates.repositories";
 import { extractTokenFromCookies, validateAuthToken } from "@/lib/auth/utils";
 import { revalidateTag } from "next/cache";
@@ -177,8 +177,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ success: false, error: "Actualización no encontrada" }, { status: 404 });
     }
 
-    // 3. Borrado físico permanente de la actualización (hard delete)
-    await hardDeleteUpdate(id);
+    // 3. Archivado para conservar el registro y permitir recuperación futura
+    await archiveUpdate(id);
 
     // Revalidar la caché
     try {
@@ -189,7 +189,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({
       success: true,
-      message: "Actualización eliminada permanentemente con éxito",
+      message: "Actualización archivada correctamente",
     });
   } catch (error) {
     console.error("[DELETE /api/updates/[id]] Error al eliminar:", error);

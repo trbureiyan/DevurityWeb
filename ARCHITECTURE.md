@@ -93,14 +93,16 @@ Server-side data fetchers wrapping repository calls with Next.js caching strateg
 
 | Module | Scope / Functionality | Caching Strategy |
 |---|---|---|
-| `landing.ts` | Quick nav, featured projects, gallery preview, latest news | Static previews are memoized per request; `getLandingNews` uses `unstable_cache` (21,600s / 6h) |
+| `landing.ts` | Quick nav, featured projects and gallery preview | Static previews are memoized per request; landing news comes from `lib/data/updates.ts` |
 | `projects.ts` | Project catalog and category filters | `unstable_cache` on `getProjectsCatalog` (21,600s / 6h) |
-| `updates.ts` | News & announcements feed and landing news | `getUpdatesFeed`: 21,600s / 6h; `getLatestNewsForLanding`: 3,600s / 1h. Both use the `updates` tag; development disables time-based expiration via `activeTTL()` |
+| `updates.ts` | News & announcements feed and landing news | `getUpdatesFeed`: 21,600s / 6h; `getLatestNewsForLanding`: 3,600s / 1h. Both use the `updates` tag; development disables time-based expiration via `activeTTL()`. The management client reads fresh data through `GET /api/updates`. |
 | `admin.ts` | Admin dashboard statistics | Dynamic / No cache (real-time query) |
 
 *Note*: `app/page.tsx` explicitly sets `export const dynamic = "force-dynamic"` to guarantee fresh server rendering and avoid build-time database connection locks during production deployment.
 
-The landing events section uses `getLatestNewsForLanding(3)` from `lib/data/updates.ts`, not `getLandingNews`. Its cache key is versioned as `latest-news-landing-v2`, and database failures are re-thrown instead of being cached as an empty list. Update mutations invalidate the shared `updates` tag.
+The landing events section uses `getLatestNewsForLanding(3)` from `lib/data/updates.ts`. Its cache key is versioned as `latest-news-landing-v2`, and database failures are re-thrown instead of being cached as an empty list. Update mutations invalidate the shared `updates` tag.
+
+The public updates feed and the management list intentionally use different read paths. Public pages may serve cached published updates, while authenticated administrators and content managers refresh the management list from the database to avoid editing stale IDs. The legacy `/content_manager` page redirects to `/updates` and no longer maintains a separate localStorage-based update source.
 
 ### 4. Data Access Layer (`repositories/`)
 

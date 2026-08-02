@@ -1,15 +1,11 @@
 import { cache } from "react";
-import { unstable_cache } from "next/cache";
 import {
   FEATURED_PROJECTS,
   QUICK_NAV_ITEMS,
   type ProjectPreview,
 } from "@/lib/constants/landing";
-import { getLatestUpdates } from "@/repositories/updates/updates.repositories";
 import { GALLERY_IMAGES } from "@/lib/constants/gallery";
 import type { QuickNavItem } from "@/lib/types/landing";
-import type { NewsEvent } from "@/lib/types/update.types";
-import { CACHE_TAGS, CACHE_TTL, activeTTL } from "@/lib/cache-tags";
 
 // Datos estáticos: memoización por request es suficiente, no necesitan ISR
 const getQuickNavItemsInternal = cache(async (): Promise<QuickNavItem[]> => {
@@ -41,19 +37,3 @@ export const getLandingProjects     = () => getFeaturedProjectsInternal();
  * @returns {Promise<string[]>} URLs de imágenes de galería.
  */
 export const getLandingGalleryPreview = () => getGalleryPreviewImagesInternal();
-
-/**
- * Obtiene las últimas 3 noticias/eventos desde la BD con caché ISR.
- * Comparte el tag "updates" para invalidación conjunta con otras partes del sitio.
- *
- * @returns {Promise<NewsEvent[]>} Lista de noticias recientes.
- * @throws Si la consulta a la base de datos falla — propaga la excepción.
- */
-export const getLandingNews = unstable_cache(
-  async (): Promise<NewsEvent[]> => getLatestUpdates(3),
-  ["landing-news"],
-  {
-    tags:       [CACHE_TAGS.updates],
-    revalidate: activeTTL(CACHE_TTL.long),
-  }
-);

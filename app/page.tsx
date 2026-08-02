@@ -36,7 +36,7 @@ export default async function Home() {
       <HeroSection quickNavItems={quickNavItems} />
       <ImpactSection />
       <AboutSection />
-      <EventsSection />           {/* Lee de useUpdates (localStorage) */}
+      <EventsSection />           {/* Lee noticias cacheadas desde la DB */}
       <ProjectsPreviewSection />  {/* Lee de useProjects (localStorage) */}
       <CTASection />
       <GalleryPreviewSection images={galleryImages} />

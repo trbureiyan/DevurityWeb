@@ -1,7 +1,14 @@
 "use client";
 
-import { useReducer, useEffect } from "react";
+import { useReducer, useEffect, useCallback } from "react";
 import { useCsrf } from "@/hooks/useCsrf";
+
+export class UpdatesApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = "UpdatesApiError";
+  }
+}
 
 // ============ TIPOS ============
 export type UpdateItem = {
@@ -18,6 +25,17 @@ export type UpdateItem = {
 
 // Mantenido para compatibilidad con imports existentes — datos reales provienen de la DB
 export const MOCK_UPDATES: UpdateItem[] = [];
+
+async function parseApiResponse<T = unknown>(response: Response): Promise<{ success: boolean; data?: T; error?: string }> {
+  const result = await response.json().catch(() => null);
+  if (!response.ok || !result?.success) {
+    throw new UpdatesApiError(
+      result?.error || "No se pudo completar la operación",
+      response.status,
+    );
+  }
+  return result;
+}
 
 type UpdateAction =
   | { type: "SET_ALL"; payload: UpdateItem[] }
@@ -64,6 +82,20 @@ export function useUpdates(initialData: UpdateItem[] = []) {
     dispatch({ type: "SET_ALL", payload: initialData });
   }, [initialData]);
 
+  const refreshUpdates = useCallback(async (): Promise<UpdateItem[]> => {
+    const response = await fetch("/api/updates?management=1", {
+      credentials: "include",
+    });
+    const result = await parseApiResponse<UpdateItem[]>(response);
+    const updates = result.data ?? [];
+    dispatch({ type: "SET_ALL", payload: updates });
+    return updates;
+  }, []);
+
+  const clearUpdates = useCallback(() => {
+    dispatch({ type: "SET_ALL", payload: [] });
+  }, []);
+
   /**
    * Crea una nueva actualización en la base de datos y la agrega al estado local.
    *
@@ -87,13 +119,12 @@ export function useUpdates(initialData: UpdateItem[] = []) {
       }),
     });
 
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.error || "Error al crear la actualización");
-    }
+    const result = await parseApiResponse<UpdateItem>(response);
 
-    dispatch({ type: "ADD", payload: result.data });
-    return result.data;
+    const created = result.data;
+    if (!created) throw new Error("La API no devolvió la actualización creada");
+    dispatch({ type: "ADD", payload: created });
+    return created;
   };
 
   /**
@@ -119,13 +150,29 @@ export function useUpdates(initialData: UpdateItem[] = []) {
       }),
     });
 
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.error || "Error al actualizar la actualización");
+    if (!response.ok) {
+      const result = await response.json().catch(() => null);
+      let message = result?.error || "Error al actualizar la actualización";
+      if (response.status === 404) {
+        message = "Esta actualización ya no existe. La lista fue actualizada.";
+        try {
+          await refreshUpdates();
+        } catch {
+          message = "La actualización ya no existe y no se pudo sincronizar la lista.";
+        }
+      }
+      throw new UpdatesApiError(
+        message,
+        response.status,
+      );
     }
 
-    dispatch({ type: "EDIT", payload: result.data });
-    return result.data;
+    const result = await parseApiResponse<UpdateItem>(response);
+
+    const updated = result.data;
+    if (!updated) throw new Error("La API no devolvió la actualización editada");
+    dispatch({ type: "EDIT", payload: updated });
+    return updated;
   };
 
   /**
@@ -140,9 +187,21 @@ export function useUpdates(initialData: UpdateItem[] = []) {
       method: "DELETE",
     });
 
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.error || "Error al eliminar la actualización");
+    if (!response.ok) {
+      const result = await response.json().catch(() => null);
+      let message = result?.error || "Error al eliminar la actualización";
+      if (response.status === 404) {
+        message = "Esta actualización ya no existe. La lista fue actualizada.";
+        try {
+          await refreshUpdates();
+        } catch {
+          message = "La actualización ya no existe y no se pudo sincronizar la lista.";
+        }
+      }
+      throw new UpdatesApiError(
+        message,
+        response.status,
+      );
     }
 
     dispatch({ type: "DELETE", payload: id });
@@ -153,5 +212,7 @@ export function useUpdates(initialData: UpdateItem[] = []) {
     addUpdate,
     editUpdate,
     deleteUpdate,
+    refreshUpdates,
+    clearUpdates,
   };
 }

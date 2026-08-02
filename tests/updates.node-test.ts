@@ -48,6 +48,23 @@ const mockPrisma = {
       }
       return null;
     },
+    findMany: async () => [
+      {
+        id: 99n,
+        slug: "test-update",
+        title: "Test Update",
+        description: "Test description",
+        display_date: "13 de agosto 2025",
+        published_at: new Date("2026-07-30T12:00:00.000Z"),
+        tags: ["test"],
+        border_color: "#b20403",
+        href: null,
+        is_featured: false,
+        status: "published",
+        created_at: new Date("2026-07-30T12:00:00.000Z"),
+        updated_at: new Date("2026-07-30T12:00:00.000Z"),
+      },
+    ],
     update: async ({ where, data }: { where: Record<string, unknown>; data: Record<string, unknown> }) => {
       return {
         id: where.id as bigint,
@@ -76,6 +93,34 @@ const mockPrisma = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).prisma = mockPrisma;
 process.env.JWT_SECRET = "supersecretkeyfortestingpurposesonly";
+
+test("Updates API Route - GET /api/updates returns a fresh management list", async () => {
+  const { GET } = await import("../app/api/updates/route");
+  const { generateToken } = await import("../lib/jwt");
+  const token = await generateToken({ sub: "1", role: "admin" });
+  const req = new NextRequest("http://localhost/api/updates?management=1", {
+    headers: { cookie: `auth_token=${token}` },
+  });
+
+  const res = await GET(req);
+  strictEqual(res.status, 200);
+
+  const data = await res.json();
+  strictEqual(data.success, true);
+  strictEqual(data.data[0].id, "99");
+  strictEqual(res.headers.get("cache-control"), "no-store");
+
+  const invalidSession = await GET(new NextRequest("http://localhost/api/updates?management=1", {
+    headers: { cookie: "auth_token=invalid" },
+  }));
+  strictEqual(invalidSession.status, 401);
+
+  const userToken = await generateToken({ sub: "2", role: "user" });
+  const restricted = await GET(new NextRequest("http://localhost/api/updates?management=1", {
+    headers: { cookie: `auth_token=${userToken}` },
+  }));
+  strictEqual(restricted.status, 403);
+});
 
 test("Updates API Route - POST /api/updates", async (t) => {
   const { POST } = await import("../app/api/updates/route");
@@ -275,6 +320,6 @@ test("Updates API Route - DELETE /api/updates/[id]", async (t) => {
     strictEqual(res.status, 200);
     const body = await res.json();
     strictEqual(body.success, true);
-    strictEqual(body.message, "Actualización eliminada permanentemente con éxito");
+    strictEqual(body.message, "Actualización archivada correctamente");
   });
 });

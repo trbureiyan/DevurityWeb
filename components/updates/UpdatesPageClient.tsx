@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { IMAGES } from "@/public/images";
-import { useUpdates, type UpdateItem } from "@/hooks/useUpdates";
+import { UpdatesApiError, useUpdates, type UpdateItem } from "@/hooks/useUpdates";
 
 // ============ COLOR UNIFICADO ============
 const ACCENT_COLOR = "#b20403";
@@ -54,6 +54,21 @@ const emptyForm = {
   href: "",
 };
 
+const getUpdateErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof UpdatesApiError) {
+    if (error.status === 401) return "Tu sesión expiró. Inicia sesión nuevamente.";
+    if (error.status === 403) {
+      return error.message.toLowerCase().includes("csrf")
+        ? "No se pudo validar la sesión de seguridad. Recarga la página e inténtalo de nuevo."
+        : "No tienes permisos para gestionar actualizaciones.";
+    }
+    if (error.status === 404) return error.message;
+    if (error.status >= 500) return "El servidor no pudo completar la operación. Intenta nuevamente.";
+  }
+  if (error instanceof TypeError) return "No se pudo conectar con el servidor. Intenta nuevamente.";
+  return error instanceof Error ? error.message : fallback;
+};
+
 // ============ PANEL DE EDICIÓN ============
 interface EditPanelProps {
   isOpen: boolean;
@@ -71,12 +86,14 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const resetToList = () => {
+  const resetToList = (clearNotice = true) => {
     setMode("list");
     setEditingItem(null);
     setFormData(emptyForm);
     setError(null);
+    if (clearNotice) setNotice(null);
     setSubmitting(false);
   };
 
@@ -90,12 +107,16 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
       href: item.href || "",
     });
     setMode("edit");
+    setError(null);
+    setNotice(null);
   };
 
   const handleStartAdd = () => {
     setEditingItem(null);
     setFormData({ ...emptyForm, displayDate: todayISO() });
     setMode("add");
+    setError(null);
+    setNotice(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -130,9 +151,12 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
           borderColor: ACCENT_COLOR,
         });
       }
-      resetToList();
+      setNotice(mode === "add"
+        ? "Actualización creada correctamente."
+        : "Actualización actualizada correctamente.");
+      resetToList(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al guardar la actualización");
+      setError(getUpdateErrorMessage(err, "No se pudo guardar la actualización."));
     } finally {
       setSubmitting(false);
     }
@@ -156,7 +180,7 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
           <div className="flex items-center gap-3">
             {mode !== "list" && (
               <button
-                onClick={resetToList}
+                onClick={() => resetToList()}
                 className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
               >
                 <svg className="w-4 h-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -184,6 +208,16 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
           {/* ——— LISTA ——— */}
           {mode === "list" && (
             <div className="p-5 space-y-4">
+              {notice && (
+                <div role="status" className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-ubuntu">
+                  {notice}
+                </div>
+              )}
+              {error && (
+                <div role="alert" className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-ubuntu">
+                  {error}
+                </div>
+              )}
               <button
                 onClick={handleStartAdd}
                 disabled={submitting}
@@ -246,10 +280,12 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
                               try {
                                 setSubmitting(true);
                                 setError(null);
+                                setNotice(null);
                                 await onDelete(item.id);
                                 setConfirmDeleteId(null);
+                                setNotice("Actualización archivada correctamente.");
                               } catch (err) {
-                                alert(err instanceof Error ? err.message : "Error al eliminar");
+                                setError(getUpdateErrorMessage(err, "No se pudo eliminar la actualización."));
                               } finally {
                                 setSubmitting(false);
                               }
@@ -296,7 +332,7 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
           {(mode === "add" || mode === "edit") && (
             <form onSubmit={handleSubmit} className="p-5 space-y-5">
               {error && (
-                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-ubuntu flex items-center gap-3">
+                <div role="alert" className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-ubuntu flex items-center gap-3">
                   <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
@@ -377,7 +413,7 @@ function EditPanel({ isOpen, onClose, updates, onAdd, onEdit, onDelete }: EditPa
               <div className="flex gap-3 pt-2 border-t border-white/10">
                 <button
                   type="button"
-                  onClick={resetToList}
+                  onClick={() => resetToList()}
                   disabled={submitting}
                   className="flex-1 py-3 border border-white/20 hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed text-white/70 hover:text-white rounded-full font-ubuntu text-xs uppercase tracking-wider transition-all"
                 >
@@ -415,12 +451,40 @@ interface UpdatesPageClientProps {
 }
 
 export default function UpdatesPageClient({ initialData }: UpdatesPageClientProps) {
-  const { allUpdates, addUpdate, editUpdate, deleteUpdate } = useUpdates(initialData);
+  const { user } = useAuthContext();
+  const canEdit = user?.role === "admin" || user?.role === "content_manager";
+  const { allUpdates, addUpdate, editUpdate, deleteUpdate, refreshUpdates, clearUpdates } = useUpdates(initialData);
   const [visibleCount, setVisibleCount] = useState(6);
   const [isLoading, setIsLoading] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const { user } = useAuthContext();
-  const canEdit = user?.role === "admin" || user?.role === "content_manager";
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [managementReady, setManagementReady] = useState(false);
+
+  useEffect(() => {
+    if (!canEdit) {
+      setManagementReady(false);
+      return;
+    }
+
+    let mounted = true;
+    setManagementReady(false);
+    setSyncError(null);
+    void refreshUpdates()
+      .then(() => {
+        if (mounted) setManagementReady(true);
+      })
+      .catch((error: unknown) => {
+        clearUpdates();
+        if (mounted) {
+          setManagementReady(false);
+          setSyncError(getUpdateErrorMessage(error, "No se pudo sincronizar la lista de actualizaciones."));
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [canEdit, clearUpdates, refreshUpdates]);
 
   const sortedUpdates = [...allUpdates].sort(
     (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
@@ -697,18 +761,24 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
             {canEdit && (
               <button
                 onClick={() => setIsPanelOpen(true)}
-                className="group inline-flex items-center gap-2 border border-white/20 hover:border-red-500/50 text-white/80 hover:text-white px-6 py-3 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:bg-red-600/10 hover:shadow-[0_0_20px_rgba(178,4,3,0.2)]"
+                disabled={!managementReady}
+                className="group inline-flex items-center gap-2 border border-white/20 hover:border-red-500/50 text-white/80 hover:text-white px-6 py-3 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:bg-red-600/10 hover:shadow-[0_0_20px_rgba(178,4,3,0.2)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:shadow-none"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
-                <span>Gestionar actualizaciones</span>
+                <span>{managementReady ? "Gestionar actualizaciones" : "Sincronizando actualizaciones..."}</span>
               </button>
             )}
             <div className="text-white/60 font-ubuntu text-sm">
               Total: <span className="text-white font-bold">{totalUpdates}</span> actualizaciones
             </div>
           </div>
+          {syncError && (
+            <div role="alert" className="mb-8 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+              {syncError}
+            </div>
+          )}
 
           {/* Grid de tarjetas */}
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -835,7 +905,7 @@ export default function UpdatesPageClient({ initialData }: UpdatesPageClientProp
       </section>
 
       {/* ═══ Panel de edición lateral ═══ */}
-      {canEdit && (
+      {canEdit && managementReady && (
         <EditPanel
           isOpen={isPanelOpen}
           onClose={() => setIsPanelOpen(false)}

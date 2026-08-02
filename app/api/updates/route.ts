@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createUpdate, slugExists } from "@/repositories/updates/updates.repositories";
+import { createUpdate, getPublishedUpdates, slugExists } from "@/repositories/updates/updates.repositories";
 import { extractTokenFromCookies, validateAuthToken } from "@/lib/auth/utils";
 import { revalidateTag } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
@@ -70,6 +70,50 @@ function mapUpdateToUpdateItem(update: {
     slug,
     href,
   };
+}
+
+export async function GET(request: NextRequest) {
+  const noStoreHeaders = { "Cache-Control": "no-store" };
+  const token = extractTokenFromCookies(request);
+  if (!token) {
+    return NextResponse.json(
+      { success: false, error: "No autenticado" },
+      { status: 401, headers: noStoreHeaders },
+    );
+  }
+
+  let role: string | undefined;
+  try {
+    ({ role } = await validateAuthToken(token));
+  } catch (error) {
+    console.error("[GET /api/updates] Error de autenticación:", error);
+    return NextResponse.json(
+      { success: false, error: "Sesión inválida" },
+      { status: 401, headers: noStoreHeaders },
+    );
+  }
+
+  if (role !== "admin" && role !== "content_manager") {
+    return NextResponse.json(
+      { success: false, error: "Acceso restringido" },
+      { status: 403, headers: noStoreHeaders },
+    );
+  }
+
+  try {
+    // YAGNI: el gestor mantiene el alcance actual de actualizaciones publicadas.
+    const updates = await getPublishedUpdates();
+    return NextResponse.json({
+      success: true,
+      data: updates.map(mapUpdateToUpdateItem),
+    }, { headers: noStoreHeaders });
+  } catch (error) {
+    console.error("[GET /api/updates] Error al cargar la lista administrativa:", error);
+    return NextResponse.json(
+      { success: false, error: "Error interno del servidor al cargar las actualizaciones" },
+      { status: 500, headers: noStoreHeaders },
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
