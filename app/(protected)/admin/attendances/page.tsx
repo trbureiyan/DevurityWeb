@@ -3,12 +3,15 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import { useCsrf } from "@/hooks/useCsrf";
+import { formatDateCO } from "@/lib/utils/date";
 
 interface QRData {
   userId: string;
   timestamp: number;
   token: string;
   expiresAt: number;
+  signature: string;
 }
 
 interface _AttendanceResponse {
@@ -19,11 +22,6 @@ interface _AttendanceResponse {
   };
 }
 
-interface DuplicateInfo {
-  fecha: string;
-  usuario: string;
-}
-
 interface LastScanned {
   id: string;
   usuario: string;
@@ -31,14 +29,41 @@ interface LastScanned {
   fecha: string;
 }
 
+interface AttendanceUser {
+  id: string;
+  name: string;
+  last_name: string;
+  email: string;
+  semester: number;
+  program: string | null;
+}
+
+interface AttendanceRecord {
+  id: string;
+  attendance_date: string;
+  user: AttendanceUser | null;
+}
+
+interface RecordsResult {
+  attendances: AttendanceRecord[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+interface Filters {
+  dateFrom: string;
+  dateTo: string;
+  search: string;
+  program: string;
+}
+
 export default function AttendancesPage() {
   const _router = useRouter();
   const [scanning, setScanning] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
-  const [duplicateInfo, setDuplicateInfo] = useState<DuplicateInfo | null>(
-    null,
-  );
   const [lastScanned, setLastScanned] = useState<LastScanned | null>(null);
   const [cameraError, setCameraError] = useState("");
   const [cameraActive, setCameraActive] = useState(false);
@@ -46,13 +71,45 @@ export default function AttendancesPage() {
   const [availableCameras, setAvailableCameras] = useState<string[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [showCameraSelector, setShowCameraSelector] = useState(false);
-  const [csrfToken, setCsrfToken] = useState<string>("");
-  const [lastScanTime, setLastScanTime] = useState<number>(0);
+  const { fetchWithCsrf, refetch: refetchCsrf } = useCsrf();
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isStoppingRef = useRef(false);
   const cooldownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const SCAN_COOLDOWN = 3000; // 3 seconds between scans
+
+  const lastScanTimeRef = useRef<number>(0);
+  const scanningRef = useRef<boolean>(false);
+  const handleRetryRef = useRef<() => Promise<void>>(async () => {});
+  const cameraActiveRef = useRef(false);
+
+  useEffect(() => {
+    cameraActiveRef.current = cameraActive;
+  }, [cameraActive]);
+
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"scanner" | "records">("scanner");
+
+  // Records state
+  const [records, setRecords] = useState<RecordsResult | null>(null);
+  const [recordsLoading, setRecordsLoading] = useState(false);
+  const [recordsError, setRecordsError] = useState("");
+  const [programs, setPrograms] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [filters, setFilters] = useState<Filters>({
+    dateFrom: "",
+    dateTo: "",
+    search: "",
+    program: "",
+  });
+  const [pendingFilters, setPendingFilters] = useState<Filters>({
+    dateFrom: "",
+    dateTo: "",
+    search: "",
+    program: "",
+  });
 
   // Detiene el scanner evitando race conditions y fugas de recursos.
   const safeStopAndClear = useCallback(async (clearInstance: boolean = true) => {
@@ -74,6 +131,7 @@ export default function AttendancesPage() {
       }
     } finally {
       setScanning(false);
+      scanningRef.current = false;
       setCameraActive(false);
       if (clearInstance) {
         scannerRef.current = null;
@@ -87,22 +145,22 @@ export default function AttendancesPage() {
       const now = Date.now();
       
       // Check cooldown period
-      if (now - lastScanTime < SCAN_COOLDOWN) {
+      if (now - lastScanTimeRef.current < SCAN_COOLDOWN) {
         console.log("Scan cooldown active, skipping...");
         return;
       }
       
-      // Prevent multiple simultaneous scans
-      if (scanning) {
+      // El estado de React tarda en actualizarse; este ref bloquea lecturas simultáneas.
+      if (scanningRef.current) {
         console.log("Scan already in progress, skipping...");
         return;
       }
-
-      setLastScanTime(now);
+      scanningRef.current = true;
       setScanning(true);
+
+      lastScanTimeRef.current = now;
       setError("");
       setSuccess("");
-      setDuplicateInfo(null);
       
       // Start cooldown timer
       setCooldownRemaining(SCAN_COOLDOWN);
@@ -120,7 +178,7 @@ export default function AttendancesPage() {
       }, 100);
       
       // Pause scanner during processing
-      if (scannerRef.current && cameraActive) {
+        if (scannerRef.current && cameraActiveRef.current) {
         try {
           await scannerRef.current.pause(true);
         } catch (err) {
@@ -138,7 +196,6 @@ export default function AttendancesPage() {
           setError(
             "QR inválido. El usuario debe generar un nuevo código desde su perfil.",
           );
-          setScanning(false);
           return;
         }
 
@@ -147,101 +204,52 @@ export default function AttendancesPage() {
           !qrData.userId ||
           !qrData.timestamp ||
           !qrData.token ||
-          !qrData.expiresAt
+          !qrData.expiresAt ||
+          !qrData.signature
         ) {
           setError("QR inválido - faltan datos requeridos");
-          setScanning(false);
           return;
         }
 
         // Verificar que el QR no haya expirado
-        const now = Date.now();
-        if (now > qrData.expiresAt) {
+        const scanTimeNow = Date.now();
+        if (scanTimeNow > qrData.expiresAt) {
           setError("QR expirado. Por favor, genera uno nuevo desde tu perfil.");
-          setScanning(false);
           return;
         }
 
         try {
-          try {
-            // Verificar que tengamos token CSRF
-            if (!csrfToken) {
-              setError("Token CSRF no disponible. Recargando...");
-              setTimeout(() => window.location.reload(), 2000);
-              setScanning(false);
-              return;
-            }
-            
-            // Registrar asistencia (requiere token CSRF y cookie de sesión)
-            const res = await fetch("/api/admin/attendances", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-Token": csrfToken,
-              },
-              credentials: "include",
-              body: JSON.stringify({
-                qrData: qrData,
+          // Registrar asistencia (requiere token CSRF y cookie de sesión)
+          const res = await fetchWithCsrf("/api/admin/attendances", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              qrData: qrData,
+            }),
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            setSuccess("¡Asistencia registrada exitosamente!");
+            setLastScanned({
+              id: data.id || qrData.userId,
+              usuario: data.usuario?.nombre || "Usuario",
+              correo: data.usuario?.correo || "",
+              fecha: new Date().toLocaleString("es-CO", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
               }),
             });
-
-            const data = await res.json();
-
-            if (res.ok) {
-              setSuccess("¡Asistencia registrada exitosamente!");
-              setLastScanned({
-                id: data.id || qrData.userId,
-                usuario: data.usuario?.nombre || "Usuario",
-                correo: data.usuario?.correo || "",
-                fecha: new Date().toLocaleString("es-CO", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }),
-              });
-              
-              // Resume scanner after delay
-              setTimeout(() => {
-                if (scannerRef.current && cameraActive) {
-                  try {
-                    scannerRef.current.resume();
-                  } catch (err) {
-                    console.log("Could not resume scanner:", err);
-                  }
-                }
-              }, 2000);
-            } else {
-              if (res.status === 409) {
-                // Conflicto - asistencia duplicada
-                setDuplicateInfo({
-                  fecha: data.fecha || new Date().toLocaleString("es-CO"),
-                  usuario: data.usuario || "Usuario",
-                });
-                setError("Esta asistencia ya fue registrada anteriormente");
-              } else {
-                setError(data.error || "Error al registrar asistencia");
-              }
-              
-              // Resume scanner after error with delay
-              setTimeout(() => {
-                if (scannerRef.current && cameraActive) {
-                  try {
-                    scannerRef.current.resume();
-                  } catch (err) {
-                    console.log("Could not resume scanner:", err);
-                  }
-                }
-              }, 2000);
-            }
-          } catch (err) {
-            console.error("Error during fetch:", err);
-            setError("Error de conexión al registrar asistencia");
             
-            // Resume scanner after error
+            // Resume scanner after delay
             setTimeout(() => {
-              if (scannerRef.current && cameraActive) {
+              if (scannerRef.current && cameraActiveRef.current) {
                 try {
                   scannerRef.current.resume();
                 } catch (err) {
@@ -249,21 +257,48 @@ export default function AttendancesPage() {
                 }
               }
             }, 2000);
-          } finally {
-            setScanning(false);
+          } else {
+            if (res.status === 409) {
+              setError("Esta asistencia ya fue registrada anteriormente");
+            } else {
+              setError(data.error || "Error al registrar asistencia");
+            }
+            
+            // Resume scanner after error with delay
+            setTimeout(() => {
+              if (scannerRef.current && cameraActiveRef.current) {
+                try {
+                  scannerRef.current.resume();
+                } catch (err) {
+                  console.log("Could not resume scanner:", err);
+                }
+              }
+            }, 2000);
           }
         } catch (err) {
-          console.error("Error scanning QR:", err);
-          setError("Error interno del servidor");
-          setScanning(false);
+          console.error("Error during fetch:", err);
+          setError("Error de conexión al registrar asistencia");
+          
+          // Resume scanner after error
+          setTimeout(() => {
+            if (scannerRef.current && cameraActiveRef.current) {
+              try {
+                scannerRef.current.resume();
+              } catch (err) {
+                console.log("Could not resume scanner:", err);
+              }
+            }
+          }, 2000);
         }
       } catch (err) {
         console.error("Error scanning QR:", err);
         setError("Error interno del servidor");
+      } finally {
+        scanningRef.current = false;
         setScanning(false);
       }
     },
-    [scanning, lastScanTime, SCAN_COOLDOWN, csrfToken, cameraActive],
+    [SCAN_COOLDOWN, fetchWithCsrf],
   );
 
   const stopScanner = useCallback(() => {
@@ -321,7 +356,6 @@ export default function AttendancesPage() {
     setScanning(false);
     setError("");
     setSuccess("");
-    setDuplicateInfo(null);
     setLastScanned(null);
 
     // Get available cameras first and wait for the result
@@ -342,7 +376,11 @@ export default function AttendancesPage() {
     );
 
     // Ensure we have a valid selected camera
-    if (!selectedCameraId || !cameras.includes(selectedCameraId)) {
+    let activeCameraId = selectedCameraId;
+    if (activeCameraId && cameras.includes(activeCameraId)) {
+      // already valid
+    } else if (cameras.length > 0) {
+      activeCameraId = cameras[0];
       setSelectedCameraId(cameras[0]);
     }
 
@@ -372,7 +410,7 @@ export default function AttendancesPage() {
         qrbox: getQrBoxSize(),
         aspectRatio: 1.0,
         videoConstraints: {
-          deviceId: selectedCameraId ? { exact: selectedCameraId } : undefined,
+          deviceId: activeCameraId ? { exact: activeCameraId } : undefined,
           // On mobile use lower ideal resolution to reduce camera handoffs
           width: { ideal: window.innerWidth > 720 ? 1280 : 640, min: 480 },
           height: { ideal: window.innerWidth > 720 ? 720 : 480, min: 320 },
@@ -385,7 +423,7 @@ export default function AttendancesPage() {
 
       // This is where the browser will show the permission dialog
       await scanner.start(
-        selectedCameraId || { facingMode: "environment" },
+        activeCameraId || { facingMode: "environment" },
         config,
         async (decodedText) => {
           console.log("QR detected:", decodedText.substring(0, 50) + "...");
@@ -452,7 +490,7 @@ export default function AttendancesPage() {
               setTimeout(() => {
                 if (!video.videoWidth && !video.videoHeight) {
                   console.log("Video still not playing - attempting restart");
-                  handleRetry();
+                  handleRetryRef.current();
                 }
               }, 2000);
             }
@@ -463,7 +501,7 @@ export default function AttendancesPage() {
               const stillNoVideo = document.querySelector("#reader video");
               if (!stillNoVideo) {
                 console.log("Still no video - attempting restart");
-                handleRetry();
+                handleRetryRef.current();
               }
             }, 1500);
           }
@@ -510,14 +548,12 @@ export default function AttendancesPage() {
         }, 500);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleScan, selectedCameraId, getAvailableCameras]);
+  }, [handleScan, selectedCameraId, getAvailableCameras, safeStopAndClear]);
 
   // Reinicia el flujo completo del escáner tras fallos o cambios.
   const handleRetry = useCallback(async () => {
     setError("");
     setSuccess("");
-    setDuplicateInfo(null);
     setLastScanned(null);
     setCameraError("");
     setWaitingForPermission(false);
@@ -537,6 +573,10 @@ export default function AttendancesPage() {
       startScanner();
     }, 800);
   }, [startScanner, safeStopAndClear]);
+
+  useEffect(() => {
+    handleRetryRef.current = handleRetry;
+  }, [handleRetry]);
 
   const toggleCameraSelector = useCallback(() => {
     setShowCameraSelector(!showCameraSelector);
@@ -565,29 +605,83 @@ export default function AttendancesPage() {
     [cameraActive, startScanner, safeStopAndClear],
   );
 
+  // Records logic
+  const fetchRecords = useCallback(async (page: number, f: Filters) => {
+    setRecordsLoading(true);
+    setRecordsError("");
+    try {
+      const params = new URLSearchParams({ page: String(page), limit: "20" });
+      if (f.dateFrom) params.set("dateFrom", f.dateFrom);
+      if (f.dateTo) params.set("dateTo", f.dateTo);
+      if (f.search) params.set("search", f.search);
+      if (f.program) params.set("program", f.program);
+
+      const res = await fetch(`/api/admin/attendances?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Error al cargar los registros");
+      const data: RecordsResult = await res.json();
+      setRecords(data);
+    } catch (err) {
+      setRecordsError(err instanceof Error ? err.message : "Error desconocido");
+    } finally {
+      setRecordsLoading(false);
+    }
+  }, []);
+
+  const handleApplyFilters = useCallback(() => {
+    setCurrentPage(1);
+    setFilters(pendingFilters);
+  }, [pendingFilters]);
+
+  const handleClearFilters = useCallback(() => {
+    const empty: Filters = { dateFrom: "", dateTo: "", search: "", program: "" };
+    setPendingFilters(empty);
+    setFilters(empty);
+    setCurrentPage(1);
+  }, []);
+
+  const handleExport = useCallback(async (format: "xlsx" | "csv") => {
+    setExportLoading(true);
+    try {
+      const params = new URLSearchParams({ format });
+      if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+      if (filters.dateTo) params.set("dateTo", filters.dateTo);
+      if (filters.search) params.set("search", filters.search);
+      if (filters.program) params.set("program", filters.program);
+
+      const res = await fetch(`/api/admin/attendances/export?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) {
+        let errorMsg = "Error al generar el archivo";
+        try {
+          const errorData = await res.json();
+          if (errorData && errorData.error) errorMsg = errorData.error;
+        } catch { /* ignore */ }
+        throw new Error(errorMsg);
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = `asistencias-${new Date().toISOString().split("T")[0]}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+    } catch (err) {
+      console.error("Export error:", err);
+      setRecordsError(err instanceof Error ? err.message : "Error al exportar");
+    } finally {
+      setExportLoading(false);
+    }
+  }, [filters]);
+
   // Fetch CSRF token on mount
   useEffect(() => {
-    const fetchCsrf = async () => {
-      try {
-        const response = await fetch("/api/auth/csrf-token", {
-          method: "GET",
-          credentials: "include",
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setCsrfToken(data.csrfToken);
-          console.log("CSRF token fetched successfully");
-        } else {
-          console.error("Failed to fetch CSRF token");
-        }
-      } catch (err) {
-        console.error("Error fetching CSRF token:", err);
-      }
-    };
-    
-    fetchCsrf();
-  }, []);
+    refetchCsrf();
+  }, [refetchCsrf]);
 
   useEffect(() => {
     // No iniciar automáticamente - esperar que el usuario haga clic
@@ -610,6 +704,27 @@ export default function AttendancesPage() {
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [stopScanner]);
+
+  // Fetch records when on records tab
+  useEffect(() => {
+    if (activeTab === "records") {
+      fetchRecords(currentPage, filters);
+    }
+  }, [activeTab, currentPage, filters, fetchRecords]);
+
+  // Fetch programs for filter dropdown
+  useEffect(() => {
+    const fetchPrograms = async () => {
+      try {
+        const res = await fetch("/api/auth/programs");
+        if (res.ok) {
+          const data = await res.json();
+          setPrograms(data.programs ?? []);
+        }
+      } catch (err) { console.error("Error fetching programs:", err); }
+    };
+    fetchPrograms();
+  }, []);
 
   return (
     <div className="min-h-screen bg-variable-collection-fondo p-2 sm:p-4 lg:p-8 font-sans">
@@ -647,34 +762,61 @@ export default function AttendancesPage() {
         }
       `}</style>
       
-      <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
+<div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 pb-2 border-b border-[#2E2E2E]">
+        <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-2 border-b border-[#2E2E2E]">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-1">
-              Registro de Asistencias
+              Asistencias
             </h1>
             <p className="text-gray-400 text-xs sm:text-sm">
-              Panel de control para escaneo de códigos QR
+              Registro y reporte de asistencias
             </p>
           </div>
-          
-          {/* Camera Status Badge */}
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors self-start sm:self-auto ${
-            cameraActive 
-              ? "bg-green-500/10 border-green-500/20 text-green-400" 
-              : "bg-red-500/10 border-red-500/20 text-red-400"
-          }`}>
-            <span className={`w-2 h-2 rounded-full ${cameraActive ? "bg-green-500 animate-pulse" : "bg-red-500"}`}></span>
-            {cameraActive ? "Cámara Activa" : "Cámara Inactiva"}
-          </div>
+          {activeTab === "scanner" && (
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors self-start sm:self-auto ${
+              cameraActive
+                ? "bg-green-500/10 border-green-500/20 text-green-400"
+                : "bg-red-500/10 border-red-500/20 text-red-400"
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${cameraActive ? "bg-green-500 animate-pulse" : "bg-red-500"}`}></span>
+              {cameraActive ? "Cámara Activa" : "Cámara Inactiva"}
+            </div>
+          )}
+        </header>
+        
+        {/* Tabs */}
+        <div className="flex gap-1 p-1 bg-[#1A1515] rounded-xl border border-[#2E2E2E] w-fit">
+          <button
+            onClick={() => setActiveTab("scanner")}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === "scanner"
+                ? "bg-variable-collection-botones text-white shadow"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            Escáner QR
+          </button>
+          <button
+            onClick={() => setActiveTab("records")}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === "records"
+                ? "bg-variable-collection-botones text-white shadow"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            Registros y Exportar
+          </button>
         </div>
 
-        {/* Main Scanner Card */}
-        <div className="relative bg-[#1A1515] border border-[#2E2E2E] rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/5">
-          
-          {/* Camera Viewport */}
-          <div className="relative aspect-[3/4] sm:aspect-[4/3] md:aspect-[16/9] bg-black overflow-hidden group">
+        {/* SCANNER TAB */}
+        {activeTab === "scanner" && (
+          <div className="max-w-3xl space-y-4 sm:space-y-6">
+            {/* Main Scanner Card */}
+            <div className="relative bg-[#1A1515] border border-[#2E2E2E] rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/5">
+              
+              {/* Camera Viewport */}
+            <div className="relative aspect-[3/4] sm:aspect-[4/3] md:aspect-[16/9] bg-black overflow-hidden group">
             <div
               id="reader"
               className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover"
@@ -850,8 +992,8 @@ export default function AttendancesPage() {
                   </svg>
                 </button>
               </div>
-            )}
-          </div>
+)}
+            </div>
         </div>
 
         {/* Error Display */}
@@ -916,20 +1058,6 @@ export default function AttendancesPage() {
                   <h4 className="text-red-400 font-semibold text-base sm:text-lg mb-1">Error al registrar</h4>
                   <p className="text-red-400/80 text-xs sm:text-sm mb-2 sm:mb-3 break-words">{error}</p>
                   
-                  {duplicateInfo && (
-                    <div className="bg-[#1A1515] rounded-lg p-3 sm:p-4 border border-red-500/10">
-                      <div className="flex items-center gap-2 text-red-300 text-xs sm:text-sm mb-2">
-                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="font-medium">Detalles del registro previo:</span>
-                      </div>
-                      <div className="grid grid-cols-1 gap-2 text-xs sm:text-sm text-gray-300">
-                        <p className="truncate"><span className="text-gray-500">Usuario:</span> {duplicateInfo.usuario}</p>
-                        <p className="truncate"><span className="text-gray-500">Fecha:</span> {duplicateInfo.fecha}</p>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -951,6 +1079,215 @@ export default function AttendancesPage() {
             <p className="text-xs sm:text-sm">QR válido por 2 minutos</p>
           </div>
         </div>
+          </div>
+        )}
+
+        {/* RECORDS TAB */}
+        {activeTab === "records" && (
+          <div className="space-y-4">
+
+            {/* Filters */}
+            <div className="bg-[#1A1515] border border-[#2E2E2E] rounded-xl p-4 sm:p-5">
+              <h2 className="text-white font-semibold text-sm mb-4">Filtros</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1.5">Desde</label>
+                  <input
+                    type="date"
+                    value={pendingFilters.dateFrom}
+                    onChange={(e) => setPendingFilters((f) => ({ ...f, dateFrom: e.target.value }))}
+                    className="w-full bg-[#0F0F0F] border border-[#2E2E2E] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-variable-collection-botones"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1.5">Hasta</label>
+                  <input
+                    type="date"
+                    value={pendingFilters.dateTo}
+                    onChange={(e) => setPendingFilters((f) => ({ ...f, dateTo: e.target.value }))}
+                    className="w-full bg-[#0F0F0F] border border-[#2E2E2E] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-variable-collection-botones"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1.5">Buscar usuario</label>
+                  <input
+                    type="text"
+                    placeholder="Nombre o email..."
+                    value={pendingFilters.search}
+                    onChange={(e) => setPendingFilters((f) => ({ ...f, search: e.target.value }))}
+                    className="w-full bg-[#0F0F0F] border border-[#2E2E2E] rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-variable-collection-botones"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1.5">Programa</label>
+                  <select
+                    value={pendingFilters.program}
+                    onChange={(e) => setPendingFilters((f) => ({ ...f, program: e.target.value }))}
+                    className="w-full bg-[#0F0F0F] border border-[#2E2E2E] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-variable-collection-botones"
+                  >
+                    <option value="">Todos los programas</option>
+                    {programs.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4 flex-wrap">
+                <button
+                  onClick={handleApplyFilters}
+                  className="inline-flex items-center gap-2 bg-variable-collection-botones hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  Aplicar filtros
+                </button>
+                <button
+                  onClick={handleClearFilters}
+                  className="inline-flex items-center gap-2 bg-[#2E2E2E] hover:bg-[#3E3E3E] text-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                >
+                  Limpiar
+                </button>
+                <div className="flex gap-2 ml-auto">
+                  <button
+                    onClick={() => handleExport("xlsx")}
+                    disabled={exportLoading || recordsLoading}
+                    className="inline-flex items-center gap-2 bg-[#2E2E2E] hover:bg-[#3E3E3E] disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                  >
+                    {exportLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-gray-500 border-t-white rounded-full animate-spin"></div>
+                        Generando...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Excel
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleExport("csv")}
+                    disabled={exportLoading || recordsLoading}
+                    className="inline-flex items-center gap-2 bg-[#2E2E2E] hover:bg-[#3E3E3E] disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                  >
+                    {exportLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-gray-500 border-t-white rounded-full animate-spin"></div>
+                        Generando...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        CSV
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="bg-[#1A1515] border border-[#2E2E2E] rounded-xl overflow-hidden">
+              {/* Stats bar */}
+              <div className="px-4 sm:px-5 py-3 border-b border-[#2E2E2E] flex items-center justify-between">
+                <span className="text-gray-400 text-xs">
+                  {records ? `${records.total} registro${records.total !== 1 ? "s" : ""} encontrado${records.total !== 1 ? "s" : ""}` : "Cargando..."}
+                </span>
+                {records && records.totalPages > 1 && (
+                  <span className="text-gray-500 text-xs">
+                    Página {records.page} de {records.totalPages}
+                  </span>
+                )}
+              </div>
+
+              {recordsLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-2 border-[#2E2E2E] border-t-variable-collection-botones rounded-full animate-spin"></div>
+                    <span className="text-gray-500 text-sm">Cargando registros...</span>
+                  </div>
+                </div>
+              ) : recordsError ? (
+                <div className="flex items-center justify-center py-16">
+                  <p className="text-red-400 text-sm">{recordsError}</p>
+                </div>
+              ) : records && records.attendances.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3">
+                  <svg className="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  <p className="text-gray-500 text-sm">No se encontraron registros con los filtros aplicados</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[#2E2E2E]">
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nombre</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Apellido</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Email</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Programa</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Sem.</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#2E2E2E]">
+                      {records?.attendances.map((a) => (
+                        <tr key={a.id} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="px-4 py-3 text-white font-medium">{a.user?.name ?? "—"}</td>
+                          <td className="px-4 py-3 text-gray-300 hidden md:table-cell">{a.user?.last_name ?? "—"}</td>
+                          <td className="px-4 py-3 text-gray-400 hidden lg:table-cell truncate max-w-[180px]">{a.user?.email ?? "—"}</td>
+                          <td className="px-4 py-3 text-gray-400 hidden sm:table-cell">
+                            {a.user?.program ? (
+                              <span className="px-2 py-0.5 bg-[#2E2E2E] rounded text-xs text-gray-300 truncate block max-w-[150px]">{a.user.program}</span>
+                            ) : (
+                              <span className="text-gray-600 text-xs">Sin programa</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-gray-400 hidden xl:table-cell">{a.user?.semester ?? "—"}</td>
+                          <td className="px-4 py-3 text-gray-300 whitespace-nowrap">{formatDateCO(a.attendance_date)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Pagination */}
+              {records && records.totalPages > 1 && (
+                <div className="px-4 sm:px-5 py-3 border-t border-[#2E2E2E] flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage <= 1 || recordsLoading}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#2E2E2E] hover:bg-[#3E3E3E] disabled:opacity-40 disabled:cursor-not-allowed text-gray-300 rounded-lg text-xs font-medium transition-all"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Anterior
+                  </button>
+                  <span className="text-gray-500 text-xs">{currentPage} / {records.totalPages}</span>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(records.totalPages, p + 1))}
+                    disabled={currentPage >= records.totalPages || recordsLoading}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#2E2E2E] hover:bg-[#3E3E3E] disabled:opacity-40 disabled:cursor-not-allowed text-gray-300 rounded-lg text-xs font-medium transition-all"
+                  >
+                    Siguiente
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

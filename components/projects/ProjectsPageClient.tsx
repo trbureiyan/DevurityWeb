@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import { useAuthContext } from "@/contexts/AuthContext";
 import {
   useProjects,
   STAGE_LABELS,
@@ -53,9 +54,9 @@ interface EditPanelProps {
   isOpen: boolean;
   onClose: () => void;
   projects: ProjectItem[];
-  onAdd: (p: ProjectItem) => void;
-  onEdit: (p: ProjectItem) => void;
-  onDelete: (id: string) => void;
+  onAdd: (p: Omit<ProjectItem, "id"> & { id?: string }) => Promise<unknown>;
+  onEdit: (p: ProjectItem) => Promise<unknown>;
+  onDelete: (id: string) => Promise<unknown>;
 }
 
 function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditPanelProps) {
@@ -63,11 +64,14 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
   const [editingItem, setEditingItem] = useState<ProjectItem | null>(null);
   const [formData, setFormData] = useState(emptyForm);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const resetToList = () => {
     setMode("list");
     setEditingItem(null);
     setFormData(emptyForm);
+    setError(null);
   };
 
   const handleStartEdit = (item: ProjectItem) => {
@@ -78,55 +82,77 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
       stage: item.stage,
       focusAreas: item.focusAreas.join(", "),
       stack: item.stack.join(", "),
-      updatedAt: item.updatedAt,
+      updatedAt: item.updatedAt ? item.updatedAt.split("T")[0] : todayISO(),
       ctaLabel: item.callToAction?.label || "",
       ctaHref: item.callToAction?.href || "",
     });
     setMode("edit");
+    setError(null);
   };
 
   const handleStartAdd = () => {
     setEditingItem(null);
     setFormData({ ...emptyForm, updatedAt: todayISO() });
     setMode("add");
+    setError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
     const focusAreas = formData.focusAreas.split(",").map((s) => s.trim()).filter(Boolean);
     const stack = formData.stack.split(",").map((s) => s.trim()).filter(Boolean);
     const callToAction =
       formData.ctaLabel && formData.ctaHref
         ? { label: formData.ctaLabel, href: formData.ctaHref }
-        : undefined;
+        : null;
 
-    if (mode === "add") {
-      const newProject: ProjectItem = {
-        id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-        title: formData.title,
-        summary: formData.summary,
-        stage: formData.stage,
-        focusAreas,
-        stack,
-        updatedAt: formData.updatedAt || todayISO(),
-        heroImage: null,
-        isLocal: true,
-        callToAction,
-      };
-      onAdd(newProject);
-    } else if (mode === "edit" && editingItem) {
-      onEdit({
-        ...editingItem,
-        title: formData.title,
-        summary: formData.summary,
-        stage: formData.stage,
-        focusAreas,
-        stack,
-        updatedAt: formData.updatedAt || editingItem.updatedAt,
-        callToAction,
-      });
+    try {
+      if (mode === "add") {
+        const newProject = {
+          title: formData.title,
+          summary: formData.summary,
+          stage: formData.stage,
+          focusAreas,
+          stack,
+          updatedAt: formData.updatedAt || todayISO(),
+          heroImage: null,
+          callToAction,
+        };
+        await onAdd(newProject);
+      } else if (mode === "edit" && editingItem) {
+        await onEdit({
+          ...editingItem,
+          title: formData.title,
+          summary: formData.summary,
+          stage: formData.stage,
+          focusAreas,
+          stack,
+          updatedAt: formData.updatedAt || editingItem.updatedAt,
+          callToAction,
+        });
+      }
+      resetToList();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al procesar la solicitud");
+    } finally {
+      setIsSubmitting(false);
     }
-    resetToList();
+  };
+
+  const handleDelete = async (id: string) => {
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      await onDelete(id);
+      setConfirmDeleteId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al eliminar el proyecto");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -195,6 +221,11 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
                 <p className="font-ubuntu text-xs uppercase tracking-widest text-white/30 px-1">
                   {projects.length} proyectos
                 </p>
+                {error && (
+                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-ubuntu">
+                    {error}
+                  </div>
+                )}
                 {projects.map((item) => (
                   <div
                     key={item.id}
@@ -202,11 +233,6 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        {item.isLocal && (
-                          <span className="text-[10px] text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-ubuntu uppercase tracking-wider">
-                            local
-                          </span>
-                        )}
                         <span className={`text-[10px] border px-2 py-0.5 rounded-full font-ubuntu uppercase tracking-wider ${STAGE_COLORS[item.stage]}`}>
                           {STAGE_LABELS[item.stage]}
                         </span>
@@ -231,8 +257,9 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
                     <div className="flex flex-col gap-2 flex-shrink-0">
                       <button
                         onClick={() => handleStartEdit(item)}
+                        disabled={isSubmitting}
                         title="Editar"
-                        className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 flex items-center justify-center transition-colors"
+                        className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <svg className="w-3.5 h-3.5 text-white/60 hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -242,8 +269,9 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
                       {confirmDeleteId === item.id ? (
                         <div className="flex flex-col gap-1">
                           <button
-                            onClick={() => { onDelete(item.id); setConfirmDeleteId(null); }}
-                            className="w-8 h-8 rounded-full bg-red-600/30 hover:bg-red-600/60 border border-red-600/40 flex items-center justify-center transition-colors"
+                            onClick={() => handleDelete(item.id)}
+                            disabled={isSubmitting}
+                            className="w-8 h-8 rounded-full bg-red-600/30 hover:bg-red-600/60 border border-red-600/40 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Confirmar"
                           >
                             <svg className="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -252,7 +280,8 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
                           </button>
                           <button
                             onClick={() => setConfirmDeleteId(null)}
-                            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-colors"
+                            disabled={isSubmitting}
+                            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Cancelar"
                           >
                             <svg className="w-3.5 h-3.5 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -263,8 +292,9 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
                       ) : (
                         <button
                           onClick={() => setConfirmDeleteId(item.id)}
+                          disabled={isSubmitting}
                           title="Eliminar"
-                          className="w-8 h-8 rounded-full bg-white/5 hover:bg-red-600/20 border border-white/10 hover:border-red-600/30 flex items-center justify-center transition-colors"
+                          className="w-8 h-8 rounded-full bg-white/5 hover:bg-red-600/20 border border-white/10 hover:border-red-600/30 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <svg className="w-3.5 h-3.5 text-white/40 hover:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -286,6 +316,7 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
                 <input
                   type="text"
                   required
+                  disabled={isSubmitting}
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className={inputCls}
@@ -297,6 +328,7 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
                 <label className={labelCls}>Resumen *</label>
                 <textarea
                   required
+                  disabled={isSubmitting}
                   value={formData.summary}
                   onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
                   rows={4}
@@ -308,6 +340,7 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
               <div className="space-y-2">
                 <label className={labelCls}>Etapa *</label>
                 <select
+                  disabled={isSubmitting}
                   value={formData.stage}
                   onChange={(e) => setFormData({ ...formData, stage: e.target.value as ProjectStage })}
                   className={`${inputCls} [color-scheme:dark]`}
@@ -323,6 +356,7 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
                 <input
                   type="text"
                   required
+                  disabled={isSubmitting}
                   value={formData.focusAreas}
                   onChange={(e) => setFormData({ ...formData, focusAreas: e.target.value })}
                   className={inputCls}
@@ -334,6 +368,7 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
                 <label className={labelCls}>Stack tecnológico (separado por coma)</label>
                 <input
                   type="text"
+                  disabled={isSubmitting}
                   value={formData.stack}
                   onChange={(e) => setFormData({ ...formData, stack: e.target.value })}
                   className={inputCls}
@@ -345,6 +380,7 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
                 <label className={labelCls}>Fecha de actualización</label>
                 <input
                   type="date"
+                  disabled={isSubmitting}
                   value={formData.updatedAt}
                   onChange={(e) => setFormData({ ...formData, updatedAt: e.target.value })}
                   className={`${inputCls} [color-scheme:dark]`}
@@ -355,6 +391,7 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
                 <p className={labelCls}>Call to action (opcional)</p>
                 <input
                   type="text"
+                  disabled={isSubmitting}
                   value={formData.ctaLabel}
                   onChange={(e) => setFormData({ ...formData, ctaLabel: e.target.value })}
                   className={inputCls}
@@ -362,6 +399,7 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
                 />
                 <input
                   type="text"
+                  disabled={isSubmitting}
                   value={formData.ctaHref}
                   onChange={(e) => setFormData({ ...formData, ctaHref: e.target.value })}
                   className={inputCls}
@@ -369,19 +407,39 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
                 />
               </div>
 
+              {error && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-ubuntu">
+                  {error}
+                </div>
+              )}
+
               <div className="flex gap-3 pt-2 border-t border-white/10">
                 <button
                   type="button"
+                  disabled={isSubmitting}
                   onClick={resetToList}
-                  className="flex-1 py-3 border border-white/20 hover:border-white/40 text-white/70 hover:text-white rounded-full font-ubuntu text-xs uppercase tracking-wider transition-all"
+                  className="flex-1 py-3 border border-white/20 hover:border-white/40 text-white/70 hover:text-white rounded-full font-ubuntu text-xs uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-ubuntu text-xs uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(178,4,3,0.5)]"
+                  disabled={isSubmitting}
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-ubuntu text-xs uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(178,4,3,0.5)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {mode === "add" ? "Guardar" : "Actualizar"}
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>Procesando...</span>
+                    </>
+                  ) : mode === "add" ? (
+                    "Guardar"
+                  ) : (
+                    "Actualizar"
+                  )}
                 </button>
               </div>
             </form>
@@ -402,6 +460,8 @@ export default function ProjectsPageClient({ initialData }: ProjectsPageClientPr
   const [visibleCount, setVisibleCount] = useState(6);
   const [isLoading, setIsLoading] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const { user } = useAuthContext();
+  const canEdit = user?.role === "admin" || user?.role === "lead_project";
 
   const sortedProjects = [...allProjects].sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -411,8 +471,8 @@ export default function ProjectsPageClient({ initialData }: ProjectsPageClientPr
   const timeline = sortedProjects.slice(1);
   const quickPanelProjects = sortedProjects.slice(0, 12);
   const totalProjects = sortedProjects.length;
-  const totalFocusAreas = filters.focusAreas.length;
-  const totalStacks = filters.stack.length;
+  const _totalFocusAreas = filters.focusAreas.length;
+  const _totalStacks = filters.stack.length;
   const currentYear = new Date().getFullYear();
 
   const hasMore = visibleCount < timeline.length;
@@ -683,15 +743,17 @@ export default function ProjectsPageClient({ initialData }: ProjectsPageClientPr
 
           {/* Barra herramientas */}
           <div className="flex flex-wrap gap-4 justify-between items-center mb-8">
-            <button
-              onClick={() => setIsPanelOpen(true)}
-              className="group inline-flex items-center gap-2 border border-white/20 hover:border-red-500/50 text-white/80 hover:text-white px-6 py-3 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:bg-red-600/10 hover:shadow-[0_0_20px_rgba(178,4,3,0.2)]"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-              <span>Gestionar proyectos</span>
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => setIsPanelOpen(true)}
+                className="group inline-flex items-center gap-2 border border-white/20 hover:border-red-500/50 text-white/80 hover:text-white px-6 py-3 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:bg-red-600/10 hover:shadow-[0_0_20px_rgba(178,4,3,0.2)]"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                <span>Gestionar proyectos</span>
+              </button>
+            )}
             <div className="text-white/60 font-ubuntu text-sm">
               Total: <span className="text-white font-bold">{totalProjects}</span> proyectos
             </div>
@@ -714,11 +776,6 @@ export default function ProjectsPageClient({ initialData }: ProjectsPageClientPr
                         {STAGE_LABELS[project.stage]}
                       </span>
                       <div className="flex items-center gap-2">
-                        {project.isLocal && (
-                          <span className="text-[10px] text-red-400 border border-red-500/30 px-2 py-1 rounded-full font-ubuntu uppercase">
-                            local
-                          </span>
-                        )}
                         <span className="text-xs font-orbitron uppercase tracking-[0.3em] text-white/50">
                           {formatProjectDate(project.updatedAt)}
                         </span>
@@ -839,14 +896,16 @@ export default function ProjectsPageClient({ initialData }: ProjectsPageClientPr
       </section>
 
       {/* ═══ Panel de edición lateral ═══ */}
-      <EditPanel
-        isOpen={isPanelOpen}
-        onClose={() => setIsPanelOpen(false)}
-        projects={allProjects}
-        onAdd={addProject}
-        onEdit={editProject}
-        onDelete={deleteProject}
-      />
+      {canEdit && (
+        <EditPanel
+          isOpen={isPanelOpen}
+          onClose={() => setIsPanelOpen(false)}
+          projects={allProjects}
+          onAdd={addProject}
+          onEdit={editProject}
+          onDelete={deleteProject}
+        />
+      )}
     </main>
   );
 }

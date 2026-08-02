@@ -4,6 +4,7 @@ import React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthContext } from "@/contexts/AuthContext";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import { getInitials } from "@/lib/utils/getInitials";
 
 export default function AdminLayout({
   children,
@@ -30,11 +31,6 @@ export default function AdminLayout({
     router.push("/");
   };
 
-  // Deriva iniciales para avatar fallback.
-  const getInitials = (name: string, last_name: string) => {
-    return `${name.charAt(0).toUpperCase()}${last_name?.charAt(0)?.toUpperCase() || ""}`;
-  };
-
   const initials = user
     ? getInitials(user.name, user.last_name ?? "")
     : getInitials("Usuario", "Devurity");
@@ -58,6 +54,7 @@ export default function AdminLayout({
         user={user ?? null}
         isLoading={isLoading}
         initials={initials}
+        role={user?.role ?? null}
       />
 
       {/* Main Content */}
@@ -72,16 +69,19 @@ export default function AdminLayout({
               aria-expanded={isMobileMenuOpen}
             >
               <span
+                key="span-cm-1"
                 className={`w-6 h-0.5 bg-white transition-all duration-300 ${
                   isMobileMenuOpen ? "rotate-45 translate-y-1.5" : ""
                 }`}
               />
               <span
+                key="span-cm-2"
                 className={`w-6 h-0.5 bg-white transition-all duration-300 my-1.5 ${
                   isMobileMenuOpen ? "opacity-0" : "opacity-100"
                 }`}
               />
               <span
+                key="span-cm-3"
                 className={`w-6 h-0.5 bg-white transition-all duration-300 ${
                   isMobileMenuOpen ? "-rotate-45 -translate-y-1.5" : ""
                 }`}

@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { findInactiveUsersWithPagination } from "@/repositories/users/users.repositories";
+import { extractTokenFromCookies } from "@/lib/auth/utils";
+import { verifyJwtPayload } from "@/lib/auth/jwt-edge";
 
 export async function GET(request: NextRequest) {
+  const token = extractTokenFromCookies(request);
+  if (!token) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  const decoded = await verifyJwtPayload(token);
+  if (!decoded || decoded.role !== "admin") {
+    return NextResponse.json({ error: "Acceso restringido" }, { status: 403 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");

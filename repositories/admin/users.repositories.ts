@@ -1,4 +1,5 @@
 import prisma from "../../lib/postgresDriver";
+import { Prisma } from "../../lib/generated/prisma";
 
 export async function getAdminUsersPaginated(params: {
     page: number;
@@ -11,7 +12,7 @@ export async function getAdminUsersPaginated(params: {
     const { page, limit, search, role, status, program } = params;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.usersWhereInput = {};
 
     if (search) {
         where.OR = [
@@ -84,6 +85,7 @@ export async function updateUserRole(userId: string, roleName: string) {
     return {
         ...updated,
         id: updated.id.toString(),
+        program_id: updated.program_id?.toString() ?? null,
         role_id: updated.role_id.toString(),
         roles: {
             id: updated.roles.id.toString(),
@@ -97,7 +99,12 @@ export async function updateUserStatus(userId: string, isActive: boolean) {
         where: { id: BigInt(userId) },
         data: { is_active: isActive },
     });
-    return { ...updated, id: updated.id.toString(), role_id: updated.role_id.toString() };
+    return {
+        ...updated,
+        id: updated.id.toString(),
+        program_id: updated.program_id?.toString() ?? null,
+        role_id: updated.role_id.toString(),
+    };
 }
 
 export async function deleteUserCompletely(userId: string) {

@@ -1,5 +1,6 @@
 import prisma from "../../lib/postgresDriver";
 import logger from "../../lib/logger";
+import crypto from "node:crypto";
 import type { CreateUserDTO, PaginatedUsersResponse } from "../../lib/types/user.types";
 
 function toBigInt(id: string | number): bigint {
@@ -360,15 +361,28 @@ export async function findActiveUsersForTeam() {
         last_name: true,
         username: true,
         motivation: true,
+        semester: true,
         user_skills: {
-          include: {
-            skills: true,
+          select: {
+            skills: {
+              select: { name: true }
+            }
           },
         },
-        roles: true,
+        roles: {
+          select: { name: true }
+        },
+        programs: {
+          select: {
+            name: true,
+          },
+        },
         user_platforms: {
-          include: {
-            platforms: true,
+          select: {
+            link: true,
+            platforms: {
+              select: { name: true }
+            }
           },
         },
       },
@@ -388,11 +402,16 @@ export async function findActiveUsersForTeam() {
         skillsCount: user.user_skills?.length ?? 0
       });
       
-      return {
-        ...user,
+    // roles se extrae del spread para evitar que el objeto relación crudo entre en el resultado
+    const { roles: _roles, ...rest } = user;
+    return {
+        ...rest,
         id: user.id.toString(),
         skills: user.user_skills?.map((us) => us.skills?.name ?? 'Unknown') ?? [],
-        role: user.roles?.name ?? 'Member',
+        // La UI agrupa por estos identificadores; los títulos visibles se definen en TeamSection.
+        role: user.roles?.name ?? 'user',
+        program: user.programs?.name ?? null,
+        semester: user.semester,
         platforms: user.user_platforms?.map((up) => ({
           name: up.platforms?.name ?? 'Link',
           link: up.link,
@@ -757,15 +776,18 @@ export async function updateUserProfile(
           });
 
           if (!project) {
+            const rawSlug = proj.title
+              .toLowerCase()
+              .trim()
+              .replace(/\s+/g, "-")
+              .replace(/[^a-z0-9-]/g, "")
+              .replace(/-+/g, "-")
+              .substring(0, 60);
+            // 6 bytes = 12 hex chars = 2^48 ≈ 281T valores. Colision estadisticamente imposible.
+            const suffix = crypto.randomBytes(6).toString("hex");
             project = await tx.projects.create({
               data: {
-                slug: proj.title
-                  .toLowerCase()
-                  .trim()
-                  .replace(/\s+/g, "-")
-                  .replace(/[^a-z0-9-]/g, "")
-                  .replace(/-+/g, "-")
-                  .substring(0, 60) + `-${Date.now()}`,
+                slug: `${rawSlug || "project"}-${suffix}`,
                 title: proj.title,
                 description: projectLink !== '#' ? projectLink : "Created from profile",
                 focus_areas: [],

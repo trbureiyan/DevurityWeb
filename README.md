@@ -60,7 +60,7 @@ Nació para resolver un problema concreto, el semillero coordinaba todo por hoja
 ├── CSRF mediante patrón de doble token en cada mutación
 ├── rate limiting en intentos de login
 ├── patrón Repository entre lógica de negocio y acceso a datos
-├── ISR en páginas públicas
+├── caché de datos públicos mediante Server Components y `unstable_cache`
 └── middleware que aplica RBAC antes de que la solicitud llegue a la página
 ```
 
@@ -119,10 +119,10 @@ prisma/               Esquema, migraciones, datos semilla
 middleware.ts         Autenticación, RBAC, seguridad
 ```
 
-La base de código sigue una arquitectura en capas: los componentes consumen repositorios, los repositorios hablan con Prisma, Prisma habla con Postgres. Middleware intercepta cada solicitud antes de que llegue a la página.
+La base de código sigue una arquitectura en capas: los Server Components y route handlers consumen `lib/data/`, la lógica de negocio usa repositorios, los repositorios hablan con Prisma y Prisma habla con Postgres. Middleware intercepta cada solicitud antes de que llegue a la página.
 
 ```
-  req ─→ middleware ─→ route ─→ component ─→ repository ─→ prisma ─→ pg
+  req ─→ middleware ─→ route/RSC ─→ lib/data ─→ repository ─→ prisma ─→ pg
 ```
 
 ---
@@ -134,7 +134,7 @@ Abierto a miembros del semillero y colaboradores externos autorizados.
 1. Rama nueva desde `dev`
 2. Changes
 3. Pull request con descripción clara
-4. Si aplica, actualiza `/docs`
+4. Si aplica, actualiza `AGENTS.md`, `ARCHITECTURE.md`, `SKILL.md` o `README.md`
 
 Convenciones: conventional commits, ESLint + TypeScript estricto, pruebas donde tengan sentido. Ejecuta `pnpm run build` antes de subir cambios.
 

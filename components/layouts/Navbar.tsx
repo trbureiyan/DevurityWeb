@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import LoginButton from "@/components/ui/LoginButton";
 import { useAuthContext } from "@/contexts/AuthContext";
 
 // Importar el menú móvil sin SSR para evitar errores de hidratación
@@ -12,23 +11,16 @@ const MobileMenu = dynamic(() => import("./MobileMenu"), {
   ssr: false,
 });
 
-const NAVIGATION_ITEMS = [
+const PUBLIC_NAV_ITEMS = [
   { label: "Nosotros", href: "/about" },
   { label: "Proyectos", href: "/projects" },
   { label: "Eventos", href: "/updates" },
-  { label: "Asistencia", href: "/admin/attendances" },
 ];
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const { user, isAuthenticated, isLoading, logout, isAdmin } = useAuthContext();
-
-  const navigationItems = [
-    { label: "Nosotros", href: "/about" },
-    { label: "Proyectos", href: "/projects" },
-    { label: "Eventos", href: "/updates" },
-  ];
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -117,7 +109,7 @@ export default function Navbar() {
           aria-label="Main navigation"
         >
           <ul className="flex items-center gap-9">
-            {NAVIGATION_ITEMS.map((item) => (
+            {PUBLIC_NAV_ITEMS.map((item) => (
               <li
                 key={item.href}
                 className="flex flex-col items-center justify-center"
@@ -130,6 +122,16 @@ export default function Navbar() {
                 </Link>
               </li>
             ))}
+            {isAuthenticated && isAdmin() && (
+              <li className="flex flex-col items-center justify-center">
+                <Link
+                  href="/admin/attendances"
+                  className="font-ubuntu font-medium text-white text-sm text-center tracking-[0] leading-[21px] whitespace-nowrap hover:text-variable-collection-link transition-colors duration-200"
+                >
+                  Asistencia
+                </Link>
+              </li>
+            )}
           </ul>
 
           {/* Desktop Auth Section */}
@@ -301,7 +303,7 @@ export default function Navbar() {
       <MobileMenu
         isMenuOpen={isMenuOpen}
         closeMenu={closeMenu}
-        navigationItems={NAVIGATION_ITEMS}
+        navigationItems={PUBLIC_NAV_ITEMS}
         isAuthenticated={isAuthenticated}
         user={user}
         onLogout={logout}

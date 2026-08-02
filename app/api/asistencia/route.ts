@@ -1,8 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/postgresDriver";
+import { csrfAdapter } from "@/lib/csrf";
+import { extractTokenFromCookies } from "@/lib/auth/utils";
+import { verifyJwtPayload } from "@/lib/auth/jwt-edge";
 
+/**
+ * Registra asistencia mediante escaneo de QR.
+ *
+ * Valida CSRF, verifica firma criptográfica del QR, confirma que el usuario
+ * existe y que no haya registrado asistencia hoy, y crea el registro.
+ *
+ * @param request - NextRequest con JSON body: { qrData: { userId, timestamp, token, expiresAt, signature } }.
+ * @returns 200 con datos de la asistencia registrada.
+ * @returns 400 si el QR es inválido, faltan campos, o la firma no coincide.
+ * @returns 403 si el token CSRF falta o es inválido.
+ * @returns 404 si el usuario no existe.
+ * @returns 409 si ya existe asistencia hoy.
+ * @returns 500 si hay un error interno del servidor.
+ */
 export async function POST(request: NextRequest) {
   try {
+    const csrfTokenFromHeader = request.headers.get("x-csrf-token");
+    const csrfTokenFromCookie = request.cookies.get("csrf_token")?.value;
+
+    if (!csrfTokenFromHeader || !csrfTokenFromCookie) {
+      return NextResponse.json(
+        { error: "Token CSRF requerido" },
+        { status: 403 }
+      );
+    }
+
+    if (!csrfAdapter.validateToken(csrfTokenFromHeader, csrfTokenFromCookie)) {
+      return NextResponse.json(
+        { error: "Token CSRF inválido" },
+        { status: 403 }
+      );
+    }
+
+    const authToken = extractTokenFromCookies(request);
+    const decoded = authToken ? await verifyJwtPayload(authToken) : null;
+    if (!decoded) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+    if (decoded.role !== "admin") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
+
     const { qrData } = await request.json();
 
     if (!qrData) {
@@ -23,29 +66,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validar que tenga los campos requeridos
+    // Validar que tenga los campos requeridos con el tipo correcto
+    const { userId, timestamp, token, expiresAt, signature } = qrData as Record<string, unknown>;
     if (
-      !qrData.userId ||
-      !qrData.timestamp ||
-      !qrData.token ||
-      !qrData.expiresAt
+      typeof userId !== "string" ||
+      !userId ||
+      typeof token !== "string" ||
+      !token ||
+      typeof signature !== "string" ||
+      !signature ||
+      typeof timestamp !== "number" ||
+      !Number.isFinite(timestamp) ||
+      typeof expiresAt !== "number" ||
+      !Number.isFinite(expiresAt)
     ) {
       return NextResponse.json(
-        { error: "QR inválido - faltan datos requeridos" },
+        { error: "QR inválido - faltan datos requeridos o firma de seguridad" },
+        { status: 400 },
+      );
+    }
+
+    // Verificar firma criptográfica del QR para evitar alteraciones o falsificaciones
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      return NextResponse.json({ error: "Configuración del servidor incompleta" }, { status: 500 });
+    }
+    const cryptoMod = await import("crypto");
+    const expectedSignature = cryptoMod.default
+      .createHmac("sha256", jwtSecret)
+      .update(`${userId}:${timestamp}:${token}:${expiresAt}`)
+      .digest("hex");
+
+    // Comparación de tiempo constante para evitar timing attacks
+    const sigBuffer = Buffer.from(signature, "hex");
+    const expectedBuffer = Buffer.from(expectedSignature, "hex");
+    if (sigBuffer.length !== expectedBuffer.length || !cryptoMod.default.timingSafeEqual(sigBuffer, expectedBuffer)) {
+      return NextResponse.json(
+        { error: "QR inválido - firma corrupta o no autorizada" },
         { status: 400 },
       );
     }
 
     // Verificar que el QR no haya expirado
     const now = Date.now();
-    if (now > qrData.expiresAt) {
+    if (now > expiresAt) {
       return NextResponse.json(
         { error: "QR expirado. Por favor, genera uno nuevo desde tu perfil." },
         { status: 410 }, // 410 Gone - recurso ya no disponible
       );
     }
-
-    const userId = qrData.userId;
 
     // Verificar que el usuario existe
     const usuario = await prisma.users.findUnique({
@@ -133,8 +202,34 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+/**
+ * Obtiene el listado completo de asistencias. Solo accesible para administradores.
+ *
+ * @param request - NextRequest con cookie auth_token.
+ * @returns 200 con array de asistencias serializadas (BigInt → string).
+ * @returns 401 si no hay token o es inválido.
+ * @returns 403 si el rol no es admin.
+ * @returns 500 si hay un error interno.
+ */
+export async function GET(request: NextRequest) {
   try {
+    const token = request.cookies.get("auth_token")?.value;
+    if (!token) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+
+    const { validateToken } = await import("@/lib/jwt");
+    let decoded;
+    try {
+      decoded = (await validateToken(token)) as { sub: string; role?: string };
+    } catch {
+      return NextResponse.json({ error: "Token inválido" }, { status: 401 });
+    }
+
+    if (decoded.role !== "admin") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
+
     const asistencias = await prisma.attendances.findMany({
       include: {
         users: {
@@ -148,7 +243,17 @@ export async function GET() {
       orderBy: { attendance_date: "desc" },
     });
 
-    return NextResponse.json(asistencias);
+    const serializedAsistencias = asistencias.map(a => ({
+      ...a,
+      id: a.id.toString(),
+      user_id: a.user_id ? a.user_id.toString() : null,
+      users: a.users ? {
+        ...a.users,
+        id: a.users.id.toString()
+      } : null
+    }));
+
+    return NextResponse.json(serializedAsistencias);
   } catch (error) {
     console.error("Error al obtener asistencias:", error);
     return NextResponse.json(

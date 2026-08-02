@@ -1,6 +1,6 @@
 "use client"; // SSG Component: ContactSection
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, useRef, useCallback } from "react";
 import { useCsrf } from "@/hooks/useCsrf";
 
 // Componentes de iconos SVG para redes sociales
@@ -70,15 +70,20 @@ export default function ContactSection() {
     email: "",
     message: "",
   });
-  
+
   // Estado para controlar si se está enviando el formulario
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Estado para manejar mensajes de éxito o error
   const [submitStatus, setSubmitStatus] = useState<{
     type: "success" | "error" | null;
     message: string;
   }>({ type: null, message: "" });
+
+  // Payload resuelto por el widget ALTCHA — null mientras no ha completado el PoW
+  const [altchaPayload, setAltchaPayload] = useState<string | null>(null);
+  const [altchaLoadError, setAltchaLoadError] = useState(false);
+  const altchaElementRef = useRef<HTMLElement | null>(null);
 
   // Hook personalizado para manejar tokens CSRF
   const { fetchWithCsrf, refetch, hasToken, error: csrfError } = useCsrf();
@@ -89,6 +94,55 @@ export default function ContactSection() {
       void refetch();
     }
   }, [hasToken, refetch]);
+
+  // Cargar el Web Component y el CSS de ALTCHA desde CDN — solo en el cliente
+  useEffect(() => {
+    if (!document.querySelector("script[data-altcha]")) {
+      const script = document.createElement("script");
+      script.type = "module";
+      script.dataset.altcha = "true";
+      script.src = "https://cdn.jsdelivr.net/npm/altcha@2.3.0/dist/altcha.min.js";
+      script.integrity = "sha384-8I1KL049hNSwGKuCu/6NlGM1rfkVTfw/5bVzUFNvxO3XLV3isCJR1s5pTyuE2Zuo";
+      script.crossOrigin = "anonymous";
+      script.onerror = () => setAltchaLoadError(true);
+      document.head.appendChild(script);
+    }
+
+    if (!document.querySelector("link[data-altcha-css]")) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.dataset.altchaCss = "true";
+      link.href = "https://cdn.jsdelivr.net/npm/altcha@2.3.0/dist/altcha.css";
+      document.head.appendChild(link);
+    }
+  }, []);
+
+  const handleVerified = useCallback((e: Event) => {
+    const customEvent = e as CustomEvent<{ payload: string }>;
+    setAltchaPayload(customEvent.detail?.payload ?? null);
+  }, []);
+
+  const handleStateChange = useCallback((e: Event) => {
+    const customEvent = e as CustomEvent<{ state: string }>;
+    if (customEvent.detail?.state === "expired" || customEvent.detail?.state === "error") {
+      setAltchaPayload(null);
+    }
+  }, []);
+
+  // Callback ref para adjuntar/desadjuntar listeners dinámicamente sin fallos de ciclo de vida
+  const altchaRefCallback = useCallback((node: HTMLElement | null) => {
+    if (altchaElementRef.current) {
+      altchaElementRef.current.removeEventListener("verified", handleVerified);
+      altchaElementRef.current.removeEventListener("statechange", handleStateChange);
+    }
+
+    altchaElementRef.current = node;
+
+    if (node) {
+      node.addEventListener("verified", handleVerified);
+      node.addEventListener("statechange", handleStateChange);
+    }
+  }, [handleVerified, handleStateChange]);
 
   // Manejador del envío del formulario
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -120,6 +174,15 @@ export default function ContactSection() {
       return;
     }
 
+    // No enviar sin verificación anti-bot completada
+    if (!altchaPayload) {
+      setSubmitStatus({
+        type: "error",
+        message: "Completa la verificación de seguridad antes de enviar.",
+      });
+      return;
+    }
+
     // Iniciar estado de carga
     setIsSubmitting(true);
     setSubmitStatus({ type: null, message: "" });
@@ -131,7 +194,7 @@ export default function ContactSection() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(trimmedPayload),
+        body: JSON.stringify({ ...trimmedPayload, altchaPayload }),
       });
 
       // Parsear respuesta JSON
@@ -152,10 +215,13 @@ export default function ContactSection() {
         });
         // Limpiar el formulario
         setFormData({
-          name: "",
-          email: "",
-          message: "",
-        });
+            name: "",
+            email: "",
+            message: "",
+          });
+          // Resetear el widget ALTCHA para la próxima vez
+          setAltchaPayload(null);
+          (altchaElementRef.current as unknown as { reset?: () => void })?.reset?.();
       } else {
         // Manejar errores del servidor
         const errorMessage =
@@ -292,11 +358,39 @@ export default function ContactSection() {
               ></textarea>
             </div>
 
+            {/* Widget ALTCHA */}
+            <div className="w-full max-w-[506px]">
+              {altchaLoadError ? (
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-red-500/30 bg-red-500/10">
+                  <svg className="w-5 h-5 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-red-300 text-sm">
+                    No se pudo cargar la verificación anti-bot. Recarga la página o intenta más tarde.
+                  </p>
+                </div>
+              ) : (
+                <altcha-widget
+                  ref={altchaRefCallback}
+                  challengeurl="/api/altcha/challenge"
+                  hidelogo
+                  hidefooter
+                  style={
+                    {
+                      "--altcha-color-base": "transparent",
+                      "--altcha-color-text": "#ffffff",
+                      "--altcha-color-success-text": "#4ade80",
+                    } as React.CSSProperties
+                  }
+                />
+              )}
+            </div>
+
             {/* Botón Enviar */}
             <div className="pt-2">
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !altchaPayload || altchaLoadError}
                 className="border-[3px] border-[#3d3d3d] rounded-lg px-5 py-2 min-w-[100px] hover:border-variable-collection-link transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="font-ubuntu font-bold text-white text-base leading-[21px] group-hover:text-variable-collection-link transition-colors">

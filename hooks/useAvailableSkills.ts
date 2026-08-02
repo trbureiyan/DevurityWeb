@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { skillNamesFromOptions } from "@/lib/profile/skills";
 
 /**
  * Custom hook to fetch available skills from the API.
@@ -17,7 +18,7 @@ export function useAvailableSkills(): string[] {
         const response = await fetch("/api/auth/skills");
         const data = await response.json();
         if (response.ok && !cancelled) {
-          setSkills(data.skills || []);
+          setSkills(skillNamesFromOptions(data.skills));
         }
       } catch (error) {
         console.error("Error fetching skills:", error);

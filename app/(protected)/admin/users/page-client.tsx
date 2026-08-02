@@ -1,7 +1,14 @@
 "use client"
 
+/**
+ * @deprecated
+ * Este archivo es legado / inactivo. El enrutamiento y la renderización de la
+ * administración de usuarios se realiza exclusivamente a través de page.tsx.
+ */
+
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import { useCsrf } from "@/hooks/useCsrf"
 
 type User = {
     id: string
@@ -25,6 +32,7 @@ type PaginatedResponse = {
 
 export default function AdminUsersClientPage() {
     const router = useRouter()
+    const { fetchWithCsrf } = useCsrf()
     const [data, setData] = useState<PaginatedResponse | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -78,8 +86,8 @@ export default function AdminUsersClientPage() {
             const json = await res.json()
             setData(json)
             setError(null)
-        } catch (err: any) {
-            setError(err.message)
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Error desconocido")
         } finally {
             setLoading(false)
         }
@@ -91,7 +99,7 @@ export default function AdminUsersClientPage() {
 
     const handleRoleChange = async (userId: string, newRole: string) => {
         try {
-            const res = await fetch(`/api/admin/users/${userId}/role`, {
+            const res = await fetchWithCsrf(`/api/admin/users/${userId}/role`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ role: newRole })
@@ -102,15 +110,15 @@ export default function AdminUsersClientPage() {
                 ...prev,
                 users: prev.users.map(u => u.id === userId ? { ...u, roles: { ...u.roles, name: newRole } } : u)
             } : null)
-        } catch (err: any) {
-            alert(err.message)
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : "Error desconocido")
         }
     }
 
     const handleStatusToggle = async (userId: string, currentStatus: boolean) => {
         if (userId === currentUserId) return;
         try {
-            const res = await fetch(`/api/admin/users/${userId}/status`, {
+            const res = await fetchWithCsrf(`/api/admin/users/${userId}/status`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ is_active: !currentStatus })
@@ -121,8 +129,8 @@ export default function AdminUsersClientPage() {
                 ...prev,
                 users: prev.users.map(u => u.id === userId ? { ...u, is_active: !currentStatus } : u)
             } : null)
-        } catch (err: any) {
-            alert(err.message)
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : "Error desconocido")
         }
     }
 
@@ -137,11 +145,11 @@ export default function AdminUsersClientPage() {
         }
 
         try {
-            const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' })
+            const res = await fetchWithCsrf(`/api/admin/users/${userId}`, { method: 'DELETE' })
             if (!res.ok) throw new Error("Error al eliminar el usuario")
             fetchUsers() // Refresh list since pagination changed
-        } catch (err: any) {
-            alert(err.message)
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : "Error desconocido")
         }
     }
 
@@ -167,8 +175,8 @@ export default function AdminUsersClientPage() {
                         <option value="">Todos los Roles</option>
                         <option value="admin">Admin</option>
                         <option value="content_manager">Content Manager</option>
-                        <option value="project_lead">Project Lead</option>
-                        <option value="member">Member</option>
+                        <option value="lead_project">Project Lead</option>
+                        <option value="user">Member</option>
                     </select>
                     <select
                         value={statusFilter}
@@ -229,8 +237,8 @@ export default function AdminUsersClientPage() {
                                         >
                                             <option value="admin">Admin</option>
                                             <option value="content_manager">Content Mgr.</option>
-                                            <option value="project_lead">Project Lead</option>
-                                            <option value="member">Member</option>
+                                            <option value="lead_project">Project Lead</option>
+                                            <option value="user">Member</option>
                                         </select>
                                     </td>
                                     <td className="px-6 py-4">

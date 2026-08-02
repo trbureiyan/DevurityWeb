@@ -85,22 +85,45 @@ export default function QRDynamic({ userId, className }: QRDynamicProps) {
         headers: { "Content-Type": "application/json" },
       });
 
-      const data = await res.json();
+      const responseText = await res.text();
+      let data: Partial<QRData> & { error?: string } = {};
+
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        throw new Error(
+          res.ok
+            ? "La respuesta del servidor no es válida"
+            : "El servidor no pudo generar el código QR",
+        );
+      }
 
       if (!isMountedRef.current) return;
 
       if (res.ok) {
-        setQrData(data);
+        if (
+          !data.qr || typeof data.qr !== "string" ||
+          !data.usuario || typeof data.usuario !== "object" ||
+          typeof data.usuario.id !== "string" ||
+          typeof data.usuario.nombre !== "string" ||
+          typeof data.usuario.correo !== "string" ||
+          typeof data.usuario.role !== "string" ||
+          typeof data.expiresAt !== "number" ||
+          typeof data.userId !== "string"
+        ) {
+          throw new Error("La respuesta del servidor no contiene un código QR válido");
+        }
+        setQrData(data as QRData);
         setTimeLeft(120);
         startTimer();
       } else {
         console.error("Error al generar QR:", data.error);
-        setError(data.error || "Error al generar QR");
+        setError(data.error || "No se pudo generar el código de asistencia");
       }
     } catch (error) {
       if (!isMountedRef.current) return;
       console.error("Error de conexión:", error);
-      setError("Error de conexión al generar QR");
+       setError("No se pudo conectar para generar el código de asistencia");
     } finally {
       isGeneratingRef.current = false;
       if (isMountedRef.current) {
@@ -155,7 +178,7 @@ export default function QRDynamic({ userId, className }: QRDynamicProps) {
         {/* Estado de error con acción de reintento */}
         <h2 className="font-bold text-white text-lg md:text-xl mb-4 flex items-center gap-2">
           <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-          Código QR
+          Registro de asistencia
         </h2>
         <div className="text-center">
           <div className="text-red-400 mb-4">{error}</div>
@@ -176,7 +199,7 @@ export default function QRDynamic({ userId, className }: QRDynamicProps) {
       {/* Título del componente */}
       <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-white">
         <div className="h-2 w-2 rounded-full bg-variable-collection-botones" />
-        Código QR Dinámico
+          Registro de asistencia
       </h2>
 
       <div className="text-center">
@@ -212,8 +235,8 @@ export default function QRDynamic({ userId, className }: QRDynamicProps) {
                 {formatTime(timeLeft)}
               </div>
               {timeLeft <= 30 && (
-                <div className="mt-1 text-xs text-red-400">
-                  ¡QR por expirar! Se renovará automáticamente
+                   <div className="mt-1 text-xs text-red-400">
+                   El código está por expirar y se renovará automáticamente
                 </div>
               )}
             </div>
@@ -228,7 +251,7 @@ export default function QRDynamic({ userId, className }: QRDynamicProps) {
           // Loading state
           <div className="flex flex-col items-center justify-center py-8">
             <div className="mb-4 h-32 w-32 animate-pulse rounded-2xl bg-black/30" />
-            <div className="text-sm text-white/60">Generando código QR...</div>
+            <div className="text-sm text-white/60">Preparando registro de asistencia...</div>
           </div>
         )}
 
@@ -238,7 +261,7 @@ export default function QRDynamic({ userId, className }: QRDynamicProps) {
           disabled={isGenerating}
           className="mt-5 flex h-12 w-full items-center justify-center rounded-2xl bg-variable-collection-botones text-sm font-semibold text-white transition-all hover:bg-variable-collection-botones/90 disabled:cursor-not-allowed disabled:bg-gray-600"
         >
-          {isGenerating ? "Generando..." : "Generar Nuevo QR"}
+          {isGenerating ? "Generando..." : "Generar código de asistencia"}
         </button>
       </div>
     </div>

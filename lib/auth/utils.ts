@@ -7,16 +7,23 @@ export function extractTokenFromCookies(request: NextRequest): string | null {
 }
 
 //Validar token y extraer datos (Edge-compatible, usa Web Crypto API)
+/**
+ * Valida un JWT y extrae el subject (ID de usuario) y el rol opcional.
+ *
+ * @param token JWT firmado con HS256 (de cookie auth_token).
+ * @returns Objeto con `sub` obligatorio y `role` opcional.
+ * @throws Error si el token no contiene el claim `sub`.
+ */
 export async function validateAuthToken(
   token: string,
-): Promise<{ sub: string }> {
+): Promise<{ sub: string; role?: string }> {
   const decoded = await verifyJwtPayload(token);
 
   if (!decoded?.sub) {
     throw new Error("Token inválido: falta subject");
   }
 
-  return { sub: decoded.sub };
+  return { sub: decoded.sub, role: decoded.role };
 }
 
 //Crear respuesta de error para APIs

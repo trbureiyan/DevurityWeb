@@ -14,6 +14,7 @@ export default async function UpdatesPage() {
       id: u.id,
       title: u.title,
       excerpt: u.excerpt,
+      publishedAt: u.publishedAt,
       displayDate: u.displayDate,
       href: u.href,
       tags: u.tags,

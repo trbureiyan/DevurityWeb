@@ -34,11 +34,12 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Necesario para Next.js
-      "style-src 'self' 'unsafe-inline'", // Necesario para estilos inline
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net blob:", // Permitir CDN y workers blob para ALTCHA
+      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net", // Permitir estilos de ALTCHA desde CDN
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
       "connect-src 'self' https:",
+      "worker-src 'self' blob:", // Permitir workers locales y blob
       "frame-ancestors 'self'",
       "form-action 'self'",
       "base-uri 'self'",

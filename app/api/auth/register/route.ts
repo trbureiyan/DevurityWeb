@@ -5,7 +5,16 @@ import { emailUniversity } from "@/lib/regex";
 import { existUserByEmail } from "@/repositories/users/users.repositories";
 
 export async function POST(request: Request) {
-  const { name, lastname, email } = await request.json();
+  let body: { name?: string; lastname?: string; email?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return new Response(
+      JSON.stringify(errorRequest("", "JSON invalido")),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+  const { name, lastname, email } = body;
 
   
   const normalizedName = name?.trim() || "";

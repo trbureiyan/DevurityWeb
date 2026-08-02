@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import QRCode from "qrcode";
 import prisma from "@/lib/postgresDriver";
+import { extractTokenFromCookies } from "@/lib/auth/utils";
+import { verifyJwtPayload } from "@/lib/auth/jwt-edge";
 
 // Tiempo de expiración del QR en minutos (configurable)
 const QR_EXPIRATION_MINUTES = 2;
 
 export async function POST(request: NextRequest) {
   try {
+    const authToken = extractTokenFromCookies(request);
+    const decoded = authToken ? await verifyJwtPayload(authToken) : null;
+    if (!decoded) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+
     const { userId } = await request.json();
 
-    if (!userId) {
+    if (typeof userId !== "string" || !userId) {
       return NextResponse.json(
         { error: "ID de usuario requerido" },
         { status: 400 },
@@ -19,6 +27,12 @@ export async function POST(request: NextRequest) {
     // Verificar si userId es un número o un username
     const isNumericId = /^\d+$/.test(userId);
     let userIdBigInt: bigint;
+
+    if (decoded.role !== "admin") {
+      if (!isNumericId || !/^\d+$/.test(decoded.sub) || BigInt(userId) !== BigInt(decoded.sub)) {
+        return NextResponse.json({ error: "No puedes generar el QR de otro usuario" }, { status: 403 });
+      }
+    }
     
     if (isNumericId) {
       userIdBigInt = BigInt(userId);
@@ -61,21 +75,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (decoded.role !== "admin" && decoded.sub !== userIdBigInt.toString()) {
+      return NextResponse.json({ error: "No puedes generar el QR de otro usuario" }, { status: 403 });
+    }
+
     // Generar timestamp actual y de expiración
     const timestamp = Date.now();
     const expirationTime = timestamp + QR_EXPIRATION_MINUTES * 60 * 1000;
 
-    // Crear un token simple usando Math.random
-    const token =
-      Math.random().toString(36).substring(2, 15) +
-      Math.random().toString(36).substring(2, 15);
+    // Crear un token criptográficamente seguro
+    const token = crypto.randomUUID();
 
-    // Datos que irán en el QR: userId + timestamp + token
+    // Generar firma criptográfica para el QR usando el JWT_SECRET existente
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      return NextResponse.json({ error: "Configuración del servidor incompleta" }, { status: 500 });
+    }
+    const cryptoMod = await import("crypto");
+    const signature = cryptoMod.default
+      .createHmac("sha256", jwtSecret)
+      .update(`${usuario.id.toString()}:${timestamp}:${token}:${expirationTime}`)
+      .digest("hex");
+
+    // Datos que irán en el QR: userId + timestamp + token + signature
     const qrData = JSON.stringify({
       userId: usuario.id.toString(),
       timestamp: timestamp,
       token: token,
       expiresAt: expirationTime,
+      signature: signature,
     });
 
     // Generar QR con los datos dinámicos

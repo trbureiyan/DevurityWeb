@@ -1,3 +1,6 @@
+// After restoring a database backup, run repair-sequences.sql to fix autoincrement IDs.
+//   npx prisma db execute --file prisma/repair-sequences.sql --schema prisma/schema.prisma
+
 generator client {
   provider      = "prisma-client-js"
   output        = "../lib/generated/prisma"

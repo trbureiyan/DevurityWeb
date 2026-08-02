@@ -1,17 +1,12 @@
 import { unstable_cache } from "next/cache";
-import { getPublishedUpdates, getLatestUpdates} from "@/repositories/updates/updates.repositories"; // mapUpdateToNewsEvent # Repositorio de updates deprecado TODO: Si no se va a usar para otra cosa, mover esta función a un helper específico de updates o eliminarla si no se necesita.
+import { getPublishedUpdates, getLatestUpdates } from "@/repositories/updates/updates.repositories";
 import type { UpdateItem, NewsEvent } from "@/lib/types/update.types";
-
-// -- Cache revision para el feed de actualizaciones --
-
-// Ajusta NEXT_PUBLIC_UPDATES_CACHE_REV en desarrollo para invalidar manualmente.
-const UPDATES_CACHE_REV = process.env.NEXT_PUBLIC_UPDATES_CACHE_REV ?? "stable";
+import { CACHE_TAGS, CACHE_TTL, activeTTL } from "@/lib/cache-tags";
 
 // Re-export types para compatibilidad con imports existentes
 export type { UpdateItem, NewsEvent };
 
 // Transforma un Update de la DB al formato UpdateItem para el frontend
-
 function mapToUpdateItem(update: {
   id: string | bigint;
   slug: string;
@@ -31,8 +26,8 @@ function mapToUpdateItem(update: {
     id: String(update.id),
     title: update.title,
     excerpt: update.description,
-    publishedAt: typeof update.published_at === 'string' 
-      ? update.published_at 
+    publishedAt: typeof update.published_at === 'string'
+      ? update.published_at
       : update.published_at.toISOString(),
     displayDate: update.display_date,
     tags: update.tags,
@@ -42,9 +37,7 @@ function mapToUpdateItem(update: {
   };
 }
 
-// Cachea y ordena el feed de updates desde la base de datos
-// Revalidación cada 6 horas
-
+// Feed completo de updates publicados, cacheado con tag para invalidación bajo demanda
 export const getUpdatesFeed = unstable_cache(
   async (): Promise<UpdateItem[]> => {
     try {
@@ -55,29 +48,27 @@ export const getUpdatesFeed = unstable_cache(
       return [];
     }
   },
-  // Claves de cache: nombre + revisión para invalidación manual
-  ["updates-feed", UPDATES_CACHE_REV],
+  ["updates-feed"],
   {
-    // Revalidación cada 60 segundos para que los datos aparezcan pronto tras deploy
-    revalidate: 60,
+    tags:       [CACHE_TAGS.updates],
+    revalidate: activeTTL(CACHE_TTL.long),
   }
 );
 
-// Consulta las últimas noticias para el landing page (formato NewsEvent)
-// Compatible con EventsSection y componentes de landing
-
+// Últimas N noticias para el landing page (formato NewsEvent)
 export const getLatestNewsForLanding = unstable_cache(
   async (count: number = 3): Promise<NewsEvent[]> => {
     try {
       return await getLatestUpdates(count);
     } catch (error) {
       console.error("[getLatestNewsForLanding] Error fetching latest news from DB:", error);
-      return [];
+      // no cachear un fallo como si la base estuviera vacía
+      throw error;
     }
   },
-  ["latest-news-landing", UPDATES_CACHE_REV],
+  ["latest-news-landing-v2"],
   {
-    // Revalidación cada 60 segundos para que los datos aparezcan pronto tras deploy
-    revalidate: 60,
+    tags:       [CACHE_TAGS.updates],
+    revalidate: activeTTL(CACHE_TTL.medium),
   }
 );

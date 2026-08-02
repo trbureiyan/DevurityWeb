@@ -40,45 +40,53 @@ export function useCsrf() {
   }, [csrfToken]);
 
   // Función para hacer requests con CSRF
-  const fetchWithCsrf = async (
-    url: string,
-    options: RequestInit = {},
-  ): Promise<Response> => {
-    let token = csrfToken;
+  const fetchWithCsrf = useCallback(
+    async (url: string, options: RequestInit = {}): Promise<Response> => {
+      const isMutating = shouldUseCsrf(options.method);
+      let token = csrfToken;
 
-    // Solo obtener token si no lo tenemos y es una request que lo requiere
-    if (!token && shouldUseCsrf(options.method)) {
-      token = await fetchCsrfToken();
-    }
+      // Solo obtener token si no lo tenemos y es una request que lo requiere
+      if (!token && isMutating) {
+        token = await fetchCsrfToken();
+      }
 
-    // Si tenemos token, agregarlo a los headers
-    if (token) {
-      const headers = {
-        ...options.headers,
-        "x-csrf-token": token,
-      };
+      if (isMutating && !token) {
+        throw new Error("No se pudo obtener el token CSRF para realizar la acción mutadora.");
+      }
 
+      // Si tenemos token, agregarlo a los headers
+      if (token) {
+        const headers = {
+          ...options.headers,
+          "x-csrf-token": token,
+        };
+
+        return fetch(url, {
+          ...options,
+          headers,
+          credentials: "include",
+        });
+      }
+
+      // Si no hay token, hacer request normal (para rutas públicas)
       return fetch(url, {
         ...options,
-        headers,
         credentials: "include",
       });
-    }
-
-    // Si no hay token, hacer request normal (para rutas públicas)
-    return fetch(url, {
-      ...options,
-      credentials: "include",
-    });
-  };
+    },
+    [csrfToken, fetchCsrfToken],
+  );
 
   // Función para crear FormData con CSRF
-  const createFormDataWithCsrf = (formData: FormData): FormData => {
-    if (csrfToken) {
-      formData.append("csrf_token", csrfToken);
-    }
-    return formData;
-  };
+  const createFormDataWithCsrf = useCallback(
+    (formData: FormData): FormData => {
+      if (csrfToken) {
+        formData.append("csrf_token", csrfToken);
+      }
+      return formData;
+    },
+    [csrfToken],
+  );
 
   // Función para verificar si un método HTTP requiere CSRF
   const shouldUseCsrf = (method?: string): boolean => {

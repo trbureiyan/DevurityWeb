@@ -1,6 +1,6 @@
 import type { PrismaClient } from "../../lib/generated/prisma";
 
-const SKILLS = [
+export const SKILLS = [
   // Languages
   "Python", "JavaScript", "Java", "C", "C++", "C#", "SQL", "TypeScript",
   "PHP", "Go", "Swift", "Kotlin", "Ruby", "R", "Dart", "MATLAB",

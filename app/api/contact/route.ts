@@ -1,43 +1,81 @@
+import { NextRequest } from "next/server";
 import { errorRequest } from "@/lib/error";
 import { EmailOptions, sendEmail } from "@/lib/email";
-import {
-  checkRateLimit,
-  getClientIp,
-  formatResetTime,
-} from "@/lib/rateLimit";
+import { verifyAltchaPayload } from "@/lib/altcha";
+import { csrfAdapter } from "@/lib/csrf";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
-// api/contact
-export async function POST(request: Request) {
+/**
+ * Valida y envía mensajes del formulario de contacto público.
+ *
+ * - Verifica ALTCHA (anti-bot PoW) antes de procesar.
+ * - Aplica rate limiting por IP para prevenir abuso.
+ * - Valida CSRF como defensa en profundidad.
+ *
+ * @param request - Objeto NextRequest con payload JSON { name, email, message, altchaPayload }.
+ * @returns 200 con mensaje de éxito si el correo se envió.
+ * @returns 403 si ALTCHA falla o CSRF inválido.
+ * @returns 429 si se excede el rate limit.
+ * @returns 422 si los campos requeridos no pasan validación.
+ * @returns 500 si el envío del correo falla o hay un error interno.
+ */
+export async function POST(request: NextRequest) {
   try {
-    // Verificar rate limit por IP
-    const clientIp = getClientIp(request);
-    const rateLimitCheck = checkRateLimit(clientIp);
-
-    if (rateLimitCheck.isLimited) {
-      const timeRemaining = formatResetTime(rateLimitCheck.resetTime);
+    // Rate limiting por IP
+    const ip = getClientIp(request);
+    const rateCheck = checkRateLimit(ip);
+    if (rateCheck.isLimited) {
       return new Response(
         JSON.stringify(
           errorRequest(
-            "límite",
-            `Has excedido el límite de solicitudes. Por favor, intenta de nuevo en ${timeRemaining}.`
+            "rate_limit",
+            "Demasiadas solicitudes. Intenta de nuevo más tarde."
           )
         ),
         {
           status: 429,
-          headers: {
-            "Content-Type": "application/json",
-            "X-RateLimit-Limit": "3",
-            "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": rateLimitCheck.resetTime.toString(),
-            "Retry-After": Math.ceil(
-              (rateLimitCheck.resetTime - Date.now()) / 1000
-            ).toString(),
-          },
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
 
-    const { name, email, message } = await request.json();
+    // Validación CSRF en servidor (defensa en profundidad — middleware también la aplica)
+    const csrfTokenFromHeader = csrfAdapter.extractTokenFromHeaders(request);
+    const csrfTokenFromCookie = request.cookies.get("csrf_token")?.value;
+    if (
+      !csrfTokenFromHeader ||
+      !csrfTokenFromCookie ||
+      !csrfAdapter.validateToken(csrfTokenFromHeader, csrfTokenFromCookie)
+    ) {
+      return new Response(
+        JSON.stringify(
+          errorRequest("csrf", "Token CSRF inválido o ausente.")
+        ),
+        {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const { name, email, message, altchaPayload } = await request.json();
+
+    // Validar anti-spam con ALTCHA (stateless HMAC verification)
+    const altchaVerified = await verifyAltchaPayload(altchaPayload);
+    if (!altchaVerified) {
+      return new Response(
+        JSON.stringify(
+          errorRequest(
+            "captcha",
+            "La verificación de seguridad anti-bot ha fallado o expirado. Por favor, intenta de nuevo."
+          )
+        ),
+        {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
 
     // Validaciones
     if (!name || !email || !message) {
@@ -129,12 +167,7 @@ export async function POST(request: Request) {
       }),
       {
         status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "X-RateLimit-Limit": "3",
-          "X-RateLimit-Remaining": rateLimitCheck.remaining.toString(),
-          "X-RateLimit-Reset": rateLimitCheck.resetTime.toString(),
-        },
+        headers: { "Content-Type": "application/json" },
       }
     );
   } catch (error) {
