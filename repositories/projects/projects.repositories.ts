@@ -147,7 +147,9 @@ export async function updateProject(id: bigint, data: UpdateProjectDTO): Promise
  * Elimina físicamente un proyecto por su ID de base de datos (BigInt).
  */
 export async function hardDeleteProject(id: bigint): Promise<void> {
-  await prisma.projects.delete({
-    where: { id },
+  await prisma.$transaction(async (tx) => {
+    // primero se eliminan las asignaciones porque la FK usa RESTRICT/NoAction
+    await tx.user_projects.deleteMany({ where: { project_id: id } });
+    await tx.projects.delete({ where: { id } });
   });
 }

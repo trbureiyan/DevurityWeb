@@ -2,6 +2,8 @@ import { test } from "node:test";
 import { strictEqual, ok } from "node:assert/strict";
 import { NextRequest } from "next/server";
 
+let deletedProjectRelationId: bigint | null = null;
+
 // 1. Mock global prisma before importing the routes
 const mockPrisma = {
   projects: {
@@ -74,7 +76,17 @@ const mockPrisma = {
       };
     },
   },
+  user_projects: {
+    deleteMany: async ({ where }: { where: { project_id: bigint } }) => {
+      deletedProjectRelationId = where.project_id;
+      return { count: 1 };
+    },
+  },
 };
+
+Object.assign(mockPrisma, {
+  $transaction: async (callback: (tx: typeof mockPrisma) => Promise<unknown>) => callback(mockPrisma),
+});
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).prisma = mockPrisma;
@@ -324,5 +336,6 @@ test("Projects API Route - DELETE /api/projects/[id]", async (t) => {
     const body = await res.json();
     strictEqual(body.success, true);
     strictEqual(body.message, "Proyecto eliminado permanentemente con éxito");
+    strictEqual(deletedProjectRelationId, 99n);
   });
 });
