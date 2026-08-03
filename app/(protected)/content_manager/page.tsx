@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { useCsrf } from "@/hooks/useCsrf";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import Image from "next/image";
+import type { GalleryImage } from "@/lib/types/gallery.types";
+import { GALLERY_ALLOWED_MIME_TYPES, GALLERY_MAX_FILE_SIZE_BYTES } from "@/lib/constants/gallery";
 // ─── Inline SVG icons (Feather-style) — replaces react-icons/fi ──────────────
 type IconProps = { className?: string };
 const FiImage = ({ className }: IconProps) => (
@@ -27,71 +29,183 @@ const FiTrash2 = ({ className }: IconProps) => (
     <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
   </svg>
 );
-const FiClock = ({ className }: IconProps) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-  </svg>
-);
-const FiPlusCircle = ({ className }: IconProps) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
-  </svg>
-);
-const FiCalendar = ({ className }: IconProps) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-  </svg>
-);
-const FiEdit = ({ className }: IconProps) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-  </svg>
-);
-const FiExternalLink = ({ className }: IconProps) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-  </svg>
-);
+// Resultado de subida por archivo, devuelto por POST /api/gallery
+type UploadResultItem = { fileName: string; success: boolean; error?: string; data?: GalleryImage };
 
-// Importar tipos de updates
-type UpdateItem = {
-  id: string;
-  title: string;
-  excerpt: string;
-  displayDate: string;
-  href?: string;
-  tags: string[];
-  borderColor: string;
-  isLocal?: boolean;
-  imageUrl?: string;
-};
+/**
+ * Hook que gestiona la galería de imágenes conectándose a /api/gallery
+ * (Supabase Storage + tabla gallery_images). Centraliza fetch, subida y
+ * eliminación para que el conteo del dashboard y la sección de gestión
+ * compartan una única fuente de verdad.
+ */
+function useGalleryAdmin() {
+  const [images, setImages] = useState<GalleryImage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { fetchWithCsrf } = useCsrf();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const response = await fetch("/api/gallery");
+        const result = await response.json();
+        if (cancelled) return;
+
+        if (result.success) {
+          setImages(result.data);
+        } else {
+          setError(result.error || "No se pudo cargar la galería");
+        }
+      } catch {
+        if (!cancelled) setError("No se pudo conectar con el servidor");
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const uploadImages = useCallback(
+    async (files: File[]): Promise<UploadResultItem[]> => {
+      const formData = new FormData();
+      files.forEach((file) => formData.append("files", file));
+
+      const response = await fetchWithCsrf("/api/gallery", {
+        method: "POST",
+        body: formData,
+      });
+      const result = await response.json();
+      const results: UploadResultItem[] = result.results || [];
+
+      const uploaded = results
+        .filter((r): r is UploadResultItem & { data: GalleryImage } => r.success && !!r.data)
+        .map((r) => r.data);
+
+      if (uploaded.length > 0) {
+        setImages((prev) => [...uploaded, ...prev]);
+      }
+
+      return results;
+    },
+    [fetchWithCsrf],
+  );
+
+  const deleteImage = useCallback(
+    async (id: string): Promise<void> => {
+      const response = await fetchWithCsrf(`/api/gallery/${id}`, { method: "DELETE" });
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Error al eliminar la imagen");
+      }
+
+      setImages((prev) => prev.filter((img) => img.id !== id));
+    },
+    [fetchWithCsrf],
+  );
+
+  return { images, isLoading, error, uploadImages, deleteImage };
+}
+
+interface ImageManagementSectionProps {
+  images: GalleryImage[];
+  isLoading: boolean;
+  loadError: string | null;
+  onUpload: (files: File[]) => Promise<UploadResultItem[]>;
+  onDelete: (id: string) => Promise<void>;
+}
 
 // Componente para gestión de imágenes
-function ImageManagementSection() {
-  const [images, setImages] = useState<string[]>([
-    "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&auto=format&fit=crop",
-  ]);
-
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+function ImageManagementSection({ images, isLoading, loadError, onUpload, onDelete }: ImageManagementSectionProps) {
+  const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [newImageUrl, setNewImageUrl] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [fileErrors, setFileErrors] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  const handleAddImage = () => {
-    if (newImageUrl) {
-      setImages([newImageUrl, ...images]);
-      setNewImageUrl("");
-      setUploadModalOpen(false);
+  const maxSizeLabel = `${GALLERY_MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB`;
+
+  const validateFiles = (files: File[]): { valid: File[]; errors: string[] } => {
+    const valid: File[] = [];
+    const errors: string[] = [];
+
+    for (const file of files) {
+      if (!GALLERY_ALLOWED_MIME_TYPES.includes(file.type as (typeof GALLERY_ALLOWED_MIME_TYPES)[number])) {
+        errors.push(`${file.name}: tipo de archivo no permitido (solo imágenes JPEG, PNG, WEBP o GIF)`);
+        continue;
+      }
+      if (file.size > GALLERY_MAX_FILE_SIZE_BYTES) {
+        errors.push(`${file.name}: supera el tamaño máximo de ${maxSizeLabel}`);
+        continue;
+      }
+      valid.push(file);
+    }
+
+    return { valid, errors };
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const { valid, errors } = validateFiles(files);
+    setSelectedFiles(valid);
+    setFileErrors(errors);
+  };
+
+  const closeUploadModal = () => {
+    setUploadModalOpen(false);
+    setSelectedFiles([]);
+    setFileErrors([]);
+  };
+
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0) return;
+
+    setIsUploading(true);
+    setBanner(null);
+    try {
+      const results = await onUpload(selectedFiles);
+      const succeeded = results.filter((r) => r.success);
+      const failed = results.filter((r) => !r.success);
+
+      if (succeeded.length > 0 && failed.length === 0) {
+        setBanner({ type: "success", message: `${succeeded.length} imagen(es) subida(s) con éxito.` });
+        closeUploadModal();
+      } else if (succeeded.length > 0 && failed.length > 0) {
+        setBanner({
+          type: "error",
+          message: `${succeeded.length} subida(s), ${failed.length} fallida(s): ${failed.map((f) => `${f.fileName} (${f.error})`).join(", ")}`,
+        });
+        closeUploadModal();
+      } else {
+        setFileErrors(failed.map((f) => `${f.fileName}: ${f.error}`));
+      }
+    } catch {
+      setBanner({ type: "error", message: "Error al subir las imágenes. Intenta de nuevo." });
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  const handleDeleteImage = (imageToDelete: string) => {
-    if (confirm("¿Estás seguro de eliminar esta imagen?")) {
-      setImages(images.filter(img => img !== imageToDelete));
+  const handleDeleteImage = async (image: GalleryImage) => {
+    if (!confirm("¿Estás seguro de eliminar esta imagen?")) return;
+
+    setDeletingId(image.id);
+    setBanner(null);
+    try {
+      await onDelete(image.id);
+      if (selectedImage?.id === image.id) setSelectedImage(null);
+      setBanner({ type: "success", message: "Imagen eliminada con éxito." });
+    } catch (err) {
+      setBanner({ type: "error", message: err instanceof Error ? err.message : "Error al eliminar la imagen" });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -111,61 +225,112 @@ function ImageManagementSection() {
         </button>
       </div>
 
-      {/* Grid de imágenes */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {images.map((img, index) => (
-          <div key={index} className="group relative aspect-square bg-[#2a2424] rounded-lg overflow-hidden">
-            <Image
-              src={img}
-              alt={`Gallery image ${index + 1}`}
-              fill
-              className="object-cover cursor-pointer group-hover:scale-105 transition-transform duration-300"
-              onClick={() => setSelectedImage(img)}
-            />
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-              <button
+      {/* Banner de éxito/error */}
+      {(banner || loadError) && (
+        <div
+          className={`mb-4 px-4 py-3 rounded-lg text-sm ${
+            loadError || banner?.type === "error"
+              ? "bg-red-500/10 text-red-400 border border-red-500/20"
+              : "bg-green-500/10 text-green-400 border border-green-500/20"
+          }`}
+        >
+          {loadError || banner?.message}
+        </div>
+      )}
+
+      {/* Estado de carga */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      ) : images.length === 0 ? (
+        <div className="text-center py-16 text-gray-400">No hay imágenes en la galería todavía.</div>
+      ) : (
+        /* Grid de imágenes */
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {images.map((img) => (
+            <div key={img.id} className="group relative aspect-square bg-[#2a2424] rounded-lg overflow-hidden">
+              <Image
+                src={img.publicUrl}
+                alt={img.fileName}
+                fill
+                className="object-cover cursor-pointer group-hover:scale-105 transition-transform duration-300"
                 onClick={() => setSelectedImage(img)}
-                className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-                title="Ver imagen"
-              >
-                <FiEye className="w-4 h-4 text-white" />
-              </button>
-              <button
-                onClick={() => handleDeleteImage(img)}
-                className="p-2 bg-red-600/20 hover:bg-red-600/30 rounded-full transition-colors"
-                title="Eliminar imagen"
-              >
-                <FiTrash2 className="w-4 h-4 text-red-500" />
-              </button>
+              />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setSelectedImage(img)}
+                  className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+                  title="Ver imagen"
+                >
+                  <FiEye className="w-4 h-4 text-white" />
+                </button>
+                <button
+                  onClick={() => handleDeleteImage(img)}
+                  disabled={deletingId === img.id}
+                  className="p-2 bg-red-600/20 hover:bg-red-600/30 rounded-full transition-colors disabled:opacity-50"
+                  title="Eliminar imagen"
+                >
+                  {deletingId === img.id ? (
+                    <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <FiTrash2 className="w-4 h-4 text-red-500" />
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Modal de subida */}
       {uploadModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
           <div className="bg-[#221b1b] border border-[rgba(140,140,140,0.2)] rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold text-white mb-4">Subir Nueva Imagen</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">Subir Nuevas Imágenes</h3>
             <input
-              type="text"
-              value={newImageUrl}
-              onChange={(e) => setNewImageUrl(e.target.value)}
-              placeholder="URL de la imagen"
-              className="w-full px-4 py-2 bg-[#2a2424] border border-[rgba(140,140,140,0.2)] rounded-lg text-white mb-4"
+              type="file"
+              accept={GALLERY_ALLOWED_MIME_TYPES.join(",")}
+              multiple
+              onChange={handleFileSelect}
+              disabled={isUploading}
+              className="w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary hover:file:bg-primary/20 bg-[#2a2424] border border-[rgba(140,140,140,0.2)] rounded-lg mb-2"
             />
+            <p className="text-xs text-gray-500 mb-4">JPEG, PNG, WEBP o GIF. Máximo {maxSizeLabel} por imagen.</p>
+
+            {selectedFiles.length > 0 && (
+              <ul className="text-sm text-gray-300 mb-4 space-y-1 max-h-32 overflow-y-auto">
+                {selectedFiles.map((file) => (
+                  <li key={file.name}>{file.name} ({(file.size / 1024).toFixed(0)} KB)</li>
+                ))}
+              </ul>
+            )}
+
+            {fileErrors.length > 0 && (
+              <ul className="text-xs text-red-400 mb-4 space-y-1">
+                {fileErrors.map((err) => (
+                  <li key={err}>{err}</li>
+                ))}
+              </ul>
+            )}
+
             <div className="flex justify-end gap-3">
               <button
-                onClick={() => setUploadModalOpen(false)}
-                className="px-4 py-2 border border-[rgba(140,140,140,0.2)] hover:border-white/40 text-white rounded-lg transition-colors"
+                type="button"
+                onClick={closeUploadModal}
+                disabled={isUploading}
+                className="px-4 py-2 border border-[rgba(140,140,140,0.2)] hover:border-white/40 text-white rounded-lg transition-colors disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
-                onClick={handleAddImage}
-                className="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded-lg transition-colors"
+                type="button"
+                onClick={handleUpload}
+                disabled={isUploading || selectedFiles.length === 0}
+                className="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
               >
-                Subir
+                {isUploading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                {isUploading ? "Subiendo..." : "Subir"}
               </button>
             </div>
           </div>
@@ -180,8 +345,8 @@ function ImageManagementSection() {
         >
           <div className="relative w-full max-w-4xl h-[80vh]">
             <Image
-              src={selectedImage}
-              alt="Imagen ampliada"
+              src={selectedImage.publicUrl}
+              alt={selectedImage.fileName}
               fill
               className="object-contain"
             />
@@ -192,283 +357,11 @@ function ImageManagementSection() {
   );
 }
 
-// Componente para gestión de updates
-function UpdatesManagementSection() {
-  const [updates, setUpdates] = useState<UpdateItem[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [editingUpdate, setEditingUpdate] = useState<UpdateItem | null>(null);
-  const [formData, setFormData] = useState({
-    title: "",
-    excerpt: "",
-    date: "",
-    tags: "",
-    href: "",
-    imageUrl: "",
-  });
-
-  // Cargar updates al montar
-  useEffect(() => {
-    // Aquí cargarías los updates de tu API o localStorage
-    const savedUpdates = localStorage.getItem("content-manager-updates");
-    if (savedUpdates) {
-      setUpdates(JSON.parse(savedUpdates));
-    }
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const tagsArray = formData.tags.split(",").map(t => t.trim()).filter(Boolean);
-    const months = ["ENE","FEB","MAR","ABR","MAY","JUN","JUL","AGO","SEP","OCT","NOV","DIC"];
-    const [year, month, day] = formData.date.split("-");
-    const displayDate = `${day} ${months[parseInt(month) - 1]} ${year}`;
-
-    if (editingUpdate) {
-      // Editar existente
-      const updated = updates.map(u => 
-        u.id === editingUpdate.id 
-          ? { ...u, title: formData.title, excerpt: formData.excerpt, displayDate, tags: tagsArray, href: formData.href, imageUrl: formData.imageUrl }
-          : u
-      );
-      setUpdates(updated);
-      localStorage.setItem("content-manager-updates", JSON.stringify(updated));
-    } else {
-      // Crear nuevo
-      const newUpdate: UpdateItem = {
-        id: `update-${Date.now()}`,
-        title: formData.title,
-        excerpt: formData.excerpt,
-        displayDate,
-        tags: tagsArray,
-        href: formData.href || "#",
-        imageUrl: formData.imageUrl || "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&auto=format&fit=crop",
-        borderColor: "#b20403",
-        isLocal: true,
-      };
-      const updated = [newUpdate, ...updates];
-      setUpdates(updated);
-      localStorage.setItem("content-manager-updates", JSON.stringify(updated));
-    }
-
-    resetForm();
-  };
-
-  const handleEdit = (update: UpdateItem) => {
-    setEditingUpdate(update);
-    setFormData({
-      title: update.title,
-      excerpt: update.excerpt,
-      date: convertDisplayToDate(update.displayDate),
-      tags: update.tags.join(", "),
-      href: update.href || "",
-      imageUrl: update.imageUrl || "",
-    });
-    setShowForm(true);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm("¿Estás seguro de eliminar esta actualización?")) {
-      const updated = updates.filter(u => u.id !== id);
-      setUpdates(updated);
-      localStorage.setItem("content-manager-updates", JSON.stringify(updated));
-    }
-  };
-
-  const convertDisplayToDate = (displayDate: string): string => {
-    const months: { [key: string]: string } = {
-      "ENE": "01", "FEB": "02", "MAR": "03", "ABR": "04", "MAY": "05", "JUN": "06",
-      "JUL": "07", "AGO": "08", "SEP": "09", "OCT": "10", "NOV": "11", "DIC": "12"
-    };
-    const [day, month, year] = displayDate.split(" ");
-    return `${year}-${months[month]}-${day}`;
-  };
-
-  const resetForm = () => {
-    setFormData({ title: "", excerpt: "", date: "", tags: "", href: "", imageUrl: "" });
-    setEditingUpdate(null);
-    setShowForm(false);
-  };
-
-  return (
-    <div className="bg-[#221b1b] border border-[rgba(140,140,140,0.2)] rounded-lg p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <FiClock className="w-5 h-5 text-primary" />
-          <h2 className="text-xl font-semibold text-white">Gestión de Updates</h2>
-        </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors text-sm"
-        >
-          <FiPlusCircle className="w-4 h-4" />
-          Nueva Actualización
-        </button>
-      </div>
-
-      {/* Formulario */}
-      {showForm && (
-        <form onSubmit={handleSubmit} className="mb-6 p-4 bg-[#2a2424] rounded-lg space-y-4">
-          <h3 className="text-white font-medium">
-            {editingUpdate ? "Editar Actualización" : "Nueva Actualización"}
-          </h3>
-          
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Título *</label>
-            <input
-              type="text"
-              required
-              value={formData.title}
-              onChange={(e) => setFormData({...formData, title: e.target.value})}
-              className="w-full px-3 py-2 bg-[#1a1515] border border-[rgba(140,140,140,0.2)] rounded-lg text-white"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Descripción *</label>
-            <textarea
-              required
-              value={formData.excerpt}
-              onChange={(e) => setFormData({...formData, excerpt: e.target.value})}
-              rows={3}
-              className="w-full px-3 py-2 bg-[#1a1515] border border-[rgba(140,140,140,0.2)] rounded-lg text-white"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Fecha *</label>
-            <input
-              type="date"
-              required
-              value={formData.date}
-              onChange={(e) => setFormData({...formData, date: e.target.value})}
-              className="w-full px-3 py-2 bg-[#1a1515] border border-[rgba(140,140,140,0.2)] rounded-lg text-white"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Tags (separados por coma) *</label>
-            <input
-              type="text"
-              required
-              value={formData.tags}
-              onChange={(e) => setFormData({...formData, tags: e.target.value})}
-              placeholder="evento, taller, noticia"
-              className="w-full px-3 py-2 bg-[#1a1515] border border-[rgba(140,140,140,0.2)] rounded-lg text-white"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Link (opcional)</label>
-            <input
-              type="text"
-              value={formData.href}
-              onChange={(e) => setFormData({...formData, href: e.target.value})}
-              className="w-full px-3 py-2 bg-[#1a1515] border border-[rgba(140,140,140,0.2)] rounded-lg text-white"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">URL de imagen (opcional)</label>
-            <input
-              type="text"
-              value={formData.imageUrl}
-              onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-              className="w-full px-3 py-2 bg-[#1a1515] border border-[rgba(140,140,140,0.2)] rounded-lg text-white"
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={resetForm}
-              className="px-4 py-2 border border-[rgba(140,140,140,0.2)] hover:border-white/40 text-white rounded-lg transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded-lg transition-colors"
-            >
-              {editingUpdate ? "Actualizar" : "Guardar"}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Lista de updates */}
-      <div className="space-y-4">
-        {updates.length === 0 ? (
-          <p className="text-center text-gray-400 py-8">No hay actualizaciones. ¡Crea una!</p>
-        ) : (
-          updates.map((update) => (
-            <div
-              key={update.id}
-              className="flex items-start gap-4 p-4 bg-[#2a2424] rounded-lg group"
-            >
-              {update.imageUrl && (
-                <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
-                  <Image
-                    src={update.imageUrl}
-                    alt={update.title}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <FiCalendar className="w-3 h-3 text-gray-400" />
-                  <span className="text-xs text-gray-400">{update.displayDate}</span>
-                </div>
-                <h4 className="text-white font-medium truncate">{update.title}</h4>
-                <p className="text-sm text-gray-400 line-clamp-2">{update.excerpt}</p>
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {update.tags.map(tag => (
-                    <span key={tag} className="text-xs px-2 py-1 bg-[#1a1515] text-gray-300 rounded-full">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={() => handleEdit(update)}
-                  className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg transition-colors"
-                  title="Editar"
-                >
-                  <FiEdit className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(update.id)}
-                  className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors"
-                  title="Eliminar"
-                >
-                  <FiTrash2 className="w-4 h-4" />
-                </button>
-                {update.href && update.href !== "#" && (
-                  <a
-                    href={update.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 bg-green-500/10 hover:bg-green-500/20 text-green-500 rounded-lg transition-colors"
-                    title="Ver enlace"
-                  >
-                    <FiExternalLink className="w-4 h-4" />
-                  </a>
-                )}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
 // Dashboard principal
 export default function ContentManagerDashboardPage() {
   const { user, isLoading } = useAuthContext();
   const router = useRouter();
+  const gallery = useGalleryAdmin();
 
   useEffect(() => {
     if (!isLoading && user?.role !== "content_manager" && user?.role !== "admin") {
@@ -492,31 +385,20 @@ export default function ContentManagerDashboardPage() {
           Panel de Content Manager
         </h1>
         <p className="text-gray-400">
-          Bienvenido, {user?.name}. Gestiona la galería de imágenes y las actualizaciones del sistema
+          Bienvenido, {user?.name}. Gestiona la galería de imágenes del sistema
         </p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-[#221b1b] border border-[rgba(140,140,140,0.2)] rounded-lg p-6">
+      <div className="grid grid-cols-1 gap-6">
+        <div className="bg-[#221b1b] border border-[rgba(140,140,140,0.2)] rounded-lg p-6 max-w-sm">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-primary/10 rounded-lg">
               <FiImage className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-white">24</p>
+              <p className="text-2xl font-bold text-white">{gallery.isLoading ? "…" : gallery.images.length}</p>
               <p className="text-gray-400">Imágenes en galería</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#221b1b] border border-[rgba(140,140,140,0.2)] rounded-lg p-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-primary/10 rounded-lg">
-              <FiClock className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">12</p>
-              <p className="text-gray-400">Actualizaciones publicadas</p>
             </div>
           </div>
         </div>
@@ -524,8 +406,13 @@ export default function ContentManagerDashboardPage() {
 
       {/* Secciones de gestión */}
       <div className="space-y-6">
-        <ImageManagementSection />
-        <UpdatesManagementSection />
+        <ImageManagementSection
+          images={gallery.images}
+          isLoading={gallery.isLoading}
+          loadError={gallery.error}
+          onUpload={gallery.uploadImages}
+          onDelete={gallery.deleteImage}
+        />
       </div>
     </div>
   );
