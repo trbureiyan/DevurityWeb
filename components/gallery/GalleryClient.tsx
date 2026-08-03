@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import NextImage from "next/image";
+import Link from "next/link";
 import { PhotoIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { IMAGES } from "@/public/images";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 // ============ COLOR UNIFICADO ============
 const ACCENT_COLOR = "#b20403";
@@ -117,6 +119,8 @@ function ImageModal({ imageSrc, onClose }: ImageModalProps) {
 
 // ============ COMPONENTE PRINCIPAL ============
 export default function GalleryClient({ images }: GalleryClientProps) {
+  const { user } = useAuthContext();
+  const canManageGallery = user?.role === "admin" || user?.role === "content_manager";
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [galleryImages, setGalleryImages] = useState(images);
   const [visibleCount, setVisibleCount] = useState(8);
@@ -246,6 +250,14 @@ export default function GalleryClient({ images }: GalleryClientProps) {
                 >
                   Ver galería
                 </a>
+                {canManageGallery && (
+                  <Link
+                    href="/content_manager"
+                    className="inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(178,4,3,0.5)]"
+                  >
+                    Editar galería
+                  </Link>
+                )}
               </div>
             </div>
 
