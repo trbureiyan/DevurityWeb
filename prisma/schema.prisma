@@ -109,8 +109,21 @@ model users {
   user_platforms        user_platforms[]
   user_projects         user_projects[]
   user_skills           user_skills[]
+  gallery_images        gallery_images[]
   roles                 roles            @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "users_roles_fk")
   programs              programs?        @relation(fields: [program_id], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "users_programs_fk")
+}
+
+/// Metadatos de las imágenes de la galería. El archivo binario vive en Supabase Storage;
+/// aquí solo se guarda la referencia (storage_path) y la URL pública ya resuelta.
+model gallery_images {
+  id           BigInt   @id @default(autoincrement())
+  file_name    String
+  storage_path String   @unique
+  public_url   String
+  uploaded_by  BigInt?
+  created_at   DateTime @default(now())
+  users        users?   @relation(fields: [uploaded_by], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "gallery_images_fk_users")
 }
 
 /// Modelo para noticias, eventos y actualizaciones del semillero
