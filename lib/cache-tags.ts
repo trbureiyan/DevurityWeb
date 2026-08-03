@@ -4,6 +4,7 @@ export const CACHE_TAGS = {
   projects: "projects",
   updates:  "updates",
   team:     "team",
+  gallery:  "gallery",
 } as const;
 
 // TTLs estándar del proyecto (en segundos).
