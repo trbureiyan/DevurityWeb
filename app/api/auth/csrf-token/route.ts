@@ -1,12 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { csrfAdapter } from "@/lib/csrf";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Generar nuevo token CSRF
-    const csrfToken = csrfAdapter.generateToken();
+    const existingToken = request.cookies.get("csrf_token")?.value;
+    const csrfToken = existingToken && /^[A-Za-z0-9]{32}$/.test(existingToken)
+      ? existingToken
+      : csrfAdapter.generateToken();
 
-    // Crear cookie CSRF
+    // reutilizar el token evita desincronizar header y cookie cuando varios componentes lo solicitan
     const csrfCookie = csrfAdapter.createCookie(csrfToken);
 
     return NextResponse.json(

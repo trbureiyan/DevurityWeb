@@ -347,19 +347,6 @@ export async function existUserByEmail(email: string) {
   return !!user;
 }
 
-const ROLE_TRANSLATIONS: Record<string, string> = {
-  admin: "Administrador",
-  project_lead: "Líder de Proyecto",
-  lead_project: "Líder de Proyecto",
-  content_manager: "Gestor de Contenido",
-  member: "Miembro",
-  user: "Miembro",
-};
-
-function getFriendlyRole(roleName: string): string {
-  return ROLE_TRANSLATIONS[roleName.toLowerCase()] || roleName;
-}
-
 export async function findActiveUsersForTeam() {
   try {
     logger.debug("findActiveUsersForTeam: Starting query");
@@ -421,7 +408,8 @@ export async function findActiveUsersForTeam() {
         ...rest,
         id: user.id.toString(),
         skills: user.user_skills?.map((us) => us.skills?.name ?? 'Unknown') ?? [],
-        role: getFriendlyRole(user.roles?.name ?? 'member'),
+        // La UI agrupa por estos identificadores; los títulos visibles se definen en TeamSection.
+        role: user.roles?.name ?? 'user',
         program: user.programs?.name ?? null,
         semester: user.semester,
         platforms: user.user_platforms?.map((up) => ({

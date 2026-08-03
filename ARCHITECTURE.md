@@ -2,7 +2,7 @@
 
 ## Status
 
-Active. This document reflects the actual architecture implemented in DevurityWeb, as deployed in production (in `main` branch).
+Active. This document reflects the architecture implemented in the current repository. Production-specific behavior must be verified against the deployed target branch and environment.
 
 ## Institutional Context & Purpose
 
@@ -72,8 +72,8 @@ Executes on every request before reaching page components or API handlers (exclu
 1. **Active Session Check**: If `auth_token` cookie is present and user accesses `/auth/login`, decode token via Edge JWT and redirect to `/profile/[id]`.
 2. **Path Normalization & Redirect Map**: Normalize trailing slashes; map `/auth`, `/login`, and `/register` to standard auth paths.
 3. **Path Traversal & Fragment Hardening**: Block requests containing `..`, `%2e%2e`, `.env`, `.git`, `package.json`, `tsconfig`, `next.config`.
-4. **Auth Guard**: Unauthenticated requests to protected paths (`/admin`, `/profile`, `/attendance`) redirect to `/auth/login` (pages) or return 401 JSON (APIs).
-5. **RBAC Guard**: Enforces `role === "admin"` in JWT payload for all `/admin` and `/api/admin` routes via `checkUserRole()`.
+4. **Auth Guard**: Unauthenticated requests to protected paths (`/admin`, `/content_manager`, `/leader_proyect`, `/profile`, `/attendance`) redirect to `/auth/login` (pages) or return 401 JSON (APIs).
+5. **RBAC Guard**: Enforces `role === "admin"` in the JWT payload for `/admin` and `/api/admin` routes. It also applies role-specific checks to `/content_manager` and `/leader_proyect` via `checkUserRoleAllowed()`.
 6. **CSRF Validation**: State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) verify matching `x-csrf-token` header and `csrf_token` cookie using constant-time comparison (`timingSafeEqual`). Exempt public routes bypass check.
 7. **Auth Middleware Delegate**: Delegates fine-grained protected path verification to `lib/auth/middleware.ts`.
 
@@ -83,7 +83,7 @@ Standard Next.js App Router REST route handlers:
 
 - **Auth Endpoints** (`app/api/auth/`): `login`, `register`, `logout`, `refresh`, `me`, `csrf-token`, `forgot-password`, `reset-password`, `profile`, `skills`, `users`, `programs`, `verify-role`, `is-admin`.
 - **Admin Endpoints** (`app/api/admin/`): `users` (paginated list, search, role/status update, delete), `attendances`, `dashboard`.
-- **Domain Endpoints**: `/api/asistencia`, `/api/qr-dinamico`, `/api/contact`, `/api/skills`, `/api/team`.
+- **Domain Endpoints**: `/api/asistencia`, `/api/qr-dinamico`, `/api/contact`, `/api/skills`, `/api/team`, `/api/projects`, `/api/updates`.
 
 **[DECISION]** Auth token set as `auth_token` in HttpOnly cookie with `SameSite=Strict` and `Secure` in production. Token subject (`sub`) contains BigInt user ID converted to string.
 
@@ -93,12 +93,16 @@ Server-side data fetchers wrapping repository calls with Next.js caching strateg
 
 | Module | Scope / Functionality | Caching Strategy |
 |---|---|---|
-| `landing.ts` | Quick nav, featured projects, gallery preview, latest news | `unstable_cache` on `getLandingNews` (21,600s / 6h) |
+| `landing.ts` | Quick nav, featured projects and gallery preview | Static previews are memoized per request; landing news comes from `lib/data/updates.ts` |
 | `projects.ts` | Project catalog and category filters | `unstable_cache` on `getProjectsCatalog` (21,600s / 6h) |
-| `updates.ts` | News & announcements feed | `unstable_cache` on `getUpdatesFeed` and `getLatestNewsForLanding` (60s) |
+| `updates.ts` | News & announcements feed and landing news | `getUpdatesFeed`: 21,600s / 6h; `getLatestNewsForLanding`: 3,600s / 1h. Both use the `updates` tag; development disables time-based expiration via `activeTTL()`. The management client reads fresh data through `GET /api/updates`. |
 | `admin.ts` | Admin dashboard statistics | Dynamic / No cache (real-time query) |
 
 *Note*: `app/page.tsx` explicitly sets `export const dynamic = "force-dynamic"` to guarantee fresh server rendering and avoid build-time database connection locks during production deployment.
+
+The landing events section uses `getLatestNewsForLanding(3)` from `lib/data/updates.ts`. Its cache key is versioned as `latest-news-landing-v2`, and database failures are re-thrown instead of being cached as an empty list. Update mutations invalidate the shared `updates` tag.
+
+The public updates feed and the management list intentionally use different read paths. Public pages may serve cached published updates, while authenticated administrators and content managers refresh the management list from the database to avoid editing stale IDs. The legacy `/content_manager` page redirects to `/updates` and no longer maintains a separate localStorage-based update source.
 
 ### 4. Data Access Layer (`repositories/`)
 
@@ -232,7 +236,7 @@ erDiagram
 - **AuthContext** (`contexts/AuthContext.tsx`): React Context providing `user`, `isAuthenticated`, `isLoading`, `login`, `logout`, `hasRole`, and `isAdmin` to all client components.
 - **Custom Hooks**:
   - `useCsrf`: Fetches CSRF token from `/api/auth/csrf-token` and provides mutation helper `fetchWithCsrf`.
-  - `useAuth`: Direct authentication actions.
+  - `useAuth`: Authentication actions plus initial and focus-triggered refresh synchronization through `/api/auth/refresh`.
   - `useProfileData`: Profile fetching and updating.
   - Data hooks: `usePrograms`, `useProjects`, `useUpdates`, `useAvailableSkills`, `useSkillObjects`, `useTokenValidation`.
 
@@ -246,6 +250,8 @@ Edge Middleware cannot execute Node.js native modules (`jsonwebtoken`). The proj
 |---|---|---|
 | Route Handlers (Node.js) | `jsonwebtoken` library | `lib/jwt.ts` |
 | Edge Middleware (V8 Isolates) | Web Crypto API (`crypto.subtle` HS256) | `lib/auth/jwt-edge.ts` |
+
+`/api/auth/refresh` validates the current cookie, loads the active user and current role from PostgreSQL, then issues a new four-hour JWT. This keeps role changes effective after refresh without trusting the stale role claim from the previous token. `/api/auth/me` uses `Cache-Control: private, no-store` because it returns session-specific data.
 
 ### Double-Submit Cookie CSRF Protection
 
@@ -283,8 +289,8 @@ Dependencies are pinned with exact versions (no `^` or `~`). The lockfile (`pnpm
 | Area | Issue | Impact | Mitigation / Status |
 |---|---|---|---|
 | Rate Limiting | In-memory `Map` limiter | Resets on Vercel cold starts; stateless across serverless instances | Planned Redis/Upstash migration |
-| Automated Testing | Suite operational with node:test | Four test files exist (`jwt`, `csrf`, `qr-attendance`, `regex`); `tests/unit/` and `tests/integration/` remain empty | Extend coverage to `lib/` and `repositories/` |
-| Schema Roles | Admin UI role options vs DB seeds | UI shows `content_manager`/`lead_project` options, but DB only seeds `admin`/`user` | Ensure DB roles match UI selection list |
+| Automated Testing | Suite operational with node:test | Nine test files cover auth refresh, CSRF, JWT, profiles, projects, QR attendance, regex, updates, and URL validation; `tests/unit/` and `tests/integration/` remain empty | Extend coverage to `lib/` and `repositories/` |
+| Auth Role Propagation | Existing JWTs retain their role claim until refresh | The client refreshes during initial synchronization and window focus; other clients keep the old claim until they refresh | Add persistent session revocation/versioning if immediate invalidation across clients becomes a requirement |
 | BigInt Serialization | Manual `.toString()` requirement | Unhandled BigInts cause runtime `JSON.stringify` failure | Strict repository conversion convention |
 
 ## Verification Command Checklist

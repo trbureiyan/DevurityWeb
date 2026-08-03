@@ -75,7 +75,7 @@ DevurityWeb/
 │   └── seeders/                  # Seed data by domain (roles, platforms, programs, skills, projects, updates)
 ├── middleware.ts                  # Global middleware: auth guard, RBAC, CSRF, path traversal protection
 ├── scripts/                      # Utility scripts (deploy-db.ts, migrate.mjs, fixtures/)
-├── tests/                        # Tests con node:test — *.node-test.ts (jwt, csrf, qr-attendance, regex)
+├── tests/                        # Tests con node:test — *.node-test.ts (auth-refresh, csrf, jwt, profile-skills, projects, qr-attendance, regex, updates, url)
 ├── public/                       # Static assets
 └── .github/                      # CI workflows, templates, PR instructions
 ```
@@ -130,11 +130,18 @@ When assigned a task:
 
 **Audit before acting:** Verify each finding against current code. Fix only still-valid issues. Skip the rest with a brief reason. Keep changes minimal. Validate after.
 
+### Documentation Maintenance
+
+- `AGENTS.md` es documentación versionada del proyecto, no una nota local descartable.
+- Cada cambio grande de arquitectura, autenticación, seguridad, base de datos, despliegue, dependencias, rutas o flujo de trabajo debe revisar este archivo y los documentos relacionados (`ARCHITECTURE.md`, `SKILL.md`, `README.md`).
+- Si el cambio modifica una instrucción, un riesgo, un comando o una descripción de la arquitectura, actualiza la documentación en el mismo cambio.
+- Si después de revisarla no hace falta editarla, deja constancia de esa decisión en el resumen del cambio. No se deben mantener instrucciones contradictorias con el código vigente.
+
 ---
 
 ## Current Risk Areas
 
-- **JWT and auth flow**: `lib/jwt.ts` (main), `lib/auth/jwt-edge.ts` (edge), `lib/auth/middleware.ts` (helpers). Token expiration, refresh flow, and secret management. Changes here affect every authenticated route. The middleware also performs RBAC checks via the JWT `role` claim — four active roles: `admin`, `content_manager`, `lead_project`, `user`.
+- **JWT and auth flow**: `lib/jwt.ts` (main), `lib/auth/jwt-edge.ts` (edge), `lib/auth/middleware.ts` (helpers). Token expiration, refresh flow, and secret management. Changes here affect every authenticated route. The middleware performs RBAC checks via the JWT `role` claim — four active roles: `admin`, `content_manager`, `lead_project`, `user`. `/api/auth/refresh` re-reads the active user's role from PostgreSQL before issuing a new token, and `useAuth` refreshes during initial auth synchronization and when the window regains focus.
 - **CSRF protection**: `lib/csrf.ts` + `hooks/useCsrf.ts` + `middleware.ts`. Double-submit cookie pattern. Every POST/PUT/DELETE must carry the token. Public exemptions are hardcoded in `middleware.ts` — adding new public routes requires updating that list.
 - **Prisma schema**: 11 models with BigInt PKs, cascade deletes, and junction tables (`user_skills`, `user_platforms`, `user_projects`). Migrations must be tested against a clean DB. Never edit generated files in `lib/generated/prisma/`.
 - **BigInt serialization**: Prisma uses `BigInt` IDs. JSON cannot serialize BigInt — always convert with `.toString()` before returning from route handlers or repositories. This is a recurring source of runtime crashes.
@@ -144,6 +151,7 @@ When assigned a task:
 - **Rate limiting**: Login endpoint uses in-memory `Map` for attempt tracking. This resets on server restart and does not work across Vercel serverless instances.
 - **Environment variables**: `.env` es el archivo principal local. Validar variables requeridas al inicio. Ver `.env.example` para la lista canónica. `ALTCHA_HMAC_SECRET` es requerida en producción; en desarrollo hay fallback hardcodeado en `lib/altcha.ts:9`.
 - **CSP en `next.config.ts`**: La política `Content-Security-Policy` en `next.config.ts:33-48` define los orígenes permitidos (scripts, estilos, fuentes, conexiones, etc.). Cualquier dependencia externa nueva se registra actualizando las directivas correspondientes. ALTCHA es la razón de que `cdn.jsdelivr.net` y `blob:` estén en las directivas `script-src`, `style-src` y `worker-src`.
+- **Caché de datos públicos**: `lib/cache-tags.ts` centraliza los tags y TTL de `unstable_cache`. En producción, el feed completo de updates usa 6 horas y las tres noticias de la landing usan 1 hora; ambas consultas comparten el tag `updates`. `unstable_cache` sigue siendo la fuente pública cacheada; el gestor administrativo usa una lectura fresca mediante `GET /api/updates` para no editar IDs obsoletos del feed público. En desarrollo, `activeTTL()` desactiva la expiración temporal, pero no debe interpretarse como una garantía de consulta directa a la base de datos en cada petición.
 
 ---
 
@@ -289,10 +297,15 @@ Tests live in `tests/` with this layout:
 
 ```text
 tests/
-├── jwt.node-test.ts         # JWT generation and verification
-├── csrf.node-test.ts        # CSRF token helpers
+├── auth-refresh.node-test.ts  # Refresh del JWT con rol vigente en DB
+├── csrf.node-test.ts          # CSRF token helpers
+├── jwt.node-test.ts           # JWT generation and verification
+├── profile-skills.node-test.ts # Profile and skills flows
+├── projects.node-test.ts      # Project API validation and RBAC
 ├── qr-attendance.node-test.ts # QR signature and attendance flow
-├── regex.node-test.ts       # Regex validation patterns
+├── regex.node-test.ts         # Regex validation patterns
+├── updates.node-test.ts       # Updates API validation and RBAC
+├── url.node-test.ts           # URL validation
 ├── unit/                    # Future: pure logic, no I/O
 └── integration/             # Future: end-to-end flows
 ```

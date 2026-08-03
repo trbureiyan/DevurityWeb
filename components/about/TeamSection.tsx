@@ -46,6 +46,8 @@ export default function TeamSection({ members }: TeamSectionProps) {
   const currentMembers = getPaginatedMembers(activeMembers, safePage);
 
   const handleTabChange = (tab: RoleGroup) => {
+    if (groupedMembers[tab].length === 0) return;
+
     if (tab !== activeTab) {
       setActiveTab(tab);
       setPage(1); // Reset page on tab change
@@ -77,16 +79,15 @@ export default function TeamSection({ members }: TeamSectionProps) {
             aria-label="Roles del equipo"
           >
             {(Object.keys(ROLE_LABELS) as RoleGroup[]).map((roleKey) => {
-              // No mostrar secciones vacías
-              if (groupedMembers[roleKey].length === 0) return null;
-
               const isActive = activeTab === roleKey;
+              const hasMembers = groupedMembers[roleKey].length > 0;
 
               return (
                 <button
                   key={roleKey}
                   type="button"
-                  className="flex flex-col items-center flex-1 cursor-pointer group bg-transparent border-0 p-0"
+                  disabled={!hasMembers}
+                  className="group flex flex-1 cursor-pointer flex-col items-center border-0 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-40"
                   onClick={() => handleTabChange(roleKey)}
                   role="tab"
                   id={`team-tab-${roleKey}`}
