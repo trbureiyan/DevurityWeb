@@ -22,10 +22,10 @@ importers:
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
       '@vercel/analytics':
         specifier: 2.0.1
-        version: 2.0.1(next@15.5.19(react-dom@19.1.2(react@19.1.2))(react@19.1.2))(react@19.1.2)
+        version: 2.0.1(next@15.5.21(react-dom@19.1.2(react@19.1.2))(react@19.1.2))(react@19.1.2)
       '@vercel/speed-insights':
         specifier: 2.0.0
-        version: 2.0.0(next@15.5.19(react-dom@19.1.2(react@19.1.2))(react@19.1.2))(react@19.1.2)
+        version: 2.0.0(next@15.5.21(react-dom@19.1.2(react@19.1.2))(react@19.1.2))(react@19.1.2)
       altcha-lib:
         specifier: 2.3.1
         version: 2.3.1
@@ -569,8 +569,8 @@ packages:
       '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.3
       '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.3
 
-  '@next/env@15.5.19':
-    resolution: {integrity: sha512-sWWluFvcv5v3Fxznmf2ZfjyoVQt/64oCnYqS90inQWGzMPK1VjvekPiz3OPHKmFT30EnHrjlbyaHLt3M0vWabw==}
+  '@next/env@15.5.21':
+    resolution: {integrity: sha512-hjJI/GfrjWHgNguRIBzItjRRu0m3Nrz17GhxsjuHfjIvg9hyg3239REd2dpI+bpMTFuVrVprHzEQ19m++cDtbw==}
 
   '@next/eslint-plugin-next@15.5.4':
     resolution: {integrity: sha512-SR1vhXNNg16T4zffhJ4TS7Xn7eq4NfKfcOsRwea7RIAHrjRpI9ALYbamqIJqkAhowLlERffiwk0FMvTLNdnVtw==}
