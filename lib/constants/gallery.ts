@@ -1,19 +1,9 @@
-export const GALLERY_IMAGES = [
-    "/images/gallery/1760754532285.jpeg",
-    "/images/gallery/1760754532692.jpeg",
-    "/images/gallery/1760754533692.jpeg",
-    "/images/gallery/1760754533755.jpeg",
-    "/images/gallery/1760754748721.jpeg",
-    "/images/gallery/1760754749336.jpeg",
-    "/images/gallery/1760754750028.jpeg",
-    "/images/gallery/1760755307255.jpeg",
-    "/images/gallery/1760755307798.jpeg",
-    "/images/gallery/1760755308729.jpeg",
-    "/images/gallery/1760755311039.jpeg",
-    "/images/gallery/1760757895010.jpeg",
-    "/images/gallery/1760757895199.jpeg",
-    "/images/gallery/1760757895574.jpeg",
-    "/images/gallery/1760757895959.jpeg",
-    "/images/gallery/1760762634313.jpeg",
-    "/images/gallery/1760762634546.jpeg",
-];
+// Reglas de validación compartidas entre cliente (formulario de subida) y
+// servidor (API route) para las imágenes de la galería.
+export const GALLERY_MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+export const GALLERY_ALLOWED_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+] as const;
