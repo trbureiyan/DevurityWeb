@@ -1,5 +1,16 @@
 import type { NextConfig } from "next";
 
+// Host del proyecto de Supabase (bucket público de la galería), derivado de la URL configurada.
+function getSupabaseHostname(): string | null {
+  try {
+    return process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname : null;
+  } catch {
+    return null;
+  }
+}
+
+const supabaseHostname = getSupabaseHostname();
+
 // Definición de headers de seguridad HTTP
 const securityHeaders = [
   {
@@ -63,6 +74,15 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
+      ...(supabaseHostname
+        ? [
+            {
+              protocol: 'https' as const,
+              hostname: supabaseHostname,
+              pathname: '/storage/v1/object/public/**',
+            },
+          ]
+        : []),
     ],
   },
 
