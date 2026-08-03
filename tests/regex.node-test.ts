@@ -7,7 +7,7 @@
  */
 import { test } from "node:test";
 import { ok, strictEqual } from "node:assert/strict";
-import { emailUniversity, email, isValidPassword } from "../lib/regex";
+import { emailUniversity, email, isValidContactEmail, isValidPassword } from "../lib/regex";
 
 // ---------------------------------------------------------------------------
 // emailUniversity — institutional format: u + exactly 11 digits + @usco.edu.co
@@ -116,6 +116,11 @@ test("email — rejects malformed addresses", async (t) => {
   await t.test("only at-sign", () => {
     strictEqual(email("@"), false);
   });
+});
+
+test("isValidContactEmail — rejects pathological input without backtracking", () => {
+  strictEqual(isValidContactEmail(`${"!.".repeat(10_000)}!@!.`), false);
+  ok(isValidContactEmail("usuario@example.com"));
 });
 
 // ---------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import { EmailOptions, sendEmail } from "@/lib/email";
 import { verifyAltchaPayload } from "@/lib/altcha";
 import { csrfAdapter } from "@/lib/csrf";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { isValidContactEmail } from "@/lib/regex";
 
 /**
  * Valida y envía mensajes del formulario de contacto público.
@@ -110,9 +111,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validación básica de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    // la expresión usa separadores que no se solapan para evitar backtracking costoso
+    if (!isValidContactEmail(email)) {
       return new Response(
         JSON.stringify(
           errorRequest("correo", "El correo electrónico no es válido")

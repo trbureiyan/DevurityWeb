@@ -1,4 +1,5 @@
 import { PrismaClient } from "../../lib/generated/prisma";
+import { randomInt as cryptoRandomInt } from "node:crypto";
 
 // ─────────────────────────────────────────────────────────────
 // Guard: fixtures must never run against a production database.
@@ -68,11 +69,11 @@ export function pick<T>(arr: T[]): T {
   if (arr.length === 0) {
     throw new Error("pick() called with an empty array");
   }
-  return arr[Math.floor(Math.random() * arr.length)];
+  return arr[cryptoRandomInt(arr.length)];
 }
 
 export function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return cryptoRandomInt(min, max + 1);
 }
 
 export function randomName(): { name: string; last_name: string } {
@@ -282,7 +283,11 @@ export function randomSlug(title: string, suffix: number): string {
 
 /** Toma N ítems al azar de un array sin repetición. */
 export function pickN<T>(arr: T[], n: number): T[] {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  const shuffled = [...arr];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = cryptoRandomInt(i + 1);
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
   return shuffled.slice(0, Math.min(n, shuffled.length));
 }
 
@@ -308,7 +313,7 @@ export function randomProjectData(suffix: number): {
     stage: pick([...STAGES]),
     focus_areas: pickN(FOCUS_AREAS_POOL, randomInt(1, 3)),
     stack: pickN(STACK_POOL, randomInt(0, 4)),
-    is_archived: Math.random() < 0.1,
+    is_archived: cryptoRandomInt(10) === 0,
     hero_image: null,
     cta_label: null,
     cta_href: null,

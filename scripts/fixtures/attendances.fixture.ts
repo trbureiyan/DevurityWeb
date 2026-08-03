@@ -1,5 +1,5 @@
 import { PrismaClient } from "../../lib/generated/prisma";
-import { getActiveUserIds, randomDateAround } from "./factory";
+import { getActiveUserIds, pick, randomDateAround } from "./factory";
 import type { SeedResult } from "./ui";
 
 const DEFAULT_COUNT = 30;
@@ -37,7 +37,7 @@ export async function seedAttendances(
   let skipped = 0;
 
   for (let i = 0; i < count; i++) {
-    const userId = userIds[Math.floor(Math.random() * userIds.length)];
+    const userId = pick(userIds);
     const date = randomDateAround(today, 90);
     // Normalize to midnight — PostgreSQL @db.Date has no time component
     date.setHours(0, 0, 0, 0);

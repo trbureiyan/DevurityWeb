@@ -4,6 +4,9 @@ export const emailUniversity = (email: string): boolean =>
 export const email = (email: string): boolean =>
   /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email);
 
+export const isValidContactEmail = (email: string): boolean =>
+  email.length <= 254 && /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(email);
+
 export const isValidPassword = (password: string): boolean =>
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=\[\]{};:'",.<>?/\\|`~]).{8,}$/.test(
     password,
