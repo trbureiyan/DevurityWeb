@@ -172,6 +172,36 @@ test("Projects API Route - POST /api/projects", async (t) => {
     strictEqual(item.callToAction.label, payload.callToAction.label);
     strictEqual(item.callToAction.href, payload.callToAction.href);
   });
+
+  await t.test("Rejects invalid stage and CTA href", async () => {
+    const token = await generateToken({ sub: "1", role: "lead_project" });
+    const invalidStageRequest = new NextRequest("http://localhost/api/projects", {
+      method: "POST",
+      headers: { cookie: `auth_token=${token}` },
+      body: JSON.stringify({
+        title: "Proyecto inválido",
+        summary: "Resumen válido",
+        stage: "desconocido",
+        focusAreas: ["ciberseguridad"],
+      }),
+    });
+
+    strictEqual((await POST(invalidStageRequest)).status, 400);
+
+    const invalidHrefRequest = new NextRequest("http://localhost/api/projects", {
+      method: "POST",
+      headers: { cookie: `auth_token=${token}` },
+      body: JSON.stringify({
+        title: "Proyecto inválido",
+        summary: "Resumen válido",
+        stage: "desarrollo",
+        focusAreas: ["ciberseguridad"],
+        callToAction: { label: "Abrir", href: "javascript:alert(1)" },
+      }),
+    });
+
+    strictEqual((await POST(invalidHrefRequest)).status, 400);
+  });
 });
 
 test("Projects API Route - PUT /api/projects/[id]", async (t) => {
@@ -227,6 +257,30 @@ test("Projects API Route - PUT /api/projects/[id]", async (t) => {
     strictEqual(body.success, true);
     strictEqual(body.data.title, "Updated Project Title");
     strictEqual(body.data.summary, "Updated project description text.");
+  });
+
+  await t.test("Rejects invalid stage and CTA href", async () => {
+    const token = await generateToken({ sub: "1", role: "admin" });
+    const invalidStageRequest = new NextRequest("http://localhost/api/projects/test-project", {
+      method: "PUT",
+      headers: { cookie: `auth_token=${token}` },
+      body: JSON.stringify({
+        stage: "desconocido",
+      }),
+    });
+
+    strictEqual((await PUT(invalidStageRequest, { params: Promise.resolve({ id: "test-project" }) })).status, 400);
+
+    const invalidHrefRequest = new NextRequest("http://localhost/api/projects/test-project", {
+      method: "PUT",
+      headers: { cookie: `auth_token=${token}` },
+      body: JSON.stringify({
+        stage: "desarrollo",
+        callToAction: { label: "Abrir", href: "//evil.example" },
+      }),
+    });
+
+    strictEqual((await PUT(invalidHrefRequest, { params: Promise.resolve({ id: "test-project" }) })).status, 400);
   });
 });
 

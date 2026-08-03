@@ -29,7 +29,8 @@ export function validateHref(rawHref: unknown): HrefValidationResult {
     return { ok: true, href: null };
   }
 
-  if (trimmed.startsWith("/") || trimmed.startsWith("#")) {
+  const isProtocolRelative = /^[/\\]{2}/.test(trimmed);
+  if (trimmed.startsWith("#") || (trimmed.startsWith("/") && !isProtocolRelative)) {
     return { ok: true, href: trimmed };
   }
 

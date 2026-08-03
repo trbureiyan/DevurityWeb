@@ -24,6 +24,9 @@ export async function DELETE(
         }
 
         const decoded = await validateAuthToken(token);
+        if (decoded.role !== "admin") {
+            return NextResponse.json({ error: "Acceso restringido" }, { status: 403 });
+        }
         if (decoded.sub === id) {
             return NextResponse.json({ error: "No puedes eliminar tu propia cuenta" }, { status: 403 });
         }

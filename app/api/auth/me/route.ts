@@ -51,8 +51,7 @@ export async function GET(request: NextRequest) {
       },
       {
         headers: {
-          // Private because the response is user-specific and tied to cookies
-          "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+          "Cache-Control": "private, no-store",
         },
       },
     );

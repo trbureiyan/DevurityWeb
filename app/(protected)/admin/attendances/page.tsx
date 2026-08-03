@@ -11,6 +11,7 @@ interface QRData {
   timestamp: number;
   token: string;
   expiresAt: number;
+  signature: string;
 }
 
 interface _AttendanceResponse {
@@ -70,7 +71,7 @@ export default function AttendancesPage() {
   const [availableCameras, setAvailableCameras] = useState<string[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [showCameraSelector, setShowCameraSelector] = useState(false);
-  const { csrfToken, refetch: refetchCsrf } = useCsrf();
+  const { fetchWithCsrf, refetch: refetchCsrf } = useCsrf();
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isStoppingRef = useRef(false);
@@ -79,12 +80,12 @@ export default function AttendancesPage() {
 
   const lastScanTimeRef = useRef<number>(0);
   const scanningRef = useRef<boolean>(false);
-  const csrfTokenRef = useRef<string | null>(null);
   const handleRetryRef = useRef<() => Promise<void>>(async () => {});
+  const cameraActiveRef = useRef(false);
 
   useEffect(() => {
-    csrfTokenRef.current = csrfToken;
-  }, [csrfToken]);
+    cameraActiveRef.current = cameraActive;
+  }, [cameraActive]);
 
 
   // Tab state
@@ -177,7 +178,7 @@ export default function AttendancesPage() {
       }, 100);
       
       // Pause scanner during processing
-      if (scannerRef.current && cameraActive) {
+        if (scannerRef.current && cameraActiveRef.current) {
         try {
           await scannerRef.current.pause(true);
         } catch (err) {
@@ -203,7 +204,8 @@ export default function AttendancesPage() {
           !qrData.userId ||
           !qrData.timestamp ||
           !qrData.token ||
-          !qrData.expiresAt
+          !qrData.expiresAt ||
+          !qrData.signature
         ) {
           setError("QR inválido - faltan datos requeridos");
           return;
@@ -217,22 +219,12 @@ export default function AttendancesPage() {
         }
 
         try {
-          // Verificar que tengamos token CSRF
-          const token = csrfTokenRef.current;
-          if (!token) {
-            setError("Token CSRF no disponible. Recargando...");
-            setTimeout(() => window.location.reload(), 2000);
-            return;
-          }
-          
           // Registrar asistencia (requiere token CSRF y cookie de sesión)
-          const res = await fetch("/api/admin/attendances", {
+          const res = await fetchWithCsrf("/api/admin/attendances", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-CSRF-Token": token,
             },
-            credentials: "include",
             body: JSON.stringify({
               qrData: qrData,
             }),
@@ -257,7 +249,7 @@ export default function AttendancesPage() {
             
             // Resume scanner after delay
             setTimeout(() => {
-              if (scannerRef.current && cameraActive) {
+              if (scannerRef.current && cameraActiveRef.current) {
                 try {
                   scannerRef.current.resume();
                 } catch (err) {
@@ -274,7 +266,7 @@ export default function AttendancesPage() {
             
             // Resume scanner after error with delay
             setTimeout(() => {
-              if (scannerRef.current && cameraActive) {
+              if (scannerRef.current && cameraActiveRef.current) {
                 try {
                   scannerRef.current.resume();
                 } catch (err) {
@@ -289,7 +281,7 @@ export default function AttendancesPage() {
           
           // Resume scanner after error
           setTimeout(() => {
-            if (scannerRef.current && cameraActive) {
+            if (scannerRef.current && cameraActiveRef.current) {
               try {
                 scannerRef.current.resume();
               } catch (err) {
@@ -306,7 +298,7 @@ export default function AttendancesPage() {
         setScanning(false);
       }
     },
-    [SCAN_COOLDOWN, cameraActive],
+    [SCAN_COOLDOWN, fetchWithCsrf],
   );
 
   const stopScanner = useCallback(() => {

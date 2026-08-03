@@ -19,6 +19,18 @@ interface LoginResponse {
   user?: User;
 }
 
+type AuthCheckResult =
+  | { ok: true; data: { user: User } }
+  | { ok: false; data: unknown };
+
+type AuthGlobals = {
+  __authPromise: Promise<AuthCheckResult> | null;
+};
+
+// se conserva entre renders y HMR para no duplicar llamadas simultaneas
+const authGlobals = globalThis as typeof globalThis & AuthGlobals;
+if (!authGlobals.__authPromise) authGlobals.__authPromise = null;
+
 export function useAuth() {
   const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>({
@@ -28,10 +40,6 @@ export function useAuth() {
   });
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
-  // Module-level dedupe for concurrent /api/auth/me calls
-  // Use (global as any) to keep across HMR in dev
-  const globalAny = global as any;
-  if (!globalAny.__mePromise) globalAny.__mePromise = null;
 
   const logout = useCallback(async (): Promise<void> => {
     try {
@@ -58,7 +66,7 @@ export function useAuth() {
       // Remove session flag
       try {
         localStorage.removeItem("has_session");
-      } catch (e) {
+      } catch {
         /* ignore */
       }
 
@@ -80,6 +88,7 @@ export function useAuth() {
     try {
       const response = await fetch("/api/auth/refresh", {
         method: "POST",
+        credentials: "include",
       });
 
       if (response.ok) {
@@ -105,7 +114,7 @@ export function useAuth() {
       let hasSession = true;
       try {
         hasSession = !!localStorage.getItem("has_session");
-      } catch (e) {
+      } catch {
         // If localStorage isn't available, fall back to calling /me
         hasSession = true;
       }
@@ -116,10 +125,9 @@ export function useAuth() {
         return;
       }
 
-      // Deduplicate concurrent calls using a global promise
-      if (globalAny.__mePromise) {
-        // __mePromise resolves to an object { ok: boolean, data?: any }
-        const result = await globalAny.__mePromise;
+      // Deduplicate concurrent refresh calls using a global promise
+      if (authGlobals.__authPromise) {
+        const result = await authGlobals.__authPromise;
         if (result.ok) {
           setAuthState({ user: result.data.user, isLoading: false, isAuthenticated: true });
         } else {
@@ -129,36 +137,39 @@ export function useAuth() {
         return;
       }
 
-      // Store a promise that resolves to parsed JSON (or error) so body is consumed only once
-      globalAny.__mePromise = (async () => {
+      // Refresh also replaces the HttpOnly cookie with the current DB role.
+      authGlobals.__authPromise = (async (): Promise<AuthCheckResult> => {
         try {
-          const resp = await fetch("/api/auth/me");
+          const resp = await fetch("/api/auth/refresh", {
+            method: "POST",
+            credentials: "include",
+          });
           if (resp.ok) {
-            const data = await resp.json();
+            const data = (await resp.json()) as { user: User };
             return { ok: true, data };
           }
           // Try to parse error body if any
           let errData = null;
           try {
             errData = await resp.json();
-          } catch (_) {
+          } catch {
             /* ignore parse error */
           }
           return { ok: false, data: errData };
-        } catch (e) {
+        } catch {
           return { ok: false, data: null };
         }
       })();
 
       try {
-        const result = await globalAny.__mePromise;
+        const result = await authGlobals.__authPromise;
         if (result.ok) {
           setAuthState({ user: result.data.user, isLoading: false, isAuthenticated: true });
         } else {
           setAuthState({ user: null, isLoading: false, isAuthenticated: false });
         }
       } finally {
-        globalAny.__mePromise = null;
+        authGlobals.__authPromise = null;
       }
     } catch (error) {
       logger.error("useAuth: Error verificando autenticación:", { error });
@@ -198,7 +209,7 @@ export function useAuth() {
     // Set session flag so client knows we have a session
     try {
       localStorage.setItem("has_session", "1");
-    } catch (e) {
+    } catch {
       /* ignore */
     }
 
@@ -230,6 +241,17 @@ export function useAuth() {
       };
     }
   }, [authState.isAuthenticated, authState.user, refreshToken]);
+
+  useEffect(() => {
+    if (!authState.isAuthenticated) return;
+
+    const refreshOnFocus = () => {
+      void refreshToken();
+    };
+
+    window.addEventListener("focus", refreshOnFocus);
+    return () => window.removeEventListener("focus", refreshOnFocus);
+  }, [authState.isAuthenticated, refreshToken]);
 
   // Verificar autenticación solo una vez al montar el componente
   useEffect(() => {
