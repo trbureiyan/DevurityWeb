@@ -6,7 +6,7 @@ import {
   type ProjectPreview,
 } from "@/lib/constants/landing";
 import { getLatestUpdates } from "@/repositories/updates/updates.repositories";
-import { GALLERY_IMAGES } from "@/lib/constants/gallery";
+import { getGalleryImageUrls } from "@/lib/data/gallery";
 import type { QuickNavItem } from "@/lib/types/landing";
 import type { NewsEvent } from "@/lib/types/update.types";
 import { CACHE_TAGS, CACHE_TTL, activeTTL } from "@/lib/cache-tags";
@@ -18,10 +18,6 @@ const getQuickNavItemsInternal = cache(async (): Promise<QuickNavItem[]> => {
 
 const getFeaturedProjectsInternal = cache(async (): Promise<ProjectPreview[]> => {
   return FEATURED_PROJECTS;
-});
-
-const getGalleryPreviewImagesInternal = cache(async (): Promise<string[]> => {
-  return GALLERY_IMAGES.slice(0, 12);
 });
 
 /**
@@ -37,10 +33,14 @@ export const getLandingQuickNav     = () => getQuickNavItemsInternal();
 export const getLandingProjects     = () => getFeaturedProjectsInternal();
 
 /**
- * Retorna hasta 12 imágenes de previsualización para la galería del landing.
+ * Retorna hasta 12 imágenes de previsualización para la galería del landing,
+ * cargadas en vivo desde la DB/Storage.
  * @returns {Promise<string[]>} URLs de imágenes de galería.
  */
-export const getLandingGalleryPreview = () => getGalleryPreviewImagesInternal();
+export const getLandingGalleryPreview = async (): Promise<string[]> => {
+  const images = await getGalleryImageUrls();
+  return images.slice(0, 12);
+};
 
 /**
  * Obtiene las últimas 3 noticias/eventos desde la BD con caché ISR.
