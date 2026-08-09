@@ -42,6 +42,13 @@ export default function AuthCarousel({
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
+  // Sincronizar el estado currentSlide cuando la longitud de los slides cambia
+  useEffect(() => {
+    if (slides && slides.length > 0) {
+      setCurrentSlide((prev) => Math.min(prev, slides.length - 1));
+    }
+  }, [slides]);
+
   const nextSlide = useCallback(() => {
     setCurrentSlide((prev) => (prev + 1) % slides.length);
   }, [slides.length]);
