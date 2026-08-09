@@ -3,7 +3,7 @@ import { Orbitron, Ubuntu } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import NavbarConditional from "@/components/layouts/NavbarConditional";
-import Footer from "@/components/layouts/Footer";
+import FooterConditional from "@/components/layouts/FooterConditional";
 import { siteIcons } from "@/lib/constants/metadata";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -72,7 +72,7 @@ export default function RootLayout({
           <NavbarConditional />
           <main className="flex-1">{children}</main>
         </AuthProvider>
-        <Footer />
+        <FooterConditional />
         <Analytics />
         <SpeedInsights />
       </body>
