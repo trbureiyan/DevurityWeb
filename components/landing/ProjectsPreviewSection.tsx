@@ -13,7 +13,11 @@ import {
   CardAction,
 } from "@/components/ui/Card";
 
-// Muestra los 3 proyectos más recientes en la landing page
+/**
+ * Muestra hasta tres proyectos recientes en la sección de portafolio público.
+ * @returns Una sección de proyectos renderizada desde el catálogo disponible.
+ * @throws No lanza excepciones; degrada a un estado vacío si falla la consulta.
+ */
 export default async function ProjectsPreviewSection() {
   let allProjects: ProjectItem[];
   try {

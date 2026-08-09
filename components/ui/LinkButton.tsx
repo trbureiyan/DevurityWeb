@@ -14,9 +14,11 @@ export type LinkButtonProps = ComponentProps<typeof Link> & {
 };
 
 /**
- * Componente de navegación semántico (renderiza Next.js <Link>).
- * Comparte exactamente el mismo diseño que <Button> mediante `button-styles.ts`,
- * pero no maneja lógica asíncrona ni estados de carga.
+ * Enlace de navegación con la apariencia del sistema de botones.
+ *
+ * @param props - Destino de navegación, variante, tamaño y props de `Link`.
+ * @returns Un componente `Link` de Next.js con estilos de botón.
+ * @throws No lanza excepciones por sí mismo.
  */
 export default function LinkButton({
   variant = "primary",
