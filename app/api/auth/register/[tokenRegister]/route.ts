@@ -520,7 +520,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         ),
       ),
       {
-        status: 500,
+        status: 422,
         headers: { "Content-Type": "application/json" },
       },
     );
