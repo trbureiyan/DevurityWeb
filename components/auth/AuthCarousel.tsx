@@ -59,7 +59,9 @@ export default function AuthCarousel({
 
   if (!slides || slides.length === 0) return null;
 
-  const activeSlideData = slides[currentSlide];
+  // protege el índice cuando slides cambia para no acceder a un slide undefined
+  const activeIndex = Math.min(currentSlide, slides.length - 1);
+  const activeSlideData = slides[activeIndex];
 
   return (
     <div
@@ -81,9 +83,9 @@ export default function AuthCarousel({
         <div
           key={slide.image}
           className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-            index === currentSlide ? "opacity-100 z-0" : "opacity-0 -z-10"
+            index === activeIndex ? "opacity-100 z-0" : "opacity-0 -z-10"
           }`}
-          aria-hidden={index !== currentSlide}
+          aria-hidden={index !== activeIndex}
         >
           <Image
             src={slide.image}
@@ -115,19 +117,17 @@ export default function AuthCarousel({
         {slides.length > 1 && (
           <div
             className="flex items-center gap-2 pt-2"
-            role="tablist"
             aria-label="Seleccionar diapositiva"
           >
             {slides.map((slide, index) => (
               <button
                 key={slide.image}
                 type="button"
-                role="tab"
-                aria-selected={index === currentSlide}
+                aria-current={index === activeIndex ? "true" : undefined}
                 aria-label={`Ir a la diapositiva ${index + 1} de ${slides.length}: ${slide.title}`}
                 onClick={() => setCurrentSlide(index)}
                 className={`h-2.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-variable-collection-link ${
-                  index === currentSlide
+                  index === activeIndex
                     ? "w-8 bg-variable-collection-link"
                     : "w-2.5 bg-white/30 hover:bg-white/60"
                 }`}

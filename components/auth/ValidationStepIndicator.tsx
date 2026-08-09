@@ -1,4 +1,3 @@
-"use client";
 
 interface ValidationStepIndicatorProps {
   currentStep: 0 | 1 | 2;
