@@ -5,6 +5,8 @@ import { verifyAltchaPayload } from "@/lib/altcha";
 import { csrfAdapter } from "@/lib/csrf";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
+const MAX_EMAIL_LENGTH = 254;
+
 /**
  * Valida y envía mensajes del formulario de contacto público.
  *
@@ -111,6 +113,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Validación básica de email
+    if (email.length > MAX_EMAIL_LENGTH) {
+      return new Response(
+        JSON.stringify(errorRequest("correo", "El correo electrónico no es válido")),
+        {
+          status: 422,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return new Response(
