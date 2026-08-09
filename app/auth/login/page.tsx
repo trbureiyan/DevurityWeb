@@ -6,25 +6,10 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { IMAGES } from "@/public/images";
-import AuthCarousel, { type AuthSlide } from "@/components/auth/AuthCarousel";
+import AuthCarousel from "@/components/auth/AuthCarousel";
+import { AUTH_SLIDES } from "@/components/auth/auth-slides";
 import Button from "@/components/ui/Button";
 import StatusModal from "@/components/ui/StatusModal";
-
-// [DECISION] Definir slides en el ámbito de módulo previene la recreación del array en cada render.
-const LOGIN_SLIDES: readonly AuthSlide[] = [
-  {
-    title: "TRAZANDO HORIZONTES DIGITALES",
-    image: IMAGES.login.slide0,
-  },
-  {
-    title: "INNOVACIÓN Y TECNOLOGÍA",
-    image: IMAGES.login.slide1,
-  },
-  {
-    title: "DESARROLLANDO EL FUTURO",
-    image: IMAGES.login.slide2,
-  },
-] as const;
 
 interface FormErrors {
   email?: string;
@@ -87,7 +72,14 @@ function LoginPageContent() {
 
     try {
       const result = await login(email, password);
-      const redirectTo = redirectFromParam || result.redirectTo || "/profile";
+      // solo se acepta redirección interna — se descarta cualquier URL externa
+      const safeRedirect =
+        redirectFromParam &&
+        redirectFromParam.startsWith("/") &&
+        !redirectFromParam.startsWith("//")
+          ? redirectFromParam
+          : null;
+      const redirectTo = safeRedirect || result.redirectTo || "/profile";
       router.push(redirectTo);
     } catch {
       setShowErrorModal(true);
@@ -130,7 +122,7 @@ function LoginPageContent() {
               </Link>
             </div>
 
-            <AuthCarousel slides={LOGIN_SLIDES} />
+            <AuthCarousel slides={AUTH_SLIDES} />
           </div>
 
           {/* Panel Derecho - Formulario de Iniciar Sesión */}
@@ -170,6 +162,7 @@ function LoginPageContent() {
                     <input
                       id="email"
                       type="text"
+                      autoComplete="username"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="tu.usuario@usco.edu.co"
@@ -180,7 +173,7 @@ function LoginPageContent() {
                       aria-describedby={errors.email ? "email-error" : undefined}
                     />
                     {errors.email && (
-                      <p id="email-error" className="text-red-400 text-xs font-ubuntu">
+                      <p id="email-error" role="alert" className="text-red-400 text-xs font-ubuntu">
                         {errors.email}
                       </p>
                     )}
@@ -198,6 +191,7 @@ function LoginPageContent() {
                       <input
                         id="password"
                         type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="••••••••"
@@ -230,7 +224,7 @@ function LoginPageContent() {
                       </button>
                     </div>
                     {errors.password && (
-                      <p id="password-error" className="text-red-400 text-xs font-ubuntu">
+                      <p id="password-error" role="alert" className="text-red-400 text-xs font-ubuntu">
                         {errors.password}
                       </p>
                     )}

@@ -5,25 +5,11 @@ import Link from "next/link";
 import { useState } from "react";
 import { useCsrf } from "@/hooks/useCsrf";
 import { IMAGES } from "@/public/images";
-import AuthCarousel, { type AuthSlide } from "@/components/auth/AuthCarousel";
+import AuthCarousel from "@/components/auth/AuthCarousel";
+import { AUTH_SLIDES } from "@/components/auth/auth-slides";
 import Button from "@/components/ui/Button";
 import StatusModal from "@/components/ui/StatusModal";
-
-// [DECISION] Definir slides en el ámbito de módulo previene recreación en cada render.
-const REGISTER_SLIDES: readonly AuthSlide[] = [
-  {
-    title: "TRAZANDO HORIZONTES DIGITALES",
-    image: IMAGES.login.slide0,
-  },
-  {
-    title: "INNOVACIÓN Y TECNOLOGÍA",
-    image: IMAGES.login.slide1,
-  },
-  {
-    title: "DESARROLLANDO EL FUTURO",
-    image: IMAGES.login.slide2,
-  },
-] as const;
+import { parseBackendError } from "@/lib/auth/register-validation";
 
 interface FormErrors {
   name?: string;
@@ -100,8 +86,8 @@ export default function RegistroPage() {
         let errorMessage = "Ocurrió un error al procesar la solicitud.";
         if (response.status === 409) {
           errorMessage = "Ya existe un usuario registrado con este correo.";
-        } else if (data && data.Error) {
-          errorMessage = data.Error;
+        } else {
+          errorMessage = parseBackendError(data as Record<string, unknown>);
         }
 
         setModalMessage(errorMessage);
@@ -164,7 +150,7 @@ export default function RegistroPage() {
               </Link>
             </div>
 
-            <AuthCarousel slides={REGISTER_SLIDES} />
+            <AuthCarousel slides={AUTH_SLIDES} />
           </div>
 
           {/* Panel Derecho - Formulario de Registro */}
@@ -198,6 +184,7 @@ export default function RegistroPage() {
                     <input
                       id="name"
                       type="text"
+                      autoComplete="given-name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Juan Andrés"
@@ -208,7 +195,7 @@ export default function RegistroPage() {
                       aria-describedby={errors.name ? "name-error" : undefined}
                     />
                     {errors.name && (
-                      <p id="name-error" className="text-red-400 text-xs font-ubuntu">
+                      <p id="name-error" role="alert" className="text-red-400 text-xs font-ubuntu">
                         {errors.name}
                       </p>
                     )}
@@ -225,6 +212,7 @@ export default function RegistroPage() {
                     <input
                       id="lastname"
                       type="text"
+                      autoComplete="family-name"
                       value={lastname}
                       onChange={(e) => setLastname(e.target.value)}
                       placeholder="Pérez Gómez"
@@ -235,7 +223,7 @@ export default function RegistroPage() {
                       aria-describedby={errors.lastname ? "lastname-error" : undefined}
                     />
                     {errors.lastname && (
-                      <p id="lastname-error" className="text-red-400 text-xs font-ubuntu">
+                      <p id="lastname-error" role="alert" className="text-red-400 text-xs font-ubuntu">
                         {errors.lastname}
                       </p>
                     )}
@@ -252,6 +240,7 @@ export default function RegistroPage() {
                     <input
                       id="email"
                       type="email"
+                      autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="u20241234567@usco.edu.co"
@@ -262,7 +251,7 @@ export default function RegistroPage() {
                       aria-describedby={errors.email ? "email-error" : undefined}
                     />
                     {errors.email && (
-                      <p id="email-error" className="text-red-400 text-xs font-ubuntu">
+                      <p id="email-error" role="alert" className="text-red-400 text-xs font-ubuntu">
                         {errors.email}
                       </p>
                     )}
