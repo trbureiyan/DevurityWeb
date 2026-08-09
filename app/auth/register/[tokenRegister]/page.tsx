@@ -1,107 +1,96 @@
 "use client";
 
-import type React from "react";
-
-import { useState, useEffect, useDeferredValue, useMemo } from "react";
-import Link from "next/link";
+import React, { useState, useEffect, useDeferredValue, useMemo } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCsrf } from "@/hooks/useCsrf";
 import { useTokenValidation } from "@/hooks/useTokenValidation";
 import { useSkillObjects } from "@/hooks/useSkillObjects";
 import { IMAGES } from "@/public/images";
 import ProgramSelector from "@/components/ui/ProgramSelector";
+import Button from "@/components/ui/Button";
+import StatusModal from "@/components/ui/StatusModal";
+import ValidationStepIndicator from "@/components/auth/ValidationStepIndicator";
+import {
+  validateRegistrationStep,
+  parseBackendError,
+  REGISTRATION_RULES,
+  type Skill,
+  type RegistrationFormData,
+} from "@/lib/auth/register-validation";
 
-// Types para las habilidades con id y nombre
-interface Skill {
-  id: number;
-  name: string;
-}
+const STEPS = ["Información Académica", "Perfil", "Acceso"] as const;
 
 export default function ValidacionPage() {
-  const [formData, setFormData] = useState({
+  const [currentStep, setCurrentStep] = useState<0 | 1 | 2>(0);
+  const [formData, setFormData] = useState<RegistrationFormData>({
     semester: "",
     motivation: "",
     program: "",
-    skills: [] as Skill[],
+    skills: [],
     password: "",
     confirmPassword: "",
   });
+
   const availableSkills = useSkillObjects();
   const [skillInput, setSkillInput] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const deferredSkillInput = useDeferredValue(skillInput);
+
   const filteredSkills = useMemo(() => {
     if (deferredSkillInput.trim() === "") return availableSkills;
     return availableSkills.filter((skill) =>
       skill.name.toLowerCase().includes(deferredSkillInput.toLowerCase()),
     );
   }, [deferredSkillInput, availableSkills]);
-  const showSuggestions = isOpen && filteredSkills.length > 0;
-//  const [isSuccess, setIsSuccess] = useState(false); # No se usa actualmente, pero podría ser útil para mostrar un mensaje de éxito después del registro.
-  const { tokenValid, isLoading, submissionError: tokenError, showErrorModal: tokenErrorModal, setShowErrorModal: setTokenErrorModal } = useTokenValidation();
+
+  const {
+    tokenValid,
+    isLoading: isTokenLoading,
+    submissionError: tokenError,
+    showErrorModal: tokenErrorModal,
+    setShowErrorModal: setTokenErrorModal,
+  } = useTokenValidation();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [acceptDisabled, setAcceptDisabled] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [stepError, setStepError] = useState("");
   const [submissionError, setSubmissionError] = useState("");
-  const [originalFormData, setOriginalFormData] = useState({
-    semester: "",
-    motivation: "",
-    program: "",
-    skills: [] as Skill[],
-    password: "",
-    confirmPassword: "",
-  });
+
   const router = useRouter();
   const { fetchWithCsrf } = useCsrf();
 
-  useEffect(() => {
-    // Ocultar elementos con type casting
-    const header = document.querySelector(
-      'header, [class*="header"], nav',
-    ) as HTMLElement | null;
-    const footer = document.querySelector(
-      'footer, [class*="footer"]',
-    ) as HTMLElement | null;
+  // Avanzar al siguiente paso del wizard con validación preventiva
+  const handleNextStep = () => {
+    const error = validateRegistrationStep(currentStep, formData);
+    if (error) {
+      setStepError(error);
+      return;
+    }
+    setStepError("");
+    setCurrentStep((prev) => (prev < 2 ? ((prev + 1) as 0 | 1 | 2) : prev));
+  };
 
-    if (header) header.style.display = "none";
-    if (footer) footer.style.display = "none";
-
-    // Limpiar al desmontar
-    return () => {
-      if (header) header.style.display = "";
-      if (footer) footer.style.display = "";
-    };
-  }, []);
+  // Retroceder de paso manteniendo los datos intactos
+  const handlePrevStep = () => {
+    setStepError("");
+    setCurrentStep((prev) => (prev > 0 ? ((prev - 1) as 0 | 1 | 2) : prev));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setStepError("");
+
+    // Validar el paso final antes del envío
+    const step2Error = validateRegistrationStep(2, formData);
+    if (step2Error) {
+      setStepError(step2Error);
+      return;
+    }
+
     setIsSubmitting(true);
-
-    // Guardar datos originales antes del envío
-    setOriginalFormData({
-      semester: formData.semester,
-      motivation: formData.motivation,
-      program: formData.program,
-      skills: [...formData.skills],
-      password: formData.password,
-      confirmPassword: formData.confirmPassword,
-    });
-    // Validaciones frontend
-    if (!formData.program || formData.program.trim().length === 0) {
-      setSubmissionError("Selecciona tu programa académico");
-      setShowErrorModal(true);
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setSubmissionError("Las contraseñas no coinciden");
-      setShowErrorModal(true);
-      setIsSubmitting(false);
-      return;
-    }
 
     try {
       const token = window.location.pathname.split("/").pop();
@@ -111,10 +100,10 @@ export default function ValidacionPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          semester: parseInt(formData.semester),
-          motivation: formData.motivation,
+          semester: parseInt(formData.semester, 10),
+          motivation: formData.motivation.trim(),
           skills: formData.skills.map((skill) => skill.id),
-          program: formData.program,
+          program: formData.program.trim(),
           password: formData.password,
         }),
       });
@@ -122,48 +111,7 @@ export default function ValidacionPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        // Mapear códigos de error a mensajes genéricos
-        let errorMessage =
-          "Error al procesar la solicitud. Por favor intenta nuevamente.";
-
-        if (response.status === 422) {
-          // Detectar tipo específico de error 422
-          if (data.Error) {
-            if (data.Error.includes("semestre")) {
-              errorMessage =
-                "Semestre no válido. Por favor ingresa un semestre entre 1 y 10.";
-            } else if (data.Error.toLowerCase().includes("programa")) {
-              errorMessage =
-                "Debes seleccionar un programa válido de la lista.";
-            } else if (data.Error.includes("Motivacion")) {
-              errorMessage =
-                "La motivación es requerida. Por favor explica tu motivación para ingresar al semillero.";
-            } else if (data.Error.includes("Contraseña")) {
-              if (data.Error.includes("mínimo 8 caracteres")) {
-                errorMessage =
-                  "La contraseña no cumple con los requisitos de seguridad. Debe tener mínimo 8 caracteres, incluyendo mayúsculas, minúsculas, números y símbolos especiales.";
-              } else {
-                errorMessage = "La contraseña es requerida.";
-              }
-            } else if (data.Error.includes("habilidades")) {
-              errorMessage =
-                "Error en la selección de habilidades. Por favor intenta nuevamente.";
-            } else {
-              errorMessage =
-                "Datos del formulario no válidos. Por favor verifica la información ingresada.";
-            }
-          } else {
-            errorMessage =
-              "Datos del formulario no válidos. Por favor verifica la información ingresada.";
-          }
-        } else if (response.status === 409) {
-          errorMessage =
-            "Ya existe un usuario registrado con este correo electrónico.";
-        } else if (response.status === 500) {
-          errorMessage =
-            "Error interno del servidor. Por favor intenta más tarde.";
-        }
-
+        const errorMessage = parseBackendError(data as Record<string, unknown>);
         setSubmissionError(errorMessage);
         setShowErrorModal(true);
         setIsSubmitting(false);
@@ -172,107 +120,97 @@ export default function ValidacionPage() {
 
       setIsSubmitting(false);
       setShowSuccessModal(true);
-      // Registro completado exitosamente
     } catch {
-      // Error submitting form
       setSubmissionError("Error de conexión. Por favor intenta nuevamente.");
       setShowErrorModal(true);
       setIsSubmitting(false);
     }
   };
 
+  // Autonavigación a la home tras éxito
+  useEffect(() => {
+    if (!showSuccessModal) return;
+    const timer = setTimeout(() => {
+      router.replace("/");
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [showSuccessModal, router]);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSkillInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSkillInput(e.target.value);
+    }));
+    if (stepError) setStepError("");
   };
 
   const handleSkillSelect = (skill: Skill) => {
     if (!formData.skills.some((s) => s.id === skill.id)) {
-      setFormData({
-        ...formData,
-        skills: [...formData.skills, skill],
-      });
+      if (formData.skills.length >= REGISTRATION_RULES.MAX_SKILLS_COUNT) {
+        setStepError(
+          `Puedes seleccionar máximo ${REGISTRATION_RULES.MAX_SKILLS_COUNT} habilidades.`,
+        );
+        return;
+      }
+      setFormData((prev) => ({
+        ...prev,
+        skills: [...prev.skills, skill],
+      }));
     }
     setSkillInput("");
-    // No ocultar las sugerencias al seleccionar una habilidad
+    if (stepError) setStepError("");
   };
 
   const handleRemoveSkill = (skillToRemove: Skill) => {
-    setFormData({
-      ...formData,
-      skills: formData.skills.filter((skill) => skill.id !== skillToRemove.id),
-    });
+    setFormData((prev) => ({
+      ...prev,
+      skills: prev.skills.filter((skill) => skill.id !== skillToRemove.id),
+    }));
   };
 
-  const _handleCloseSuccessModal = () => {
-    setShowSuccessModal(false);
-  };
+  if (isTokenLoading) {
+    return (
+      <div className="min-h-screen bg-[#171212] flex items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-variable-collection-link border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="font-ubuntu text-white/70 text-sm">
+            Validando token de admisión...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-  // When success modal opens, disable the Accept button for 3s then redirect home
-  useEffect(() => {
-    if (!showSuccessModal) return;
-    setAcceptDisabled(true);
-    const t = setTimeout(() => {
-      // After 3 seconds, navigate to home — replace prevents back-button returning to the empty form
-      router.replace("/");
-    }, 3000);
-
-    return () => clearTimeout(t);
-  }, [showSuccessModal, router]);
-
-  const handleCloseErrorModal = () => {
-    setShowErrorModal(false);
-    setTokenErrorModal(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && skillInput.trim() && filteredSkills.length > 0) {
-      e.preventDefault();
-      handleSkillSelect(filteredSkills[0]);
-    } else if (
-      e.key === "Backspace" &&
-      !skillInput &&
-      formData.skills.length > 0
-    ) {
-      handleRemoveSkill(formData.skills[formData.skills.length - 1]);
-    }
-  };
-
-  // Prevenir scroll del contenedor padre cuando se hace scroll en el dropdown
-  const handleDropdownScroll = (e: React.WheelEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-  };
-
-  // Frontend JSX
+  if (!tokenValid) {
+    return (
+      <main className="min-h-screen bg-[#171212] flex items-center justify-center p-4">
+        <StatusModal
+          open={tokenErrorModal}
+          variant="error"
+          title="Enlace Inválido o Expirado"
+          message={
+            tokenError ||
+            "El enlace de registro no es válido o ha expirado. Solicita un nuevo correo de verificación."
+          }
+          actionLabel="Ir al Inicio"
+          onClose={() => {
+            setTokenErrorModal(false);
+            router.push("/");
+          }}
+        />
+      </main>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#171212] flex items-center justify-center p-4">
-      {/* Main Card Container */}
-      <div className="w-full max-w-3xl bg-[#1f1a1a] rounded-2xl overflow-hidden shadow-2xl">
-        {/* Hero Banner with Logo and Back Button */}
-        <div className="relative w-full h-48">
-          <Image
-            src={IMAGES.register.background}
-            alt="Hero"
-            fill
-            sizes="(max-width: 768px) 100vw, 768px"
-            className="object-cover"
-          />
-          {/* Overlay oscuro para mejorar contraste */}
-          <div className="absolute inset-0 bg-black/27"></div>
-
-          {/* Logo and Back Button overlaid on banner */}
-          <div className="absolute inset-0 flex items-start justify-between p-6">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="relative w-8 h-8 rounded">
+    <main className="min-h-screen bg-[#171212] flex items-center justify-center p-4 md:p-6 lg:p-8">
+      <div className="w-full max-w-2xl bg-[#1f1a1a] rounded-3xl border border-white/10 shadow-2xl p-6 sm:p-10 space-y-8">
+        {/* Cabecera institucional */}
+        <div className="flex items-center justify-between border-b border-white/10 pb-6">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="relative w-8 h-8 rounded overflow-hidden">
               <Image
                 src={IMAGES.login.logo}
                 alt="Devurity Logo"
@@ -280,382 +218,315 @@ export default function ValidacionPage() {
                 height={32}
                 className="bg-white/10 rounded"
               />
-              </div>
-              <h1 className="font-orbitron font-bold text-white text-lg tracking-[5px] leading-[23px] whitespace-nowrap">
-                DEVURITY
-              </h1>
-            </Link>
-            <Link
-              href="/"
-              className="bg-white/90 hover:bg-white text-[#171212] px-4 py-2 rounded-full text-sm font-medium transition-colors"
-            >
-              Volver al sitio
-            </Link>
-          </div>
+            </div>
+            <span className="font-orbitron font-bold text-white text-sm tracking-[3px]">
+              DEVURITY
+            </span>
+          </Link>
+
+          <Link
+            href="/"
+            className="text-xs font-ubuntu text-white/60 hover:text-white transition-colors"
+          >
+            Volver al sitio
+          </Link>
         </div>
 
-        {/* Form Content */}
-        <div className="px-8 py-10">
-          <h1 className="text-3xl font-orbitron text-center mb-8 font-bold text-white tracking-[5px] leading-[23px] whitespace-nowrap">
-            Validacion
-          </h1>
+        {/* Título e Indicador de Pasos */}
+        <div className="space-y-4">
+          <div className="text-center space-y-1">
+            <h1 className="font-orbitron font-bold text-2xl sm:text-3xl text-white">
+              Admisión Académica
+            </h1>
+            <p className="font-ubuntu text-xs sm:text-sm text-white/60">
+              Completa la información requerida para tu perfil de semillero
+            </p>
+          </div>
 
-          {isLoading && (
-            <div className="mb-6 p-4 bg-blue-500/20 border border-blue-500/50 rounded-lg">
-              <p className="text-blue-300 text-sm font-ubuntu text-center">
-                Validando enlace de registro...
-              </p>
-            </div>
-          )}
+          <ValidationStepIndicator
+            currentStep={currentStep}
+            steps={STEPS}
+          />
+        </div>
 
-          {!isLoading && tokenValid && (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Semestre */}
+        {/* Alerta de error de paso */}
+        {stepError && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm font-ubuntu animate-fade-in flex items-center gap-3">
+            <svg
+              className="w-5 h-5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>{stepError}</span>
+          </div>
+        )}
+
+        {/* Formulario Wizard por pasos */}
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+          {/* PASO 0: Información Académica */}
+          {currentStep === 0 && (
+            <div className="space-y-5 animate-fade-in">
               <div className="space-y-2">
-                <label htmlFor="semester" className="block text-sm text-white">
-                  Semestre actual<span className="text-[#CA2B26]">*</span>
+                <label htmlFor="semester" className="block font-ubuntu text-white text-sm">
+                  Semestre Actual<span className="text-[#CA2B26]">*</span>
                 </label>
                 <input
                   id="semester"
                   name="semester"
                   type="number"
-                  placeholder="Indica el semestre que cursas (ej: 5)"
+                  placeholder={`Indica el semestre que cursas (${REGISTRATION_RULES.MIN_SEMESTER}–${REGISTRATION_RULES.MAX_SEMESTER})`}
                   value={formData.semester}
                   onChange={handleChange}
-                  required
-                  min="1"
-                  max="20"
-                  className="w-full bg-[#2e2e2e] border-none text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#CA2B26] rounded-lg px-4 py-3"
+                  min={REGISTRATION_RULES.MIN_SEMESTER}
+                  max={REGISTRATION_RULES.MAX_SEMESTER}
+                  className="w-full bg-[#171212] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-variable-collection-link transition-colors placeholder:text-white/30"
                 />
               </div>
 
-              {/* Programa académico */}
               <div className="space-y-2">
-                <label htmlFor="program" className="block text-sm text-white">
-                  Programa que cursas<span className="text-[#CA2B26]">*</span>
+                <label htmlFor="program" className="block font-ubuntu text-white text-sm">
+                  Programa Académico<span className="text-[#CA2B26]">*</span>
                 </label>
                 <ProgramSelector
                   value={formData.program || null}
-                  onChange={(programName) =>
-                    setFormData({ ...formData, program: programName || "" })
-                  }
-                  placeholder="Escribe para buscar tu programa"
-                  helperText="Solo se aceptan programas de la lista oficial."
+                  onChange={(programName) => {
+                    setFormData((prev) => ({ ...prev, program: programName || "" }));
+                    if (stepError) setStepError("");
+                  }}
                 />
               </div>
+            </div>
+          )}
 
+          {/* PASO 1: Perfil */}
+          {currentStep === 1 && (
+            <div className="space-y-5 animate-fade-in">
               {/* Motivación */}
               <div className="space-y-2">
-                <label
-                  htmlFor="motivation"
-                  className="block text-sm text-white"
-                >
-                  Motivación o propósito para entrar
-                  <span className="text-[#CA2B26]">*</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="motivation" className="block font-ubuntu text-white text-sm">
+                    Motivación de Ingreso<span className="text-[#CA2B26]">*</span>
+                  </label>
+                  <span
+                    className={`text-xs font-ubuntu ${
+                      formData.motivation.length > REGISTRATION_RULES.MAX_MOTIVATION_LENGTH
+                        ? "text-red-400 font-semibold"
+                        : "text-white/40"
+                    }`}
+                  >
+                    {formData.motivation.length}/{REGISTRATION_RULES.MAX_MOTIVATION_LENGTH}
+                  </span>
+                </div>
                 <textarea
                   id="motivation"
                   name="motivation"
-                  placeholder="Ej: Soy estudiante de Ingeniería de Software y quiero desarrollar mis habilidades en desarrollo web. Me gustaría aprender más sobre el diseño de interfaces y la experiencia de usuario, así como mejorar mis habilidades de programación y trabajo en equipo."
+                  rows={4}
+                  placeholder="Explica brevemente por qué deseas ingresar al semillero Devurity y qué áreas de investigación te interesan..."
                   value={formData.motivation}
                   onChange={handleChange}
-                  required
-                  rows={5}
-                  className="w-full bg-[#2e2e2e] border-none text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#CA2B26] rounded-lg px-4 py-3 resize-none"
+                  maxLength={REGISTRATION_RULES.MAX_MOTIVATION_LENGTH}
+                  className="w-full bg-[#171212] border border-white/10 rounded-xl p-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-variable-collection-link transition-colors placeholder:text-white/30 resize-none"
                 />
               </div>
 
-              {/* Habilidades e intereses */}
+              {/* Habilidades */}
               <div className="space-y-2">
-                <label htmlFor="skills" className="block text-sm text-white">
-                  Habilidades e intereses
+                <label htmlFor="skills-input" className="block font-ubuntu text-white text-sm">
+                  Habilidades Técnicas<span className="text-[#CA2B26]">*</span>
                 </label>
+                <p className="text-xs text-white/50">
+                  Selecciona al menos una habilidad. (Máximo {REGISTRATION_RULES.MAX_SKILLS_COUNT})
+                </p>
 
-                {/* Tags container */}
-                <div className="w-full bg-[#2e2e2e] border-none text-white focus-within:ring-2 focus-within:ring-[#CA2B26] rounded-lg px-4 py-3 min-h-12 flex flex-wrap gap-2 items-center">
-                  {/* Tags existentes */}
-                  {formData.skills.map((skill) => (
-                    <div
-                      key={skill.id}
-                      className="bg-[#CA2B26] text-white px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                    >
-                      {skill.name}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSkill(skill)}
-                        className="text-white hover:text-gray-200 text-xs"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-
-                  {/* Input para nuevas habilidades */}
-                  <input
-                    type="text"
-                    value={skillInput}
-                    onChange={handleSkillInputChange}
-                    onKeyDown={handleKeyDown}
-                    onFocus={() => setIsOpen(true)}
-                    onBlur={() =>
-                      setTimeout(() => setIsOpen(false), 150)
-                    }
-                    placeholder={
-                      formData.skills.length === 0
-                        ? "Escribe para buscar habilidades..."
-                        : ""
-                    }
-                    className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-500 min-w-32"
-                  />
-                </div>
-
-                {/* Sugerencias */}
-                {showSuggestions && filteredSkills.length > 0 && (
-                  <div
-                    role="listbox"
-                    aria-label="Sugerencias de habilidades"
-                    className="bg-[#2e2e2e] border border-gray-600 rounded-lg mt-1 max-h-48 overflow-y-auto"
-                    onTouchStart={(e) => e.stopPropagation()} // Prevenir scroll del padre en móviles
-                    onTouchMove={(e) => e.stopPropagation()} // Prevenir scroll del padre en móviles
-                    onWheel={handleDropdownScroll} // Prevenir scroll del padre en desktop
-                  >
-                    {filteredSkills.map((skill) => (
-                      <div
+                {/* Tags de habilidades seleccionadas */}
+                {formData.skills.length > 0 && (
+                  <div className="flex flex-wrap gap-2 p-3 bg-[#171212] border border-white/10 rounded-xl">
+                    {formData.skills.map((skill) => (
+                      <span
                         key={skill.id}
-                        role="option"
-                        tabIndex={0}
-                        aria-selected={formData.skills.some((s) => s.id === skill.id)}
-                        onClick={() => handleSkillSelect(skill)}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSkillSelect(skill); } }}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onTouchStart={(e) => e.stopPropagation()}
-                        className="px-4 py-2 text-white hover:bg-[#3a3a3a] cursor-pointer border-b border-gray-600 last:border-b-0"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 bg-variable-collection-link/20 border border-variable-collection-link/40 text-variable-collection-link rounded-full text-xs font-ubuntu"
                       >
                         {skill.name}
-                      </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSkill(skill)}
+                          className="hover:text-white transition-colors"
+                          aria-label={`Eliminar habilidad ${skill.name}`}
+                        >
+                          ×
+                        </button>
+                      </span>
                     ))}
                   </div>
                 )}
 
-                <p className="text-gray-400 text-xs">
-                  Escribe para buscar habilidades y haz clic para agregarlas.
-                  Presiona Enter para seleccionar la primera sugerencia.
+                {/* Input con auto-completado */}
+                <div className="relative">
+                  <input
+                    id="skills-input"
+                    type="text"
+                    placeholder="Escribe para buscar habilidades (ej: Python, Ciberseguridad)..."
+                    value={skillInput}
+                    onChange={(e) => {
+                      setSkillInput(e.target.value);
+                      setIsOpen(true);
+                    }}
+                    onFocus={() => setIsOpen(true)}
+                    className="w-full bg-[#171212] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-variable-collection-link transition-colors placeholder:text-white/30"
+                  />
+
+                  {/* Dropdown de sugerencias */}
+                  {isOpen && filteredSkills.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-[#1f1a1a] border border-white/10 rounded-xl shadow-2xl z-30 divide-y divide-white/5">
+                      {filteredSkills.map((skill) => {
+                        const isSelected = formData.skills.some((s) => s.id === skill.id);
+                        return (
+                          <button
+                            key={skill.id}
+                            type="button"
+                            disabled={isSelected}
+                            onClick={() => {
+                              handleSkillSelect(skill);
+                              setIsOpen(false);
+                            }}
+                            className={`w-full text-left px-4 py-2.5 text-xs font-ubuntu transition-colors flex items-center justify-between ${
+                              isSelected
+                                ? "text-white/30 bg-white/5 cursor-not-allowed"
+                                : "text-white/80 hover:bg-variable-collection-link/20 hover:text-white"
+                            }`}
+                          >
+                            <span>{skill.name}</span>
+                            {isSelected && <span className="text-[10px]">Añadida</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PASO 2: Acceso */}
+          {currentStep === 2 && (
+            <div className="space-y-5 animate-fade-in">
+              {/* Reglas de la contraseña */}
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-2">
+                <p className="text-xs font-semibold text-white font-ubuntu">
+                  Requisitos de Seguridad de la Contraseña:
+                </p>
+                <ul className="text-xs text-white/60 space-y-1 font-ubuntu list-disc list-inside">
+                  <li>Mínimo 8 caracteres</li>
+                  <li>Al menos una letra mayúscula y una minúscula</li>
+                  <li>Al menos un número</li>
+                  <li>Al menos un símbolo especial (!@#$%^&*...)</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="password" className="block font-ubuntu text-white text-sm">
+                  Contraseña<span className="text-[#CA2B26]">*</span>
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full bg-[#171212] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-variable-collection-link transition-colors placeholder:text-white/30"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="confirmPassword" className="block font-ubuntu text-white text-sm">
+                  Confirmar Contraseña<span className="text-[#CA2B26]">*</span>
+                </label>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className="w-full bg-[#171212] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-variable-collection-link transition-colors placeholder:text-white/30"
+                />
+              </div>
+
+              {/* Aviso institucional de revisión */}
+              <div className="bg-variable-collection-selected/30 border border-white/10 rounded-xl p-4 text-xs text-white/70 font-ubuntu space-y-1">
+                <p className="font-semibold text-white">Aviso de Admisión:</p>
+                <p>
+                  Al completar este formulario, tu solicitud quedará registrada en el sistema y pasará a revisión por los coordinadores del semillero Devurity.
                 </p>
               </div>
-
-              {/* Contraseña y Confirmación */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="password"
-                    className="block text-sm text-white"
-                  >
-                    Contraseña<span className="text-[#CA2B26]">*</span>
-                  </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="Ingresa tu contraseña"
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                    className="w-full bg-[#2e2e2e] border-none text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#CA2B26] rounded-lg px-4 py-3"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label
-                    htmlFor="confirmPassword"
-                    className="block text-sm text-white"
-                  >
-                    Confirmar contraseña
-                    <span className="text-[#CA2B26]">*</span>
-                  </label>
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    placeholder="Confirma tu contraseña"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    required
-                    className="w-full bg-[#2e2e2e] border-none text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#CA2B26] rounded-lg px-4 py-3"
-                  />
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <div className="flex justify-center pt-4">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={`${
-                    isSubmitting
-                      ? "bg-gray-500 cursor-not-allowed"
-                      : "bg-[#CA2B26] hover:bg-[#a82320]"
-                  } text-white px-12 py-6 text-base font-medium rounded-lg transition-colors flex items-center gap-2`}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <svg
-                        className="animate-spin h-5 w-5 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Enviando...
-                    </>
-                  ) : (
-                    "Enviar solicitud"
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {!isLoading && !tokenValid && (
-            <div className="text-center py-8">
-              <p className="text-gray-400 text-sm mb-4">
-                No puedes completar el registro con este enlace.
-              </p>
-              <Link
-                href="/auth/register"
-                className="text-white bg-[#CA2B26] hover:bg-[#a82320] px-6 py-3 rounded-lg font-ubuntu transition-colors"
-              >
-                Volver al registro
-              </Link>
             </div>
           )}
-        </div>
+
+          {/* Botones de navegación del Wizard */}
+          <div className="flex items-center justify-between pt-4 border-t border-white/10">
+            {currentStep > 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={handlePrevStep}
+              >
+                ← Anterior
+              </Button>
+            ) : (
+              <div />
+            )}
+
+            {currentStep < 2 ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                onClick={handleNextStep}
+              >
+                Siguiente →
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                isLoading={isSubmitting}
+              >
+                Completar Registro
+              </Button>
+            )}
+          </div>
+        </form>
       </div>
 
-      {/* Chat Button */}
-      <button
-        className="fixed bottom-6 right-6 w-14 h-14 bg-[#555555] hover:bg-[#666666] rounded-full flex items-center justify-center transition-colors shadow-lg"
-        aria-label="Chat"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={2}
-          stroke="currentColor"
-          className="w-6 h-6 text-white"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"
-          />
-        </svg>
-      </button>
+      {/* Modales de estado accesibles */}
+      <StatusModal
+        open={showErrorModal}
+        variant="error"
+        title="Error en el Registro"
+        message={submissionError}
+        actionLabel="Reintentar"
+        onClose={() => setShowErrorModal(false)}
+      />
 
-      {/* Modal de Éxito */}
-      {showSuccessModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Registro exitoso"
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-        >
-          <div className="bg-[#1f1a1a] rounded-2xl p-8 max-w-md w-full text-center">
-            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="w-8 h-8 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M5 13l4 4L19 7"
-                ></path>
-              </svg>
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-2">¡Éxito!</h3>
-            <p className="text-gray-300 mb-6">
-              Tu solicitud ha sido enviada exitosamente. Un administrador
-              revisará tu registro y te notificará cuando sea aprobado.
-            </p>
-            <button
-              onClick={() => {
-                if (acceptDisabled) return; // ignore clicks while disabled
-                setShowSuccessModal(false);
-                // Restablecer el formulario con los datos originales
-                setFormData({
-                  semester: originalFormData.semester,
-                  motivation: originalFormData.motivation,
-                  program: originalFormData.program,
-                  skills: [...originalFormData.skills],
-                  password: originalFormData.password,
-                  confirmPassword: originalFormData.confirmPassword,
-                });
-              }}
-              disabled={acceptDisabled}
-              className={`${
-                acceptDisabled
-                  ? "bg-gray-500 cursor-not-allowed"
-                  : "bg-[#CA2B26] hover:bg-[#a82320]"
-              } text-white px-8 py-3 rounded-lg font-medium transition-colors w-full`}
-            >
-              {acceptDisabled ? "Redirigiendo..." : "Aceptar"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Error */}
-      {(showErrorModal || tokenErrorModal) && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Error de registro"
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-        >
-          <div className="bg-[#1f1a1a] rounded-2xl p-8 max-w-md w-full text-center">
-            <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="w-8 h-8 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                ></path>
-              </svg>
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-2">Error</h3>
-            <p className="text-gray-300 mb-6">{submissionError || tokenError}</p>
-            <button
-              onClick={handleCloseErrorModal}
-              className="bg-[#CA2B26] hover:bg-[#a82320] text-white px-8 py-3 rounded-lg font-medium transition-colors w-full"
-            >
-              Aceptar
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+      <StatusModal
+        open={showSuccessModal}
+        variant="success"
+        title="¡Solicitud Completada!"
+        message="Tu registro ha sido enviado exitosamente. Redirigiendo a la página principal..."
+        actionLabel="Ir al Inicio"
+        onClose={() => router.replace("/")}
+      />
+    </main>
   );
 }
