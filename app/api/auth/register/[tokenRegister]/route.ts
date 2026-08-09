@@ -520,7 +520,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         ),
       ),
       {
-        status: 500,
+        status: 422,
         headers: { "Content-Type": "application/json" },
       },
     );
@@ -545,7 +545,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       JSON.stringify(
         errorRequest(
           "Contraseña",
-          "Debe tener mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número. Verifica tu ",
+          "Debe tener mínimo 8 caracteres, al menos una mayúscula, una minúscula, un número y un símbolo especial. Verifica tu ",
         ),
       ),
       {
