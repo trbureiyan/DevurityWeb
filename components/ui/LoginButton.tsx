@@ -10,19 +10,15 @@ interface LoginButtonProps {
  * Consume `LinkButton` para mantener la coherencia semántica y el diseño del sistema.
  */
 export default function LoginButton({
-  variant = "desktop",
+  variant: _variant = "desktop",
   className = "",
 }: LoginButtonProps) {
-  const isDesktop = variant === "desktop";
-
   return (
     <LinkButton
       href="/auth/login"
       variant="primary"
       size="sm"
-      className={`font-ubuntu font-bold whitespace-nowrap ${
-        isDesktop ? "px-5 py-1.5 text-sm" : "px-3 py-1 text-xs"
-      } ${className}`}
+      className={`font-ubuntu font-bold whitespace-nowrap ${className}`}
       aria-label="Iniciar Sesión"
     >
       Iniciar Sesión
