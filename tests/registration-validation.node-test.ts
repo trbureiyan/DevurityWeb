@@ -1,11 +1,18 @@
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { match, ok, strictEqual } from "node:assert/strict";
 import {
   validateRegistrationStep,
   parseBackendError,
   REGISTRATION_RULES,
   type RegistrationFormData,
 } from "../lib/auth/register-validation";
+
+const VALID_PASSWORD = "Segura#123";
+const PASSWORD_WITHOUT_SPECIAL = "Segura123";
+const PASSWORD_WITHOUT_UPPERCASE = "segura#123";
+const PASSWORD_WITHOUT_NUMBER = "Segura#abc";
+const SHORT_PASSWORD = "Seg#1";
+const MISMATCHED_PASSWORD = "Segura#999";
 
 // datos base válidos para cada paso
 const VALID_STEP_0: RegistrationFormData = {
@@ -31,20 +38,20 @@ const VALID_STEP_2: RegistrationFormData = {
   motivation: "Quiero aprender ciberseguridad y contribuir al semillero.",
   program: "Ingeniería de Sistemas",
   skills: [{ id: 1, name: "Python" }],
-  password: "Segura#123",
-  confirmPassword: "Segura#123",
+  password: VALID_PASSWORD,
+  confirmPassword: VALID_PASSWORD,
 };
 
 describe("validateRegistrationStep — Paso 0: Información Académica", () => {
   it("acepta semestre en el límite mínimo (1)", () => {
-    assert.strictEqual(
+    strictEqual(
       validateRegistrationStep(0, { ...VALID_STEP_0, semester: "1" }),
       null,
     );
   });
 
   it("acepta semestre en el límite máximo (13)", () => {
-    assert.strictEqual(
+    strictEqual(
       validateRegistrationStep(0, { ...VALID_STEP_0, semester: "13" }),
       null,
     );
@@ -55,8 +62,8 @@ describe("validateRegistrationStep — Paso 0: Información Académica", () => {
       ...VALID_STEP_0,
       semester: "0",
     });
-    assert.ok(result !== null, "esperaba error para semestre 0");
-    assert.match(result, /1.*13/);
+    ok(result !== null, "esperaba error para semestre 0");
+    match(result, /1.*13/);
   });
 
   it("rechaza semestre 14 (supera el máximo del backend)", () => {
@@ -64,8 +71,8 @@ describe("validateRegistrationStep — Paso 0: Información Académica", () => {
       ...VALID_STEP_0,
       semester: "14",
     });
-    assert.ok(result !== null, "esperaba error para semestre 14");
-    assert.match(result, /1.*13/);
+    ok(result !== null, "esperaba error para semestre 14");
+    match(result, /1.*13/);
   });
 
   it("rechaza semestre 20 (valor incorrecto del frontend anterior)", () => {
@@ -73,7 +80,7 @@ describe("validateRegistrationStep — Paso 0: Información Académica", () => {
       ...VALID_STEP_0,
       semester: "20",
     });
-    assert.ok(result !== null);
+    ok(result !== null);
   });
 
   it("rechaza semestre no numérico", () => {
@@ -81,7 +88,7 @@ describe("validateRegistrationStep — Paso 0: Información Académica", () => {
       ...VALID_STEP_0,
       semester: "abc",
     });
-    assert.ok(result !== null);
+    ok(result !== null);
   });
 
   it("rechaza programa vacío", () => {
@@ -89,8 +96,8 @@ describe("validateRegistrationStep — Paso 0: Información Académica", () => {
       ...VALID_STEP_0,
       program: "",
     });
-    assert.ok(result !== null);
-    assert.match(result, /programa/i);
+    ok(result !== null);
+    match(result, /programa/i);
   });
 
   it("rechaza programa de solo espacios", () => {
@@ -98,13 +105,13 @@ describe("validateRegistrationStep — Paso 0: Información Académica", () => {
       ...VALID_STEP_0,
       program: "   ",
     });
-    assert.ok(result !== null);
+    ok(result !== null);
   });
 });
 
 describe("validateRegistrationStep — Paso 1: Perfil", () => {
   it("acepta motivación y habilidades válidas", () => {
-    assert.strictEqual(validateRegistrationStep(1, VALID_STEP_1), null);
+    strictEqual(validateRegistrationStep(1, VALID_STEP_1), null);
   });
 
   it("rechaza motivación vacía", () => {
@@ -112,8 +119,8 @@ describe("validateRegistrationStep — Paso 1: Perfil", () => {
       ...VALID_STEP_1,
       motivation: "",
     });
-    assert.ok(result !== null);
-    assert.match(result, /motivaci[oó]n/i);
+    ok(result !== null);
+    match(result, /motivaci[oó]n/i);
   });
 
   it("rechaza motivación de solo espacios", () => {
@@ -121,7 +128,7 @@ describe("validateRegistrationStep — Paso 1: Perfil", () => {
       ...VALID_STEP_1,
       motivation: "   ",
     });
-    assert.ok(result !== null);
+    ok(result !== null);
   });
 
   it(`rechaza motivación que supera ${REGISTRATION_RULES.MAX_MOTIVATION_LENGTH} caracteres`, () => {
@@ -130,13 +137,13 @@ describe("validateRegistrationStep — Paso 1: Perfil", () => {
       ...VALID_STEP_1,
       motivation: overLimit,
     });
-    assert.ok(result !== null);
-    assert.match(result, /2000/);
+    ok(result !== null);
+    match(result, /2000/);
   });
 
   it(`acepta motivación exactamente de ${REGISTRATION_RULES.MAX_MOTIVATION_LENGTH} caracteres`, () => {
     const atLimit = "x".repeat(REGISTRATION_RULES.MAX_MOTIVATION_LENGTH);
-    assert.strictEqual(
+    strictEqual(
       validateRegistrationStep(1, { ...VALID_STEP_1, motivation: atLimit }),
       null,
     );
@@ -147,8 +154,8 @@ describe("validateRegistrationStep — Paso 1: Perfil", () => {
       ...VALID_STEP_1,
       skills: [],
     });
-    assert.ok(result !== null);
-    assert.match(result, /habilidad/i);
+    ok(result !== null);
+    match(result, /habilidad/i);
   });
 
   it(`rechaza más de ${REGISTRATION_RULES.MAX_SKILLS_COUNT} habilidades`, () => {
@@ -160,13 +167,13 @@ describe("validateRegistrationStep — Paso 1: Perfil", () => {
       ...VALID_STEP_1,
       skills: tooMany,
     });
-    assert.ok(result !== null);
+    ok(result !== null);
   });
 });
 
 describe("validateRegistrationStep — Paso 2: Acceso", () => {
   it("acepta contraseña válida que cumple todos los requisitos", () => {
-    assert.strictEqual(validateRegistrationStep(2, VALID_STEP_2), null);
+    strictEqual(validateRegistrationStep(2, VALID_STEP_2), null);
   });
 
   it("rechaza contraseña vacía", () => {
@@ -175,55 +182,55 @@ describe("validateRegistrationStep — Paso 2: Acceso", () => {
       password: "",
       confirmPassword: "",
     });
-    assert.ok(result !== null);
-    assert.match(result, /contrase[ñn]a/i);
+    ok(result !== null);
+    match(result, /contrase[ñn]a/i);
   });
 
   it("rechaza contraseña sin símbolo especial", () => {
     const result = validateRegistrationStep(2, {
       ...VALID_STEP_2,
-      password: "Segura123",
-      confirmPassword: "Segura123",
+      password: PASSWORD_WITHOUT_SPECIAL,
+      confirmPassword: PASSWORD_WITHOUT_SPECIAL,
     });
-    assert.ok(result !== null);
-    assert.match(result, /s[íi]mbolos/i);
+    ok(result !== null);
+    match(result, /s[íi]mbolos/i);
   });
 
   it("rechaza contraseña sin mayúscula", () => {
     const result = validateRegistrationStep(2, {
       ...VALID_STEP_2,
-      password: "segura#123",
-      confirmPassword: "segura#123",
+      password: PASSWORD_WITHOUT_UPPERCASE,
+      confirmPassword: PASSWORD_WITHOUT_UPPERCASE,
     });
-    assert.ok(result !== null);
+    ok(result !== null);
   });
 
   it("rechaza contraseña sin número", () => {
     const result = validateRegistrationStep(2, {
       ...VALID_STEP_2,
-      password: "Segura#abc",
-      confirmPassword: "Segura#abc",
+      password: PASSWORD_WITHOUT_NUMBER,
+      confirmPassword: PASSWORD_WITHOUT_NUMBER,
     });
-    assert.ok(result !== null);
+    ok(result !== null);
   });
 
   it("rechaza contraseña de menos de 8 caracteres", () => {
     const result = validateRegistrationStep(2, {
       ...VALID_STEP_2,
-      password: "Seg#1",
-      confirmPassword: "Seg#1",
+      password: SHORT_PASSWORD,
+      confirmPassword: SHORT_PASSWORD,
     });
-    assert.ok(result !== null);
+    ok(result !== null);
   });
 
   it("rechaza cuando confirmPassword no coincide", () => {
     const result = validateRegistrationStep(2, {
       ...VALID_STEP_2,
-      password: "Segura#123",
-      confirmPassword: "Segura#999",
+      password: VALID_PASSWORD,
+      confirmPassword: MISMATCHED_PASSWORD,
     });
-    assert.ok(result !== null);
-    assert.match(result, /no coinciden/i);
+    ok(result !== null);
+    match(result, /no coinciden/i);
   });
 });
 
@@ -235,7 +242,7 @@ describe("parseBackendError — mapeo de respuestas del API", () => {
       message: "Semestre no válido. Debe ser un número entero entre 1 y 13",
       Error: "Semestre no válido. Debe ser un número entero entre 1 y 13: semestre",
     });
-    assert.match(result, /1.*13/);
+    match(result, /1.*13/);
   });
 
   it("mapea correctamente campo Motivacion", () => {
@@ -244,7 +251,7 @@ describe("parseBackendError — mapeo de respuestas del API", () => {
       code: "VALIDATION_ERROR",
       message: "La motivación es requerida",
     });
-    assert.match(result, /motivaci/i);
+    match(result, /motivaci/i);
   });
 
   it("mapea correctamente campo Contraseña", () => {
@@ -253,25 +260,25 @@ describe("parseBackendError — mapeo de respuestas del API", () => {
       code: "VALIDATION_ERROR",
       message: "Contraseña inválida",
     });
-    assert.match(result, /contrase/i);
+    match(result, /contrase/i);
   });
 
   it("usa fallback legacy cuando data.field no existe pero data.Error contiene campo conocido", () => {
     const result = parseBackendError({
       Error: "La motivación es requerida: Motivacion",
     });
-    assert.match(result, /motivaci/i);
+    match(result, /motivaci/i);
   });
 
   it("devuelve mensaje genérico cuando no hay mapeo", () => {
     const result = parseBackendError({
       Error: "Error desconocido sin campo conocido",
     });
-    assert.match(result, /procesar/i);
+    match(result, /procesar/i);
   });
 
   it("devuelve mensaje genérico ante objeto vacío", () => {
     const result = parseBackendError({});
-    assert.match(result, /procesar/i);
+    match(result, /procesar/i);
   });
 });
