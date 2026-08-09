@@ -14,5 +14,5 @@ export const errorRequest = (
   message,
   // [DECISION] Se mantiene Error por compatibilidad con consumers legacy que leen data.Error.
   // Una vez todos los endpoints y tests migrados a data.field, eliminar este campo.
-  Error: `${message}: ${field}`,
+  Error: field ? `${message}: ${field}` : message,
 });

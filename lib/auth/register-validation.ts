@@ -112,11 +112,12 @@ export function parseBackendError(data: Record<string, unknown>): string {
   // fallback legacy — en transición hasta que todos los endpoints usen contrato nuevo
   const errorStr = typeof data.Error === "string" ? data.Error : null;
   if (errorStr) {
-    // intentar mapear por coincidencia de campo conocido
-    const knownField = Object.keys(BACKEND_ERROR_FIELD_MAP).find((k) =>
-      errorStr.includes(k),
-    );
-    if (knownField) return BACKEND_ERROR_FIELD_MAP[knownField];
+    // el formato generado por errorRequest es "mensaje: campo" — extraemos solo el sufijo
+    const colonIndex = errorStr.lastIndexOf(": ");
+    const extractedField = colonIndex !== -1 ? errorStr.slice(colonIndex + 2).trim() : "";
+    if (extractedField && BACKEND_ERROR_FIELD_MAP[extractedField]) {
+      return BACKEND_ERROR_FIELD_MAP[extractedField];
+    }
   }
   return "Error al procesar la solicitud. Por favor intenta nuevamente.";
 }
