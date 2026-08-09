@@ -144,7 +144,7 @@ export default function Footer() {
           </p>
           <div className="flex items-center gap-6">
             <Link
-              href="/help/reglamento"
+              href="/help/reglamentos"
               className="font-ubuntu text-xs text-[#9ca3af] hover:text-variable-collection-link transition-colors"
             >
               Reglamento

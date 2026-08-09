@@ -8,7 +8,9 @@ const HIDDEN_PATHS = ["/admin", "/auth"];
 
 export default function FooterConditional() {
   const pathname = usePathname();
-  const shouldHide = HIDDEN_PATHS.some((path) => pathname?.startsWith(path));
+  const shouldHide = HIDDEN_PATHS.some(
+    (path) => pathname === path || pathname?.startsWith(`${path}/`),
+  );
   if (shouldHide) return null;
   return <Footer />;
 }
