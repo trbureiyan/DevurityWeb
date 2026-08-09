@@ -81,6 +81,13 @@ export default function ValidacionPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Enter en pasos intermedios avanza al siguiente paso, no envía el form
+    if (currentStep < 2) {
+      handleNextStep();
+      return;
+    }
+
     setStepError("");
 
     // Validar el paso final antes del envío
@@ -251,12 +258,16 @@ export default function ValidacionPage() {
 
         {/* Alerta de error de paso */}
         {stepError && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm font-ubuntu animate-fade-in flex items-center gap-3">
+          <div
+            role="alert"
+            className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm font-ubuntu animate-fade-in flex items-center gap-3"
+          >
             <svg
               className="w-5 h-5 flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -380,6 +391,10 @@ export default function ValidacionPage() {
                       setIsOpen(true);
                     }}
                     onFocus={() => setIsOpen(true)}
+                    onBlur={() => {
+                      // delay para permitir que el click en una opción del dropdown se complete
+                      setTimeout(() => setIsOpen(false), 150);
+                    }}
                     className="w-full bg-[#171212] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-variable-collection-link transition-colors placeholder:text-white/30"
                   />
 
