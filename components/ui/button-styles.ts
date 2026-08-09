@@ -4,7 +4,7 @@
  */
 
 export const BUTTON_BASE =
-  "inline-flex items-center justify-center gap-2 font-ubuntu rounded-full transition-[background-color,border-color,color,transform,box-shadow,opacity] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-variable-collection-link focus-visible:ring-offset-2 focus-visible:ring-offset-[#171212] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 disabled:hover:shadow-none";
+  "inline-flex items-center justify-center gap-2 font-ubuntu rounded-full cursor-pointer transition-[background-color,border-color,color,transform,box-shadow,opacity] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-variable-collection-link focus-visible:ring-offset-2 focus-visible:ring-offset-[#171212] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 disabled:hover:shadow-none";
 
 export const BUTTON_SIZE_CLASSES = {
   sm: "px-4 py-2 text-sm",

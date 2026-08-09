@@ -14,13 +14,12 @@ export default function LoginButton({
   className = "",
 }: LoginButtonProps) {
   const isDesktop = variant === "desktop";
-  const size = isDesktop ? "sm" : "sm";
 
   return (
     <LinkButton
       href="/auth/login"
       variant="primary"
-      size={size}
+      size="sm"
       className={`font-ubuntu font-bold whitespace-nowrap ${
         isDesktop ? "px-5 py-1.5 text-sm" : "px-3 py-1 text-xs"
       } ${className}`}

@@ -103,7 +103,7 @@ export default function StatusModal({
     if (!open) return;
 
     previousActiveElement.current = document.activeElement as HTMLElement;
-    const originalOverflow = window.getComputedStyle(document.body).overflow;
+    const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     // Foco al botón de acción principal al abrirse
@@ -142,12 +142,18 @@ export default function StatusModal({
         const lastElement = focusableElements[focusableElements.length - 1];
 
         if (e.shiftKey) {
-          if (document.activeElement === firstElement) {
+          if (
+            document.activeElement === firstElement ||
+            !containerRef.current?.contains(document.activeElement)
+          ) {
             lastElement.focus();
             e.preventDefault();
           }
         } else {
-          if (document.activeElement === lastElement) {
+          if (
+            document.activeElement === lastElement ||
+            !containerRef.current?.contains(document.activeElement)
+          ) {
             firstElement.focus();
             e.preventDefault();
           }
