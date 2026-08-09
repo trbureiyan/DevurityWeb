@@ -10,6 +10,7 @@ import AuthCarousel from "@/components/auth/AuthCarousel";
 import { AUTH_SLIDES } from "@/components/auth/auth-slides";
 import Button from "@/components/ui/Button";
 import StatusModal from "@/components/ui/StatusModal";
+import { getSafeInternalRedirect } from "@/lib/routing/public-routes";
 
 interface FormErrors {
   email?: string;
@@ -32,11 +33,14 @@ function LoginPageContent() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState(
+    "Credenciales incorrectas o cuenta pendiente de aprobación. Verifica tus datos e intenta nuevamente.",
+  );
   const { login, isLoading } = useAuthContext();
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectFromParam = searchParams.get("redirect");
+  const redirectFromParam = getSafeInternalRedirect(searchParams.get("redirect"));
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -72,16 +76,19 @@ function LoginPageContent() {
 
     try {
       const result = await login(email, password);
-      // solo se acepta redirección interna — se descarta cualquier URL externa
-      const safeRedirect =
-        redirectFromParam &&
-        redirectFromParam.startsWith("/") &&
-        !redirectFromParam.startsWith("//")
-          ? redirectFromParam
-          : null;
-      const redirectTo = safeRedirect || result.redirectTo || "/profile";
+      const redirectTo = redirectFromParam || result.redirectTo || "/profile";
       router.push(redirectTo);
-    } catch {
+    } catch (error) {
+      const isNetworkError =
+        error instanceof TypeError ||
+        (error instanceof Error &&
+          (error.message.toLowerCase().includes("fetch") ||
+            error.message.toLowerCase().includes("network")));
+      setModalMessage(
+        isNetworkError
+          ? "Error de conexión. Por favor verifica tu acceso a internet e intenta nuevamente."
+          : "Credenciales incorrectas o cuenta pendiente de aprobación. Verifica tus datos e intenta nuevamente.",
+      );
       setShowErrorModal(true);
       setIsSubmitting(false);
     }
@@ -259,7 +266,7 @@ function LoginPageContent() {
         open={showErrorModal}
         variant="error"
         title="Error de inicio de sesión"
-        message="Credenciales incorrectas o cuenta pendiente de aprobación. Verifica tus datos e intenta nuevamente."
+        message={modalMessage}
         actionLabel="Reintentar"
         onClose={handleCloseErrorModal}
       />

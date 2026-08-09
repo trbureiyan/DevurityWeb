@@ -27,6 +27,11 @@ const PROTECTED_PREFIXES = [
   "/recovery-password",
 ] as const;
 
+/**
+ * Normaliza una ruta pública eliminando el slash final si no es la raíz.
+ * @param pathname - La ruta a normalizar
+ * @returns La ruta normalizada
+ */
 export function normalizePublicPath(pathname: string): string {
   if (pathname.length > 1 && pathname.endsWith("/")) {
     return pathname.slice(0, -1);
@@ -35,11 +40,53 @@ export function normalizePublicPath(pathname: string): string {
   return pathname;
 }
 
+/**
+ * Obtiene la redirección pública para un alias conocido.
+ * @param pathname - Ruta alias a evaluar (ej: /login)
+ * @returns Ruta canónica o null si no es un alias
+ */
 export function getPublicRedirect(pathname: string): string | null {
   const normalizedPath = normalizePublicPath(pathname);
   return PUBLIC_ROUTE_ALIASES[normalizedPath] ?? null;
 }
 
+/**
+ * Valida y retorna una ruta interna segura para redirección.
+ * Rechaza URLs absolutas (http/https), rutas relativas a protocolo (//),
+ * secuencias con contrabarra (\, /\) y valores malformados o no texto.
+ * @param target - La ruta candidata recibida (ej: desde searchParams)
+ * @returns La ruta interna sanitizada o null si es insegura.
+ */
+export function getSafeInternalRedirect(target: string | null | undefined): string | null {
+  if (!target || typeof target !== "string") return null;
+
+  const trimmed = target.trim();
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.startsWith("/\\")) {
+    return null;
+  }
+
+  // rechaza contrabarras y caracteres de control
+  if (trimmed.includes("\\") || /[\x00-\x1F\x7F]/.test(trimmed)) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(trimmed, "http://localhost");
+    if (parsed.origin !== "http://localhost") {
+      return null;
+    }
+    return parsed.pathname + parsed.search + parsed.hash;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Genera sugerencias de rutas públicas cercanas mediante distancia de Levenshtein.
+ * @param pathname - Ruta no encontrada
+ * @param limit - Máximo número de sugerencias (por defecto 3)
+ * @returns Lista de rutas públicas sugeridas
+ */
 export function getPublicRouteSuggestions(pathname: string, limit = 3): string[] {
   const normalizedPath = normalizePublicPath(pathname);
 
