@@ -3,12 +3,7 @@ import type { NextRequest } from "next/server";
 import { authMiddleware } from "./lib/auth/middleware";
 import { csrfAdapter } from "./lib/csrf";
 import { verifyJwtPayload } from "./lib/auth/jwt-edge";
-
-const redirectMap: Record<string, string> = {
-  "/auth": "/auth/login",
-  "/register": "/auth/register",
-  "/login": "/auth/login"
-};
+import { getPublicRedirect, normalizePublicPath } from "./lib/routing/public-routes";
 
 const forbiddenFragments = [
   ".env",
@@ -24,10 +19,7 @@ export async function middleware(
 ): Promise<NextResponse | Response> {
   const token = request.cookies.get("auth_token")?.value;
   const currentPath = request.nextUrl.pathname;
-  const normalisedPath =
-    currentPath.endsWith("/") && currentPath !== "/"
-      ? currentPath.slice(0, -1)
-      : currentPath;
+  const normalisedPath = normalizePublicPath(currentPath);
 
   // If there is an active session (token cookie present) and the user
   // is trying to access the login page, redirect them to profile to
@@ -43,7 +35,7 @@ export async function middleware(
     // Token inválido — dejar pasar para que se autentique de nuevo
   }
 
-  const redirectTarget = redirectMap[normalisedPath];
+  const redirectTarget = getPublicRedirect(normalisedPath);
   if (redirectTarget) {
     const url = request.nextUrl.clone();
     url.pathname = redirectTarget;
