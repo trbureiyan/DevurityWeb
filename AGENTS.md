@@ -24,9 +24,10 @@ DevurityWeb/
 │   └── layout.tsx, page.tsx, globals.css             # Root layout, landing, global styles
 ├── components/                   # React components
 │   ├── landing/                  # Landing sections (Hero, About, CTA, Events, Gallery, Impact, Projects, Reglamento, Contact)
-│   ├── layouts/                  # Navbar, Footer, MobileMenu, NavbarConditional
+│   ├── layouts/                  # Navbar, Footer, MobileMenu, NavbarConditional, FooterConditional
+│   ├── auth/                     # Auth-specific components (AuthCarousel, ValidationStepIndicator)
 │   ├── admin/                    # Admin dashboard + sidebar
-│   ├── ui/                       # Shared primitives (Tooltip, avatar, LoginButton, ProgramSelector, SkillSelector, SocialLinksEditor, UsernameEditor)
+│   ├── ui/                       # Shared primitives (Button, LinkButton, Card, StatusModal, button-styles, Tooltip, avatar, LoginButton, ProgramSelector, SkillSelector, SocialLinksEditor, UsernameEditor)
 │   ├── icons/                    # HeroIcons wrapper
 │   ├── gallery/, help/, projects/, updates/, about/  # Feature-specific client components
 │   └── qr-dynamic.tsx            # QR code component
@@ -48,6 +49,7 @@ DevurityWeb/
 │   │   ├── jwt-edge.ts           # Edge-compatible JWT (for middleware)
 │   │   ├── middleware.ts          # Auth middleware helper
 │   │   ├── config.ts             # Auth config
+│   │   ├── register-validation.ts # Pure per-step registration validation (consumed by wizard + tests)
 │   │   └── utils.ts              # Auth utilities
 │   ├── csrf.ts                   # CSRF adapter (double-submit cookie)
 │   ├── bcrypt.ts                 # bcryptjs wrapper (NOT bcrypt — Edge Runtime incompatibility)
@@ -75,7 +77,7 @@ DevurityWeb/
 │   └── seeders/                  # Seed data by domain (roles, platforms, programs, skills, projects, updates)
 ├── middleware.ts                  # Global middleware: auth guard, RBAC, CSRF, path traversal protection
 ├── scripts/                      # Utility scripts (deploy-db.ts, migrate.mjs, fixtures/)
-├── tests/                        # Tests con node:test — *.node-test.ts (auth-refresh, csrf, jwt, profile-skills, projects, qr-attendance, regex, updates, url)
+├── tests/                        # Tests con node:test — *.node-test.ts (auth-refresh, csrf, jwt, profile-skills, projects, qr-attendance, regex, registration-validation, updates, url)
 ├── public/                       # Static assets
 └── .github/                      # CI workflows, templates, PR instructions
 ```
@@ -174,7 +176,7 @@ Fonts: `font-orbitron` for headings/brand, `font-ubuntu` for body/paragraphs.
 
 ### Component conventions
 
-- **Before creating a new component**, check `components/ui/` for existing primitives. Reuse `Tooltip`, `avatar`, `LoginButton`, `ProgramSelector`, `SkillSelector`, `SocialLinksEditor`, `UsernameEditor` before building new ones.
+- **Before creating a new component**, check `components/ui/` for existing primitives. Reuse `Button`, `LinkButton`, `Card`, `StatusModal`, `Tooltip`, `avatar`, `LoginButton`, `ProgramSelector`, `SkillSelector`, `SocialLinksEditor`, `UsernameEditor` before building new ones.
 - **Landing sections** live in `components/landing/`. Each is a Server Component by default. Client interactivity requires `"use client"` only when hooks or browser APIs are needed.
 - **Client components** use the `"use client"` directive at the top of the file. They consume `AuthContext` via `useAuth()` or the CSRF hook.
 - **Animations** use the custom CSS classes from `globals.css` (`animate-fade-in`, `animate-fade-up`, `animate-bounce`, `animate-shimmer`, `animate-shake`). Framer Motion is available for complex animations. Always respect `prefers-reduced-motion` — the CSS layer already handles this for custom classes; for framer-motion, use `useReducedMotion()`.
