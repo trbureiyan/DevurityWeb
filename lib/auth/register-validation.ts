@@ -88,6 +88,12 @@ export function validateRegistrationStep(
  * Usa el contrato estable de errorRequest() — lee data.field, no data.Error.
  */
 export const BACKEND_ERROR_FIELD_MAP: Record<string, string> = {
+  nombre: "El nombre es requerido y debe tener al menos 2 caracteres.",
+  name: "El nombre es requerido y debe tener al menos 2 caracteres.",
+  apellido: "Los apellidos son requeridos y deben tener al menos 2 caracteres.",
+  lastname: "Los apellidos son requeridos y deben tener al menos 2 caracteres.",
+  correo: "El correo institucional no es válido o ya se encuentra registrado.",
+  email: "El correo institucional no es válido o ya se encuentra registrado.",
   semestre:
     `El semestre debe estar entre ${REGISTRATION_RULES.MIN_SEMESTER} y ${REGISTRATION_RULES.MAX_SEMESTER}.`,
   Motivacion: "La motivación ingresada no es válida. Verifica el contenido.",
@@ -102,22 +108,27 @@ export const BACKEND_ERROR_FIELD_MAP: Record<string, string> = {
 
 /**
  * Extrae el mensaje de error legible de una respuesta del backend.
- * Prioriza data.field (contrato nuevo), cae en data.Error legacy si no existe.
+ * Prioriza data.field (contrato nuevo), cae en data.Error legacy o data.message si no existe.
  */
 export function parseBackendError(data: Record<string, unknown>): string {
   const field = typeof data.field === "string" ? data.field : null;
   if (field && BACKEND_ERROR_FIELD_MAP[field]) {
     return BACKEND_ERROR_FIELD_MAP[field];
   }
+
   // fallback legacy — en transición hasta que todos los endpoints usen contrato nuevo
   const errorStr = typeof data.Error === "string" ? data.Error : null;
   if (errorStr) {
-    // el formato generado por errorRequest es "mensaje: campo" — extraemos solo el sufijo
     const colonIndex = errorStr.lastIndexOf(": ");
     const extractedField = colonIndex !== -1 ? errorStr.slice(colonIndex + 2).trim() : "";
     if (extractedField && BACKEND_ERROR_FIELD_MAP[extractedField]) {
       return BACKEND_ERROR_FIELD_MAP[extractedField];
     }
   }
+
+  if (typeof data.message === "string" && data.message.trim() && data.message !== "VALIDATION_ERROR") {
+    return data.message.trim();
+  }
+
   return "Error al procesar la solicitud. Por favor intenta nuevamente.";
 }
