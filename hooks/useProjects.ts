@@ -1,37 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { ProjectStage, ProjectItem, ProjectFilters } from "@/lib/types/project.types";
 
-// ============ TIPOS ============
-export type ProjectStage =
-  | "incubacion"
-  | "desarrollo"
-  | "validacion"
-  | "produccion"
-  | "experimentacion"
-  | "pausa";
-
-export interface ProjectItem {
-  id: string;
-  title: string;
-  summary: string;
-  stage: ProjectStage;
-  focusAreas: string[];
-  stack: string[];
-  updatedAt: string;
-  heroImage: string | null;
-  isLocal?: boolean;
-  callToAction?: {
-    label: string;
-    href: string;
-  };
-}
-
-export interface ProjectFilters {
-  stages: ProjectStage[];
-  focusAreas: string[];
-  stack: string[];
-}
+export type { ProjectStage, ProjectItem, ProjectFilters };
 
 // ============ ETIQUETAS LEGIBLES DE ETAPA ============
 export const STAGE_LABELS: Record<ProjectStage, string> = {
@@ -116,31 +88,105 @@ export function useProjects(initialData: ProjectItem[] = []) {
     window.dispatchEvent(new Event("devurity-projects-changed"));
   };
 
-  const addProject = (project: ProjectItem) => {
-    const updated = [project, ...allProjects];
-    setAllProjects(updated);
-    persist(updated);
-  };
-
-  const editProject = (edited: ProjectItem) => {
-    const updated = allProjects.map((p) => (p.id === edited.id ? edited : p));
-    setAllProjects(updated);
-    persist(updated);
-  };
-
-  const deleteProject = (id: string) => {
-    const updated = allProjects.filter((p) => p.id !== id);
-    setAllProjects(updated);
-    // Remover del storage si era local
+  const addProject = async (project: ProjectItem) => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const saved: ProjectItem[] = raw ? JSON.parse(raw) : [];
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(saved.filter((p) => p.id !== id))
-      );
-      window.dispatchEvent(new Event("devurity-projects-changed"));
-    } catch {}
+      const response = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: project.title,
+          description: project.summary,
+          focusAreas: project.focusAreas,
+          stack: project.stack,
+          ctaLabel: project.callToAction?.label || null,
+          ctaHref: project.callToAction?.href || null,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Error creating project:", await response.text());
+        return;
+      }
+
+      const { data: created } = await response.json();
+      const mapped: ProjectItem = {
+        id: created.slug,
+        title: created.title,
+        summary: created.description,
+        stage: created.stage,
+        focusAreas: created.focusAreas || [],
+        stack: created.stack || [],
+        updatedAt: created.updatedAt,
+        heroImage: created.bannerPath || null,
+        callToAction: created.ctaLabel && created.ctaHref ? { label: created.ctaLabel, href: created.ctaHref } : undefined,
+      };
+
+      const updated = [mapped, ...allProjects];
+      setAllProjects(updated);
+      persist(updated);
+    } catch (error) {
+      console.error("Failed to add project:", error);
+    }
+  };
+
+  const editProject = async (edited: ProjectItem) => {
+    try {
+      const response = await fetch(`/api/projects/${edited.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: edited.title,
+          description: edited.summary,
+          focusAreas: edited.focusAreas,
+          stack: edited.stack,
+          ctaLabel: edited.callToAction?.label || null,
+          ctaHref: edited.callToAction?.href || null,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Error updating project:", await response.text());
+        return;
+      }
+
+      const { data: updated_data } = await response.json();
+      const mapped: ProjectItem = {
+        id: updated_data.slug,
+        title: updated_data.title,
+        summary: updated_data.description,
+        stage: updated_data.stage,
+        focusAreas: updated_data.focusAreas || [],
+        stack: updated_data.stack || [],
+        updatedAt: updated_data.updatedAt,
+        heroImage: updated_data.bannerPath || null,
+        callToAction: updated_data.ctaLabel && updated_data.ctaHref ? { label: updated_data.ctaLabel, href: updated_data.ctaHref } : undefined,
+      };
+
+      const updated = allProjects.map((p) => (p.id === edited.id ? mapped : p));
+      setAllProjects(updated);
+      persist(updated);
+    } catch (error) {
+      console.error("Failed to edit project:", error);
+    }
+  };
+
+  const deleteProject = async (id: string) => {
+    try {
+      const response = await fetch(`/api/projects/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        console.error("Error deleting project:", await response.text());
+        return;
+      }
+
+      const updated = allProjects.filter((p) => p.id !== id);
+      setAllProjects(updated);
+      persist(updated);
+    } catch (error) {
+      console.error("Failed to delete project:", error);
+    }
   };
 
   // Filtros computados dinámicamente

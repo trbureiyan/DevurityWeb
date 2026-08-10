@@ -9,6 +9,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ProjectRole {
+  leader
+  member
+}
+
 model attendances {
   id              BigInt   @id @default(autoincrement())
   attendance_date DateTime @db.Date
@@ -30,14 +35,91 @@ model projects {
   stage         String          @default("incubacion") // incubacion | desarrollo | validacion | produccion | experimentacion
   focus_areas   String[]        @default([])
   stack         String[]        @default([])
-  hero_image    String?
+  hero_image    String?         // path en Supabase Storage, ej. projects/{slug}/banner.webp
   cta_label     String?
   cta_href      String?
   start_date    DateTime?       @default(dbgenerated("CURRENT_DATE")) @db.Date
   is_archived   Boolean?        @default(false)
   created_at    DateTime        @default(now())
   updated_at    DateTime        @updatedAt
-  user_projects user_projects[]
+
+  // Trazabilidad (Etapa 2): un _updated_at por parametro rastreado, sin tabla de auditoria generica
+  stage_updated_at         DateTime  @default(now())
+  current_phase             String?
+  current_phase_updated_at  DateTime?
+  project_type               String?
+  project_type_updated_at    DateTime?
+  has_funding                 Boolean   @default(false)
+  has_funding_updated_at      DateTime?
+  funding_source               String?
+  funding_notes                 String?
+
+  // Contenido (Etapa 1): texto extraido del .md subido, ademas del archivo canonico en Storage
+  content_markdown       String? @db.Text
+  content_markdown_path  String? // path en Supabase Storage, ej. projects/{slug}/content.md
+
+  user_projects                  user_projects[]
+  project_articles               project_articles[]
+  project_congresses             project_congresses[]
+  project_resources              project_resources[]
+  project_traceability_comments  project_traceability_comments[]
+}
+
+model project_articles {
+  id            BigInt    @id @default(autoincrement())
+  project_id    BigInt
+  title         String
+  authors       String?
+  publication   String?
+  url           String?
+  published_at  DateTime? @db.Date
+  created_by    BigInt?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  projects      projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, map: "project_articles_fk_projects")
+  users         users?    @relation(fields: [created_by], references: [id], onDelete: SetNull, map: "project_articles_fk_users")
+}
+
+model project_congresses {
+  id            BigInt    @id @default(autoincrement())
+  project_id    BigInt
+  name          String
+  role          String?   // Ponencia | Poster | Asistencia (string libre, igual que `stage`)
+  location      String?
+  url           String?
+  held_at       DateTime? @db.Date
+  created_by    BigInt?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  projects      projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, map: "project_congresses_fk_projects")
+  users         users?    @relation(fields: [created_by], references: [id], onDelete: SetNull, map: "project_congresses_fk_users")
+}
+
+model project_resources {
+  id            BigInt    @id @default(autoincrement())
+  project_id    BigInt
+  kind          String    // image | document | link
+  title         String?
+  storage_path  String?   // null cuando kind = "link"
+  external_url  String?   // usado cuando kind = "link"
+  mime_type     String?
+  size_bytes    Int?
+  display_order Int       @default(0)
+  uploaded_by   BigInt?
+  created_at    DateTime  @default(now())
+  projects      projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, map: "project_resources_fk_projects")
+  users         users?    @relation(fields: [uploaded_by], references: [id], onDelete: SetNull, map: "project_resources_fk_users")
+}
+
+model project_traceability_comments {
+  id          BigInt    @id @default(autoincrement())
+  project_id  BigInt
+  author_id   BigInt?
+  body        String
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  projects    projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, map: "project_traceability_comments_fk_projects")
+  users       users?    @relation(fields: [author_id], references: [id], onDelete: SetNull, map: "project_traceability_comments_fk_users")
 }
 
 model roles {
@@ -69,13 +151,29 @@ model user_platforms {
 }
 
 model user_projects {
-  id           BigInt    @id @default(autoincrement())
+  id           BigInt      @id @default(autoincrement())
   project_id   BigInt?
   user_id      BigInt?
-  is_active    Boolean?  @default(true)
-  project_role String?
-  projects     projects? @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_projects_fk_projects")
-  users        users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_projects_fk_users")
+  is_active    Boolean?    @default(true)
+  project_role ProjectRole @default(member)
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @updatedAt
+  projects     projects?   @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_projects_fk_projects")
+  users        users?      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_projects_fk_users")
+
+  @@unique([project_id, user_id], map: "user_projects_project_user_unique")
+}
+
+/// Portafolio de "trabajando en" del perfil de usuario.
+/// Deliberadamente SIN relacion con `projects`/`user_projects`: son entradas de texto libre
+/// que el usuario autodescribe en su perfil, no el catalogo real de proyectos del semillero.
+model user_portfolio_projects {
+  id         BigInt   @id @default(autoincrement())
+  user_id    BigInt
+  title      String
+  link       String?
+  created_at DateTime @default(now())
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "user_portfolio_projects_fk_users")
 }
 
 model user_skills {
@@ -108,6 +206,12 @@ model users {
   user_skills           user_skills[]
   roles                 roles            @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "users_roles_fk")
   programs              programs?        @relation(fields: [program_id], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "users_programs_fk")
+
+  project_articles               project_articles[]
+  project_congresses             project_congresses[]
+  project_resources              project_resources[]
+  project_traceability_comments  project_traceability_comments[]
+  user_portfolio_projects        user_portfolio_projects[]
 }
 
 /// Modelo para noticias, eventos y actualizaciones del semillero

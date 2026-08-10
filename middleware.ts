@@ -96,6 +96,15 @@ export async function middleware(
     if (roleCheck) return roleCheck;
   }
 
+  // Dashboard de trazabilidad: unica ruta del modulo de Proyectos gateada por prefijo
+  // (sin scoping por proyecto). El resto de /api/projects/** se autoriza en el handler
+  // via lib/auth/projectAuth.ts, porque necesita saber si el usuario es lider de UN
+  // proyecto especifico — algo que este middleware (Edge, sin acceso a BD) no puede resolver.
+  if (currentPath.startsWith("/traceability") || currentPath.startsWith("/api/projects/dashboard")) {
+    const roleCheck = await checkUserRoleAllowed(request, token, ["admin", "auditor"]);
+    if (roleCheck) return roleCheck;
+  }
+
   // Verificar CSRF para requests que lo requieran
   const csrfResult = await verifyCsrf(request);
   if (csrfResult) {
@@ -107,7 +116,7 @@ export async function middleware(
 
 // Función helper para verificar rutas protegidas
 function isProtectedPath(path: string): boolean {
-  const protectedPaths = ["/admin", "/content_manager", "/leader_proyect", "/profile", "/attendance"];
+  const protectedPaths = ["/admin", "/content_manager", "/leader_proyect", "/profile", "/attendance", "/traceability"];
 
   return protectedPaths.some((protectedPath) => path.startsWith(protectedPath));
 }

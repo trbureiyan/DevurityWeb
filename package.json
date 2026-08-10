@@ -30,6 +30,7 @@
   "dependencies": {
     "@heroicons/react": "2.2.0",
     "@prisma/client": "6.19.3",
+    "@supabase/supabase-js": "2.112.2",
     "@vercel/analytics": "^2.0.1",
     "bcryptjs": "3.0.3",
     "framer-motion": "12.38.0",
@@ -41,11 +42,15 @@
     "qrcode": "1.5.4",
     "react": "19.1.2",
     "react-dom": "19.1.2",
+    "react-markdown": "10.1.0",
+    "rehype-sanitize": "6.0.0",
+    "remark-gfm": "4.0.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "3.3.5",
     "@tailwindcss/postcss": "4.2.4",
+    "@tailwindcss/typography": "0.5.20",
     "@types/bcryptjs": "2.4.6",
     "@types/jsonwebtoken": "9.0.10",
     "@types/node": "20.19.39",

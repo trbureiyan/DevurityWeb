@@ -1,6 +1,5 @@
 import prisma from "../../lib/postgresDriver";
 import logger from "../../lib/logger";
-import crypto from "node:crypto";
 import type { CreateUserDTO, PaginatedUsersResponse } from "../../lib/types/user.types";
 
 function toBigInt(id: string | number): bigint {
@@ -134,15 +133,10 @@ export async function findByIdWithFullProfile(id: string) {
           },
         },
       },
-      user_projects: {
+      user_portfolio_projects: {
         select: {
-          projects: {
-            select: {
-              id: true,
-              title: true,
-              description: true,
-            },
-          },
+          title: true,
+          link: true,
         },
       },
       user_platforms: {
@@ -732,9 +726,12 @@ export async function updateUserProfile(
         }
       }
 
-      // 4. Update Projects (working_on)
+      // 4. Update "working_on" portfolio entries
+      // Nota: deliberadamente NO toca `projects`/`user_projects` (catalogo real del semillero,
+      // con asignaciones de lider/miembro). "Trabajando en" es texto libre autodescrito por el
+      // usuario en su perfil, guardado en `user_portfolio_projects`, sin relacion con el catalogo.
       if (data.working_on && Array.isArray(data.working_on)) {
-        await tx.user_projects.deleteMany({
+        await tx.user_portfolio_projects.deleteMany({
           where: { user_id: userIdBigInt },
         });
 
@@ -744,56 +741,24 @@ export async function updateUserProfile(
           }
 
           // Validate project URL if provided
-          let projectLink = proj.link || '#';
-          if (projectLink !== '#' && projectLink.trim().length > 0) {
+          let projectLink: string | null = proj.link || null;
+          if (projectLink && projectLink !== '#' && projectLink.trim().length > 0) {
             try {
               projectLink = validateAndNormalizeUrl(projectLink, `Proyecto "${proj.title}"`);
             } catch (error) {
               throw new Error(`${error instanceof Error ? error.message : 'Error validando URL del proyecto'}`);
             }
+          } else {
+            projectLink = null;
           }
 
-          let project = await tx.projects.findFirst({
-            where: { title: proj.title },
-          });
-
-          if (!project) {
-            const rawSlug = proj.title
-              .toLowerCase()
-              .trim()
-              .replace(/\s+/g, "-")
-              .replace(/[^a-z0-9-]/g, "")
-              .replace(/-+/g, "-")
-              .substring(0, 60);
-            // 6 bytes = 12 hex chars = 2^48 ≈ 281T valores. Colision estadisticamente imposible.
-            const suffix = crypto.randomBytes(6).toString("hex");
-            project = await tx.projects.create({
-              data: {
-                slug: `${rawSlug || "project"}-${suffix}`,
-                title: proj.title,
-                description: projectLink !== '#' ? projectLink : "Created from profile",
-                focus_areas: [],
-                stack: [],
-              },
-            });
-          }
-
-          const existingLink = await tx.user_projects.findFirst({
-            where: {
+          await tx.user_portfolio_projects.create({
+            data: {
               user_id: userIdBigInt,
-              project_id: project.id,
+              title: proj.title,
+              link: projectLink,
             },
           });
-
-          if (!existingLink) {
-            await tx.user_projects.create({
-              data: {
-                user_id: userIdBigInt,
-                project_id: project.id,
-                project_role: "Member",
-              },
-            });
-          }
         }
       }
 

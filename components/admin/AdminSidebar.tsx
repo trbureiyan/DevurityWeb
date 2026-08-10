@@ -98,6 +98,13 @@ const menuItems: MenuItem[] = [
     isActive: (pathname) => pathname.startsWith("/admin/attendances"),
     allowedRoles: ["admin"],
   },
+  {
+    label: "Trazabilidad",
+    href: "/traceability",
+    icon: ClipboardDocumentListIcon,
+    isActive: (pathname) => pathname.startsWith("/traceability"),
+    allowedRoles: ["admin", "auditor"],
+  },
 ];
 
 const bottomMenuItems: Array<{ label: string; href: string; icon: NavIcon }> = [

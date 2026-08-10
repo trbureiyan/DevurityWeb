@@ -54,9 +54,9 @@ interface EditPanelProps {
   isOpen: boolean;
   onClose: () => void;
   projects: ProjectItem[];
-  onAdd: (p: ProjectItem) => void;
-  onEdit: (p: ProjectItem) => void;
-  onDelete: (id: string) => void;
+  onAdd: (p: ProjectItem) => Promise<void>;
+  onEdit: (p: ProjectItem) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }
 
 function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditPanelProps) {
@@ -92,7 +92,7 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
     setMode("add");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const focusAreas = formData.focusAreas.split(",").map((s) => s.trim()).filter(Boolean);
     const stack = formData.stack.split(",").map((s) => s.trim()).filter(Boolean);
@@ -114,9 +114,9 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
         isLocal: true,
         callToAction,
       };
-      onAdd(newProject);
+      await onAdd(newProject);
     } else if (mode === "edit" && editingItem) {
-      onEdit({
+      await onEdit({
         ...editingItem,
         title: formData.title,
         summary: formData.summary,
@@ -243,7 +243,7 @@ function EditPanel({ isOpen, onClose, projects, onAdd, onEdit, onDelete }: EditP
                       {confirmDeleteId === item.id ? (
                         <div className="flex flex-col gap-1">
                           <button
-                            onClick={() => { onDelete(item.id); setConfirmDeleteId(null); }}
+                            onClick={async () => { await onDelete(item.id); setConfirmDeleteId(null); }}
                             className="w-8 h-8 rounded-full bg-red-600/30 hover:bg-red-600/60 border border-red-600/40 flex items-center justify-center transition-colors"
                             title="Confirmar"
                           >
@@ -437,7 +437,7 @@ export default function ProjectsPageClient({ initialData }: ProjectsPageClientPr
     }, 500);
   };
 
-  const highlightHref = highlight?.callToAction?.href || "#";
+  const highlightHref = highlight?.callToAction?.href || (highlight ? `/projects/${highlight.id}` : "#");
   const highlightIsExternal = isExternalHref(highlightHref);
 
   return (
@@ -602,7 +602,7 @@ export default function ProjectsPageClient({ initialData }: ProjectsPageClientPr
                 </div>
                 <ul className="space-y-4 max-h-[32rem] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-red-600/50 scrollbar-track-white/5">
                   {quickPanelProjects.map((project, index) => {
-                    const projectHref = project?.callToAction?.href || "#";
+                    const projectHref = project?.callToAction?.href || `/projects/${project.id}`;
                     const isExternal = isExternalHref(projectHref);
 
                     return (
@@ -705,7 +705,7 @@ export default function ProjectsPageClient({ initialData }: ProjectsPageClientPr
           {/* Grid de tarjetas */}
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {visibleTimeline.map((project) => {
-              const projectHref = project?.callToAction?.href || "#";
+              const projectHref = project?.callToAction?.href || `/projects/${project.id}`;
               const isExternal = isExternalHref(projectHref);
 
               const card = (

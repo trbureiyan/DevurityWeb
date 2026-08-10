@@ -101,9 +101,9 @@ export async function GET(
       program,
       joined_at: user.joined_at?.toISOString() || null,
       skills: skills,
-      working_on: user.user_projects.map((up) => ({
-        title: up.projects?.title || "Proyecto",
-        link: "#", // Schema doesn't have link for projects
+      working_on: user.user_portfolio_projects.map((p) => ({
+        title: p.title,
+        link: p.link || "#",
       })),
       social_links: user.user_platforms.map((up) => ({
         label: up.platforms?.name || "Link",
