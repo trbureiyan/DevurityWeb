@@ -11,3 +11,5 @@ minimumReleaseAgeIgnoreMissingTime: true
 
 overrides:
   postcss: '8.5.10'
+  # Prisma 6.19.3 aún solicita la rama vulnerable; forzamos la versión corregida.
+  deepmerge-ts: '8.0.0'
