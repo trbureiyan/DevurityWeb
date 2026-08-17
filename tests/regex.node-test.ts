@@ -55,6 +55,18 @@ test("emailUniversity — rejects non-institutional addresses", async (t) => {
   await t.test("uppercase domain is not normalized by the helper", () => {
     strictEqual(emailUniversity("profesor@USCO.EDU.CO"), false);
   });
+
+  await t.test("leading dot in local part", () => {
+    strictEqual(emailUniversity(".profesor@usco.edu.co"), false);
+  });
+
+  await t.test("trailing dot in local part", () => {
+    strictEqual(emailUniversity("profesor.@usco.edu.co"), false);
+  });
+
+  await t.test("consecutive dots in local part", () => {
+    strictEqual(emailUniversity("pro..fesor@usco.edu.co"), false);
+  });
 });
 
 // ---------------------------------------------------------------------------
