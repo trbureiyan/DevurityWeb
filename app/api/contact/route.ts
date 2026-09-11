@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validación básica de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
     if (!emailRegex.test(email)) {
       return new Response(
         JSON.stringify(
