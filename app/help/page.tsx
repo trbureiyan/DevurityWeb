@@ -1,14 +1,21 @@
 // app/ayuda/page.tsx
 import Link from "next/link";
 import type { Metadata } from "next";
-import { siteIcons } from "@/lib/constants/metadata";
-// SSR estático para el centro de ayuda
+import { siteIcons, siteOpenGraph, siteTwitter } from "@/lib/constants/metadata";
 export const dynamic = "force-static";
-// SEO en meta para la página de ayuda
 export const metadata: Metadata = {
   title: "Centro de Ayuda | Devurity",
-  description: "Recursos, reglamentos y preguntas frecuentes para miembros y aspirantes del semillero Devurity.",
+  description:
+    "Recursos, reglamentos y preguntas frecuentes para miembros y aspirantes del semillero Devurity.",
   icons: siteIcons,
+  openGraph: {
+    ...siteOpenGraph,
+    title: "Centro de Ayuda | Devurity",
+    description:
+      "Recursos, reglamentos y preguntas frecuentes para miembros y aspirantes del semillero Devurity.",
+    url: "/help",
+  },
+  twitter: siteTwitter,
 };
 
 export default function AyudaPage() {

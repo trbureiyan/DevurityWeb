@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
 import { getUpdatesFeed } from "@/lib/data/updates";
-import { siteIcons } from "@/lib/constants/metadata";
+import { siteIcons, siteOpenGraph, siteTwitter } from "@/lib/constants/metadata";
 
 // Pagina de detalle de cada update
 
@@ -54,6 +54,15 @@ export async function generateMetadata({
     title: `${update.title} | Devurity`,
     description: update.excerpt,
     icons: siteIcons,
+    openGraph: {
+      ...siteOpenGraph,
+      title: `${update.title} | Devurity`,
+      description: update.excerpt,
+      url: `/updates/${update.slug}`,
+      type: "article",
+      publishedTime: update.publishedAt,
+    },
+    twitter: siteTwitter,
   };
 }
 

@@ -13,13 +13,21 @@ import {
   getLandingQuickNav,
 } from "@/lib/data/landing";
 import type { Metadata } from "next";
-import { siteIcons } from "@/lib/constants/metadata";
+import { siteIcons, siteOpenGraph, siteTwitter } from "@/lib/constants/metadata";
 
 export const metadata: Metadata = {
   title: "Devurity | Semillero de Investigación en Ciberseguridad",
   description:
     "Somos un semillero y comunidad académica ubicada en la Universidad Surcolombiana enfocada en investigación, desarrollo de software seguro y ciberseguridad. Únete a nuestros proyectos y eventos.",
   icons: siteIcons,
+  openGraph: {
+    ...siteOpenGraph,
+    title: "Devurity | Semillero de Investigación en Ciberseguridad",
+    description:
+      "Somos un semillero y comunidad académica ubicada en la Universidad Surcolombiana enfocada en investigación, desarrollo de software seguro y ciberseguridad. Únete a nuestros proyectos y eventos.",
+    url: "/",
+  },
+  twitter: siteTwitter,
 };
 
 // Forzar render dinámico para que EventsSection cargue datos en vivo de la DB
