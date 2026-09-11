@@ -21,9 +21,18 @@ export const siteOpenGraph: NonNullable<Metadata["openGraph"]> = {
   type: "website",
   siteName: SITE_NAME,
   locale: "es_CO",
+  images: [
+    {
+      url: "/android-chrome-512x512.png",
+      width: 512,
+      height: 512,
+      alt: "Devurity – Semillero de Investigación",
+    },
+  ],
 };
 
 export const siteTwitter: NonNullable<Metadata["twitter"]> = {
   card: "summary_large_image",
   site: "@DevurityUSCO",
+  images: ["/android-chrome-512x512.png"],
 };

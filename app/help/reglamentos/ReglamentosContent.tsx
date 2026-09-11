@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
-/* ------------------------- Reglamento  ------------------------- */
 const reglamentoCompleto = [
   {
     titulo: "TÍTULO I: DISPOSICIONES GENERALES",
@@ -177,19 +176,23 @@ const reglamentoCompleto = [
   },
 ];
 
-/* ------------------------------- COMPONENTE ------------------------------- */
 export default function ReglamentosPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeArticle, setActiveArticle] = useState<{ titulo: string; numero: string; texto: string } | null>(null);
 
-  // cerrar modal con ESC
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeModal();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
 
-  function openModal(titulo: string, art: { numero: string; texto: string }) {
+  useEffect(() => {
+    if (modalOpen) {
+      dialogRef.current?.focus();
+    } else {
+      triggerRef.current?.focus();
+    }
+  }, [modalOpen]);
+
+  function openModal(titulo: string, art: { numero: string; texto: string }, trigger: HTMLElement) {
+    triggerRef.current = trigger;
     setActiveArticle({ titulo, ...art });
     setModalOpen(true);
   }
@@ -197,6 +200,21 @@ export default function ReglamentosPage() {
   function closeModal() {
     setModalOpen(false);
     setActiveArticle(null);
+  }
+
+  function handleDialogKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "Escape") { closeModal(); return; }
+    if (e.key !== "Tab" || !dialogRef.current) return;
+    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last?.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first?.focus(); }
+    }
   }
 
   return (
@@ -210,7 +228,6 @@ export default function ReglamentosPage() {
         </p>
       </header>
 
-      {/* --- BLOQUES DE REGLAS --- */}
       <div className="space-y-6">
         {reglamentoCompleto.map((bloque, _bi) => (
           <details
@@ -239,7 +256,7 @@ export default function ReglamentosPage() {
                   </p>
 
                   <button
-                    onClick={() => openModal(bloque.titulo, art)}
+                    onClick={(e) => openModal(bloque.titulo, art, e.currentTarget)}
                     className="mt-3 px-3 py-1 rounded-md border border-[var(--color-variable-collection-botones)]
                                bg-[var(--placeholder)]/10 hover:bg-[var(--placeholder)]/20 transition"
                   >
@@ -252,7 +269,6 @@ export default function ReglamentosPage() {
         ))}
       </div>
 
-      {/* --- MODAL SIN ZOOM --- */}
       {modalOpen && activeArticle && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
           <div
@@ -265,13 +281,15 @@ export default function ReglamentosPage() {
           />
 
           <div
+            ref={dialogRef}
             className="relative z-10 max-w-3xl w-full bg-[var(--variable-collection-placeholder)]/95
                        border border-[var(--color-selected)] rounded-2xl p-6 shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-label="Detalle del artículo del reglamento"
+            tabIndex={-1}
             onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
+            onKeyDown={handleDialogKeyDown}
           >
             <h2 className="text-xl font-orbitron">{activeArticle.numero}</h2>
             <p className="text-xs opacity-70 mb-4">{activeArticle.titulo}</p>

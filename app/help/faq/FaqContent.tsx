@@ -41,26 +41,24 @@ export default function FAQPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeFAQ, setActiveFAQ] = useState<{ q: string; a: string } | null>(null);
 
-  // array de refs que acepta HTMLDivElement o null (importante para TS y desmontado)
   const articleRefs = useRef<(HTMLElement | null)[]>([]);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
 
-  // Cerrar modal con ESC
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeModal();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
+    if (modalOpen) {
+      dialogRef.current?.focus();
+    } else {
+      triggerRef.current?.focus();
+    }
+  }, [modalOpen]);
 
-  function openModalAt(index: number, faq: { q: string; a: string }) {
+  function openModalAt(index: number, faq: { q: string; a: string }, trigger: HTMLElement) {
+    triggerRef.current = trigger;
     const target = articleRefs.current[index];
 
     if (target) {
-      target.scrollIntoView({
-        behavior: "smooth",
-        block: "center"
-      });
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
     setTimeout(() => {
@@ -72,6 +70,21 @@ export default function FAQPage() {
   function closeModal() {
     setModalOpen(false);
     setActiveFAQ(null);
+  }
+
+  function handleDialogKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "Escape") { closeModal(); return; }
+    if (e.key !== "Tab" || !dialogRef.current) return;
+    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last?.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first?.focus(); }
+    }
   }
 
   return (
@@ -98,7 +111,7 @@ export default function FAQPage() {
             </p>
 
             <button
-              onClick={() => openModalAt(i, item)}
+              onClick={(e) => openModalAt(i, item, e.currentTarget)}
               className="mt-3 px-3 py-1 rounded-md border border-[var(--color-variable-collection-botones)]
               bg-[var(--placeholder)]/10 hover:bg-[var(--placeholder)]/20 transition"
             >
@@ -112,7 +125,6 @@ export default function FAQPage() {
         Si no encuentras tu respuesta, consulta directamente con el coordinador del semillero.
       </footer>
 
-      {/* MODAL */}
       {modalOpen && activeFAQ && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
           <div
@@ -125,13 +137,15 @@ export default function FAQPage() {
           />
 
           <div
+            ref={dialogRef}
             className="relative z-10 max-w-3xl w-full bg-[var(--variable-collection-placeholder)]/95
                        border border-[var(--color-selected)] rounded-2xl p-6 shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-label="Detalle de pregunta frecuente"
+            tabIndex={-1}
             onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
+            onKeyDown={handleDialogKeyDown}
           >
             <h2 className="text-xl font-orbitron">{activeFAQ.q}</h2>
 
