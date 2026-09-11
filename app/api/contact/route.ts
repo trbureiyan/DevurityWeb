@@ -187,12 +187,23 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Template HTML para el email de contacto
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 const contactEmailTemplate = (
   name: string,
   email: string,
   message: string
 ) => {
+  const safeName = escapeHtml(name);
+  const safeEmail = escapeHtml(email);
+  const safeMessage = escapeHtml(message);
   return `
   <!DOCTYPE html>
   <html lang="es">
@@ -305,17 +316,17 @@ const contactEmailTemplate = (
         <div class="info-section">
           <div class="info-item">
             <span class="info-label">Nombre:</span>
-            <span class="info-value">${name}</span>
+            <span class="info-value">${safeName}</span>
           </div>
           <div class="info-item">
             <span class="info-label">Email:</span>
-            <span class="info-value"><a href="mailto:${email}" style="color: #ca2b26; text-decoration: none;">${email}</a></span>
+            <span class="info-value"><a href="mailto:${safeEmail}" style="color: #ca2b26; text-decoration: none;">${safeEmail}</a></span>
           </div>
         </div>
-        
+
         <div class="message-section">
           <h3>Mensaje:</h3>
-          <p class="message-content">${message}</p>
+          <p class="message-content">${safeMessage}</p>
         </div>
       </div>
       
