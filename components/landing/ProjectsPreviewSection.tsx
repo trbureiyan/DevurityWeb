@@ -1,6 +1,76 @@
+import Image from "next/image";
 import Link from "next/link";
-import { STAGE_LABELS, STAGE_COLORS } from "@/hooks/useProjects";
-import { getProjectsCatalog, type ProjectItem } from "@/lib/data/projects";
+import { getProjectsCatalog, type ProjectItem, type ProjectStage } from "@/lib/data/projects";
+import ProjectCover from "@/components/landing/ProjectCover";
+
+// copia local de las etiquetas: hooks/useProjects es "use client" y sus
+// constantes llegan al servidor como referencias de cliente, no como objetos
+const STAGE_LABELS: Record<ProjectStage, string> = {
+  incubacion: "Incubación",
+  desarrollo: "Desarrollo",
+  validacion: "Validación",
+  produccion: "Producción",
+  experimentacion: "Experimentación",
+  pausa: "En pausa",
+};
+
+const isExternal = (href: string) => href.startsWith("http");
+
+function ProjectCard({ project }: { project: ProjectItem }) {
+  const href = project.callToAction?.href ?? "/projects";
+  const external = isExternal(href);
+  // [DECISION] Solo rutas locales pasan por next/image — hero_image es texto libre y
+  // un host remoto no listado en remotePatterns rompería el render. El resto usa portada generativa.
+  const localImage = project.heroImage?.startsWith("/") ? project.heroImage : null;
+
+  return (
+    <Link
+      href={href}
+      target={external ? "_blank" : undefined}
+      rel={external ? "noopener noreferrer" : undefined}
+      className="group flex h-full flex-col overflow-hidden rounded-md border border-white/10 bg-white/[0.02] transition-colors duration-300 hover:border-variable-collection-link/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-variable-collection-link"
+    >
+      <div className="relative aspect-[16/9] overflow-hidden sm:aspect-[4/3] border-b border-white/10">
+        {localImage ? (
+          <Image
+            src={localImage}
+            alt=""
+            fill
+            sizes="(max-width: 768px) 100vw, 280px"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <ProjectCover
+            seed={project.id}
+            className="absolute inset-0 h-full w-full transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none"
+          />
+        )}
+        <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.15em] text-white/70 backdrop-blur-sm">
+          <span className="h-1.5 w-1.5 rounded-full bg-variable-collection-link" />
+          {STAGE_LABELS[project.stage]}
+        </span>
+      </div>
+
+      <div className="flex flex-1 flex-col justify-between gap-5 p-4">
+        <h3 className="font-ubuntu text-[15px] font-medium leading-snug text-white line-clamp-3 transition-colors group-hover:text-variable-collection-link">
+          {project.title}
+        </h3>
+        {project.focusAreas.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5">
+            {project.focusAreas.slice(0, 2).map((area) => (
+              <li
+                key={area}
+                className="rounded-full border border-white/15 px-2.5 py-0.5 font-ubuntu text-[11px] text-white/60"
+              >
+                #{area}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Link>
+  );
+}
 
 // Muestra los 3 proyectos más recientes en el landing
 export default async function ProjectsPreviewSection() {
@@ -13,88 +83,66 @@ export default async function ProjectsPreviewSection() {
     allProjects = [];
   }
 
-  const sorted = [...allProjects].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  );
-  const featured = sorted.slice(0, 3);
+  const featured = [...allProjects]
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 3);
 
   return (
-    <section className="relative py-20 lg:py-28 bg-variable-collection-fondo overflow-hidden">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-red-600/5 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="relative container mx-auto px-6 md:px-10">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-          <div className="space-y-3">
-            <span className="font-ubuntu text-xs uppercase tracking-[0.3em] text-variable-collection-link">
-              Proyectos activos
-            </span>
-            <h2 className="font-orbitron text-4xl md:text-5xl font-bold text-white">
-              Portafolio
-              <div className="h-1 w-16 mt-2 bg-[#b20403]" />
-            </h2>
-            <p className="font-ubuntu text-white/50 max-w-md">
-              Las iniciativas más recientes del semillero.
-            </p>
-          </div>
-          <Link
-            href="/projects"
-            className="inline-flex items-center gap-2 border border-white/20 hover:border-red-500/50 text-white/80 hover:text-white px-6 py-3 rounded-full font-ubuntu text-sm uppercase tracking-wider transition-all hover:bg-red-600/10 flex-shrink-0"
+    <section
+      id="proyectos"
+      aria-labelledby="proyectos-titulo"
+      className="relative overflow-hidden bg-variable-collection-fondo py-20 lg:py-28"
+    >
+      <div className="container mx-auto grid gap-12 px-6 md:px-10 lg:grid-cols-12 lg:gap-10">
+        {/* Columna izquierda: la tesis, no el inventario */}
+        <div className="flex flex-col justify-center lg:col-span-4">
+          <span className="mb-5 font-mono text-xs uppercase tracking-[0.3em] text-white/40">
+            Proyectos
+          </span>
+          <h2
+            id="proyectos-titulo"
+            className="font-orbitron text-2xl font-bold uppercase leading-tight tracking-[0.06em] text-white md:text-3xl lg:text-2xl xl:text-3xl"
           >
-            Ver todos
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-          </Link>
+            Innovación con propósito.
+            <br />
+            Tecnología con impacto.
+          </h2>
+          <span className="my-6 block h-1.5 w-1.5 rounded-full bg-variable-collection-link" aria-hidden="true" />
+          <p className="max-w-sm font-ubuntu text-sm leading-relaxed text-white/60 md:text-base">
+            Desarrollamos soluciones tecnológicas reales desde la universidad hacia el mundo.
+          </p>
         </div>
 
-        {/* Grid */}
-        <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
-          {featured.map((project) => (
-            <article
-              key={project.id}
-              className="group flex h-full flex-col justify-between rounded-3xl border border-white/10 bg-black/40 px-6 pb-6 pt-8 transition hover:border-variable-collection-link/60 hover:shadow-[0_25px_60px_-30px_rgba(202,43,38,0.35)]"
+        {/* Columna derecha: contador + tarjetas */}
+        <div className="lg:col-span-8">
+          <p className="mb-4 font-ubuntu text-sm text-white/60">
+            Total: <span className="font-medium text-variable-collection-link">{allProjects.length}</span>{" "}
+            {allProjects.length === 1 ? "proyecto" : "proyectos"}
+          </p>
+
+          {featured.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+              {featured.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-md border border-dashed border-white/10 px-6 py-12 text-center font-ubuntu text-sm text-white/40">
+              Aún no hay proyectos publicados.
+            </div>
+          )}
+
+          <div className="mt-8 flex justify-end">
+            <Link
+              href="/projects"
+              className="group inline-flex items-center gap-3 font-mono text-xs uppercase tracking-[0.2em] text-variable-collection-link transition-colors hover:text-white"
             >
-              <div className="space-y-4">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <span className={`text-xs font-ubuntu uppercase tracking-wider border px-3 py-1 rounded-full ${STAGE_COLORS[project.stage]}`}>
-                    {STAGE_LABELS[project.stage]}
-                  </span>
-                </div>
-
-                <h3 className="font-orbitron text-xl text-white group-hover:text-variable-collection-link transition-colors line-clamp-2">
-                  {project.title}
-                </h3>
-                <p className="font-ubuntu text-sm text-white/60 line-clamp-3">
-                  {project.summary}
-                </p>
-
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {project.focusAreas.slice(0, 3).map((area) => (
-                    <span key={area} className="rounded-full border border-white/10 px-3 py-1 text-xs font-ubuntu text-white/60">
-                      #{area}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {project.callToAction && (
-                <div className="pt-5">
-                  <Link
-                    href={project.callToAction.href}
-                    target={project.callToAction.href.startsWith("http") ? "_blank" : undefined}
-                    rel={project.callToAction.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                    className="inline-flex items-center gap-2 text-sm font-ubuntu text-variable-collection-link transition group-hover:translate-x-1"
-                  >
-                    {project.callToAction.label}
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </Link>
-                </div>
-              )}
-            </article>
-          ))}
+              Ver todos los proyectos
+              <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
+                &rarr;
+              </span>
+            </Link>
+          </div>
         </div>
       </div>
     </section>

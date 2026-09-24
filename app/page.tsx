@@ -45,7 +45,7 @@ export default async function Home() {
       <ImpactSection />
       <AboutSection />
       <EventsSection />           {/* Lee noticias cacheadas desde la DB */}
-      <ProjectsPreviewSection />  {/* Lee de useProjects (localStorage) */}
+      <ProjectsPreviewSection />  {/* Lee el catálogo cacheado desde la DB */}
       <CTASection />
       <GalleryPreviewSection images={galleryImages} />
       <ContactSection />
