@@ -1,66 +1,75 @@
 ---
-name: Custom issue template
-about: Describe this issue template's purpose here.
+name: Story / Task
+about: Historia de usuario con criterios funcionales, o tarea técnica derivada de una historia.
 title: ''
 labels: ''
 assignees: ''
 
 ---
 
-# 📖 STORY: [Nombre de la Funcionalidad]
+# STORY: [Nombre de la Funcionalidad]
 
 > **Código:** `[PROYECTO]-[MODULO]-H[XX]`
-> **Sprint:** [Nombre/Número del Sprint]
 > **Responsable:** @usuario
-> **Prioridad:** 🔴 CRÍTICA | 🟡 ALTA | 🔵 MEDIA
+> **Prioridad:** CRÍTICA | ALTA | MEDIA
 > **Dependencia:** [ID_STORY] — [Nombre de la dependencia]
 
 ---
 
-## 📋 Contexto
-[Explicación del propósito de esta funcionalidad, qué problema resuelve y por qué es necesaria ahora.]
+## ▸ Contexto
 
-## 👤 Historia de Usuario
-**Como** [Rol del usuario]  
-**Necesito** [Acción o funcionalidad]  
-**Para** [Beneficio o valor de negocio]
+[Propósito de esta funcionalidad, problema que resuelve y por qué es necesaria ahora.]
+
+## ▸ Historia de usuario
+
+**Como** [rol del usuario]
+**necesito** [acción o funcionalidad]
+**para** [beneficio o valor de negocio]
 
 ---
 
-## ⚠️ Dependencias / Bloqueos
+## ▸ Dependencias y bloqueos
+
 - [ ] **Bloqueante:** [Descripción de qué impide el progreso]
 - [ ] **Técnica:** [Requisito previo de infraestructura o BD]
 
 ---
 
-## ✅ Criterios de Aceptación (Gherkin)
+## ▸ Criterios de aceptación
+
 ```gherkin
 Feature: [Nombre de la funcionalidad]
 
-  Scenario: [Nombre del escenario 1]
+  Scenario: [Nombre del escenario]
     Given [Contexto inicial]
     When [Acción realizada]
     Then [Resultado esperado]
     And [Validación adicional]
 
-  Scenario: [Nombre del escenario 2 (Error/Alternativo)]
+  Scenario: [Escenario alternativo o de error]
     Given ...
 ```
 
 ---
 
-## 🔒 Seguridad y Permisos
-| Ruta/Acción | Rol A | Rol B | Rol C |
-|------|-------|-------|-------| 
-| `/ruta/*` | ✅ | ❌ | ❌ |
+## ▸ Permisos por rol
+
+| Ruta / Acción | admin | content_manager | project_lead | user |
+|---|---|---|---|---|
+| `/ruta/*` | ✅ | ❌ | ❌ | ❌ |
 
 ---
 
-## 📌 Notas / Bugs Conocidos
-- [ ] **Bug:** [Descripción del error a corregir]
-- [ ] **Out of Scope:** [Lo que NO se hará en este sprint]
+## ▸ Notas
 
-# 🔧 Tarea: [Nombre de la Tarea Técnica]
+- [ ] **Bug conocido:** [Descripción]
+- [ ] **Out of scope:** [Lo que no se hará en este issue]
+
+---
+---
+---
+
+# TAREA: [Nombre de la Tarea Técnica]
 
 > **Código:** `[PROYECTO]-[MODULO]-T[XX]`
 > **Parent Story:** #[ID_STORY]
@@ -69,43 +78,39 @@ Feature: [Nombre de la funcionalidad]
 
 ---
 
-## 📋 Descripción
-[Explicación detallada del problema técnico, conflicto de código o necesidad de infraestructura.]
+## ▸ Descripción
+
+[Problema técnico, conflicto de código o necesidad de infraestructura que esta tarea resuelve.]
 
 ---
 
-## 📂 Archivos / Rutas Clave
-- `ruta/al/archivo` — [Descripción del componente o API]
+## ▸ Archivos y rutas clave
+
+- `ruta/al/archivo` — [Descripción del componente o endpoint]
 - `ruta/al/directorio/` — [Propósito del módulo]
 
 ---
 
-## 📊 Resumen Técnico
-| Métrica | Valor |
-|---------|-------|
-| Patrón Arquitectónico | [Ej: SSR, Server Actions, Client Component] |
-| Seguridad/Protección | [Ej: RBAC, CSRF, JWT-Middleware] |
-| Dependencias Críticas | [Listado de librerías o servicios] |
+## ▸ Checklist de ejecución
 
----
-
-## ✅ Checklist de Ejecución
 - [ ] [Paso técnico 1]
 - [ ] [Paso técnico 2]
-- [ ] [Verificación en entorno de producción/staging]
+- [ ] [Verificación en entorno local o staging]
 
 ---
 
-## 🧪 Criterio de Aceptación Técnico
+## ▸ Criterio de aceptación técnico
+
 ```gherkin
-Dado que [Situación técnica inicial]
-Cuando [Se ejecuta el cambio/script/merge]
-Entonces [El sistema se comporta de X manera]
-Y [No se rompe la funcionalidad Y]
+Given [Situación técnica inicial]
+When [Se ejecuta el cambio]
+Then [El sistema se comporta de X manera]
+And [No se rompe la funcionalidad Y]
 ```
 
 ---
 
-## 📌 Notas Técnicas
-- **Variables de Entorno:** [Listado de variables necesarias]
+## ▸ Notas técnicas
+
+- **Variables de entorno:** [Variables necesarias, si aplica]
 - **Impacto:** [Módulos que podrían verse afectados]

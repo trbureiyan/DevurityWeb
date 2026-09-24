@@ -9,23 +9,22 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://devurity.com";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://devurityweb.vercel.app";
 
-  // Rutas estáticas principales
   const staticRoutes: MetadataRoute.Sitemap = [
-    "",
-    "/about",
-    "/projects",
-    "/updates",
-    "/gallery",
-    "/help",
-    "/help/faq",
-    "/help/reglamentos",
-  ].map((route) => ({
-    url: `${baseUrl}${route}`,
+    { path: "",                 freq: "weekly",  priority: 1.0 },
+    { path: "/about",           freq: "monthly", priority: 0.9 },
+    { path: "/projects",        freq: "weekly",  priority: 0.9 },
+    { path: "/updates",         freq: "daily",   priority: 0.8 },
+    { path: "/gallery",         freq: "monthly", priority: 0.5 },
+    { path: "/help",            freq: "monthly", priority: 0.6 },
+    { path: "/help/faq",        freq: "monthly", priority: 0.5 },
+    { path: "/help/reglamentos",freq: "monthly", priority: 0.5 },
+  ].map(({ path, freq, priority }) => ({
+    url: `${baseUrl}${path}`,
     lastModified: new Date(),
-    changeFrequency: "weekly" as const,
-    priority: route === "" ? 1 : 0.8,
+    changeFrequency: freq as MetadataRoute.Sitemap[number]["changeFrequency"],
+    priority,
   }));
 
   // Rutas dinámicas desde la DB — degradación elegante si la DB no está disponible

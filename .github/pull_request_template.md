@@ -1,160 +1,74 @@
 <!-- 
 INSTRUCCIONES:
-Selecciona la plantilla que mejor se adapte a tus cambios.
-- Usa la VERSIÓN COMPLETA para PRs grandes, nuevas features o cambios arquitectónicos.
-- Usa la VERSIÓN ABREVIADA para fixes rápidos, typos o cambios menores.
+Usa la VERSIÓN COMPLETA para features, refactors, cambios arquitectónicos o PRs con múltiples áreas de impacto.
+Usa la VERSIÓN ABREVIADA para hotfixes, typos, ajustes de configuración o cambios de una sola línea de razonamiento.
 Borra la versión que no vayas a utilizar antes de abrir el Pull Request.
 -->
 
 <!-- ======================================================================= -->
-<!-- VERSIÓN COMPLETA                                                        -->
+<!-- VERSIÓN COMPLETA                                                         -->
 <!-- ======================================================================= -->
 
-### 1. Información General
-| Campo | Detalle |
-|---|---|
-| **Título** | `tipo:` [descripción] (ej. `feature: autenticación JWT`, `fix: error en login`) |
-| **Rama Origen** | `feature/`, `bugfix/`, `hotfix/`, `release/` (Respetando Gitflow) |
-| **Rama Destino** | `develop` (features/bugfixes) / `main` (releases/hotfixes) |
-| **Epic Principal** | DVW-XXX |
-| **Historia** | DVW-XXX [Nombre de la historia] |
-| **Prioridad** | `[!!] ALTA` / `MEDIA` / `BAJA` |
-| **Autor** | @usuario |
-| **Fecha** | DD/MM/YYYY |
+[Una o dos oraciones que expliquen qué hace este PR y por qué era necesario. Sin listas aquí.]
+
+**Ramas:** `origen` → `dev` / `main` &nbsp;|&nbsp; **Issue:** #[número]
 
 ---
 
-### 2. Descripción
-[Escribe aquí un resumen general del cambio, el problema que resuelve y el enfoque utilizado para abordarlo.]
+## [Área o componente afectado]
 
-**Funcionalidades:**
-- [Resume el cambio relevante 1]
-- [Resume el cambio relevante 2]
+> [!IMPORTANT]
+> [Contexto del problema que motivó este cambio: qué estaba mal, qué faltaba, o por qué era necesario ahora.]
 
----
+Cambios concretos:
 
-### 3. Criterios de Aceptación
-| # | Criterio | Estado | Evidencia |
-|---|---|---|---|
-| 1 | [Descripción del criterio] | [ ] / [x] | `archivo_o_link.png` / [Descripción] |
-| 2 | [Descripción del criterio] | [ ] / [x] | `archivo_o_link.png` / [Descripción] |
+- **`ruta/al/archivo.ts`**. [Descripción del cambio y su razón.]
+- **`ruta/al/otro.ts`**. [Descripción del cambio.]
 
 ---
 
-### 4. Tareas Incluidas
-### DVW-XX: <nombre de la tarea>
-> **Archivo:** `ruta/al/archivo.js`
-> **Prioridad:** Highest / High / Medium
+## [Otra área de impacto, si aplica]
 
-[Descripción breve de la tarea implementada]
+> [!NOTE]
+> [Contexto cuando el cambio no es evidente por sí solo. Omitir si no es necesario.]
 
-**<Categoría> (p. ej. Frontend / Backend):**
-- [x] caso testeado / implementado
-- [ ] caso pendiente
+[Descripción en prosa o lista de cambios, según lo que sea más claro.]
 
 ---
 
-### 5. Cambios Introducidos
-**Archivos Nuevos**:
-```text
-ruta/
-└── al/
-    └── archivo_nuevo.js     # Propósito del archivo (tamaño aprox / líneas)
-```
+## Screenshots
 
-**Archivos Modificados**:
-| Archivo | Cambio |
-|---|---|
-| `ruta/al/archivo.js` | [Breve descripción de lo modificado] |
+[Capturas de pantalla cuando el PR toca UI. Omitir si no aplica.]
 
 ---
 
-### 6. Testing
-**Resumen de Cobertura**:
-| Componente | Tests | Estado |
-|---|---|---|
-| [Nombre componente] | [Unitarios / E2E / Integración] | [Pass / Fail] |
+## Checklist
 
-**Scripts de Testing**:
-```bash
-pnpm test
-pnpm run test:e2e
-```
-
-**Escenarios Validados**:
-| Escenario | Resultado Esperado | Estado |
-|---|---|---|
-| [Flujo a validar] | [El comportamiento esperado] | [Pass / Fail] |
-
----
-
-### 7. Arquitectura de Testing *(cuando aplica)*
-```text
-tests/
-└── unit/
-    └── feature/             # Pattern: Setup → Act → Assert → Teardown
-```
-
----
-
-### 8. Commits Incluidos
-| # | SHA | Tipo | Descripción |
-|---|---|---|---|
-| 1 | `abcdef1` | `feature` | Agrega endpoint de autenticación |
-| 2 | `a1b2c3d` | `test` | Agrega coverage para auth |
-
----
-
-### 9. Impacto en Código Existente
-**Antes**:
-```javascript
-// Código preexistente
-```
-
-**Después**:
-```javascript
-// Código nuevo o refactorizado
-```
-> **Nota de compatibilidad:** ¿Este cambio es retrocompatible? Sí / No. (Si no lo es, explicar impacto en BD o API).
-
----
-
-### 10. Checklist Pre-Merge
-- [ ] Tests pasando (`pnpm test`).
-- [ ] Documentación actualizada (README, Swagger, etc.).
-- [ ] Code Review aprobado por al menos 1 reviewer.
-- [ ] QA / Validación manual completada.
-- [ ] Sincronizado con `develop` (branch actualizada sin conflictos).
+- [ ] Build limpio (`pnpm build`)
+- [ ] Tests pasan (`pnpm test`)
+- [ ] Typecheck sin errores (`pnpm exec tsc --noEmit`)
+- [ ] Lint limpio (`pnpm lint`)
+- [ ] [Validación manual relevante para este PR — ser específico]
 
 
 <br><br><br>
 
 
 <!-- ======================================================================= -->
-<!-- VERSIÓN ABREVIADA / COMPACTA                                            -->
+<!-- VERSIÓN ABREVIADA                                                        -->
 <!-- ======================================================================= -->
 
-### Resumen (Versión Corta)
+[Una oración que describa el cambio.]
 
-**Objetivo:** [Explicación concisa y directa de la mejora o arreglo]
-**Issue / Tarea:** DVW-XXX
-**Ramas (Gitflow):** `origen` ➔ `destino` (`develop` o `main`)
+**Ramas:** `origen` → `dev` / `main` &nbsp;|&nbsp; **Issue:** #[número]
 
-**Cambios Clave:**
+Cambios:
 
-- **[Componente/Archivo]:** [Descripción del cambio realizado].
-- **[Componente/Archivo]:** [Descripción del cambio realizado].
-- **[Componente/Archivo]:** [Descripción del cambio realizado].
+- **`ruta/al/archivo.ts`**. [Qué cambió y por qué.]
 
-**Testing y Verificación:**
-- [ ] Funcionalidad validada localmente.
-- [ ] Tests automáticos pasando correctamente.
-- [ ] Sin impacto negativo (Retrocompatible).
+## Checklist
 
-**Checklist:**
-- [ ] El código pasa el linter localmente (`lint-staged`).
-- [ ] El type-check de TypeScript es exitoso (`npx tsc --noEmit`).
-- [ ] Los cambios han sido probados en el entorno local.
-
-> [!NOTE]
-> [Inserta aquí observaciones importantes, dependencias externas o tareas pendientes relacionadas con este PR]
+- [ ] Build limpio (`pnpm build`)
+- [ ] Tests pasan (`pnpm test`)
+- [ ] Typecheck sin errores (`pnpm exec tsc --noEmit`)
+- [ ] Lint limpio (`pnpm lint`)

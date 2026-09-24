@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useCsrf } from "@/hooks/useCsrf";
 import { IMAGES } from "@/public/images";
+import { emailUniversity } from "@/lib/regex";
 
 interface Slide {
   title: string;
@@ -94,11 +95,8 @@ export default function RegistroPage() {
     // Validar email
     if (!email.trim()) {
       newErrors.email = "El correo institucional es requerido";
-    } else {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        newErrors.email = "Correo institucional inválido";
-      }
+    } else if (!emailUniversity(email.trim().toLowerCase())) {
+      newErrors.email = "Correo institucional inválido";
     }
 
     setErrors(newErrors);

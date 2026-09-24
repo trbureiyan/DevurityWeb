@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { unstable_cache } from "next/cache";
+import type { Metadata } from "next";
 import { IMAGES } from "@/public/images";
 import logger from "@/lib/logger";
 import { findActiveUsersForTeam } from "@/repositories/users/users.repositories";
@@ -7,6 +8,22 @@ import TeamSection from "@/components/about/TeamSection";
 import type { TeamMember } from "@/components/about/team.types";
 import FoundersSection from "@/components/about/FoundersSection";
 import { CACHE_TAGS, CACHE_TTL, activeTTL } from "@/lib/cache-tags";
+import { siteIcons, siteOpenGraph, siteTwitter } from "@/lib/constants/metadata";
+
+export const metadata: Metadata = {
+  title: "Sobre Nosotros | Devurity",
+  description:
+    "Conoce la misión, visión y equipo del semillero de investigación Devurity de la Universidad Surcolombiana. Formamos ingenieros en ciberseguridad y desarrollo de software.",
+  icons: siteIcons,
+  openGraph: {
+    ...siteOpenGraph,
+    title: "Sobre Nosotros | Devurity",
+    description:
+      "Conoce la misión, visión y equipo del semillero de investigación Devurity de la Universidad Surcolombiana.",
+    url: "/about",
+  },
+  twitter: siteTwitter,
+};
 
 const getTeamMembersCached = unstable_cache(
   async (): Promise<TeamMember[]> => {

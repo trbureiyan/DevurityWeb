@@ -6,6 +6,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { IMAGES } from "@/public/images";
+import { emailUniversity } from "@/lib/regex";
 
 interface Slide {
   title: string;
@@ -90,11 +91,8 @@ function LoginPageContent() {
     // Validar email
     if (!email.trim()) {
       newErrors.email = "El email o usuario es requerido";
-    } else if (email.includes("@")) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        newErrors.email = "Email inválido";
-      }
+    } else if (!emailUniversity(email.trim().toLowerCase())) {
+      newErrors.email = "Debe ser un email universitario válido";
     }
 
     // Validar contraseña

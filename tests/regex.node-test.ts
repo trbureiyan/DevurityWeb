@@ -10,59 +10,62 @@ import { ok, strictEqual } from "node:assert/strict";
 import { emailUniversity, email, isValidPassword } from "../lib/regex";
 
 // ---------------------------------------------------------------------------
-// emailUniversity — institutional format: u + exactly 11 digits + @usco.edu.co
+// emailUniversity — any valid local part at the exact @usco.edu.co domain
 // ---------------------------------------------------------------------------
 
 test("emailUniversity — accepts valid institutional addresses", async (t) => {
-  await t.test("standard 11-digit code", () => {
+  await t.test("student 11-digit code", () => {
     ok(emailUniversity("u20231234567@usco.edu.co"));
   });
 
-  await t.test("digits starting with zero", () => {
-    ok(emailUniversity("u00000000001@usco.edu.co"));
+  await t.test("professor address", () => {
+    ok(emailUniversity("profesor.apellido@usco.edu.co"));
   });
 
-  await t.test("all nines", () => {
-    ok(emailUniversity("u99999999999@usco.edu.co"));
+  await t.test("administrator address", () => {
+    ok(emailUniversity("administrador+semillero@usco.edu.co"));
   });
 });
 
 test("emailUniversity — rejects non-institutional addresses", async (t) => {
-  await t.test("missing leading u", () => {
-    strictEqual(emailUniversity("20231234567@usco.edu.co"), false);
+  await t.test("missing local part", () => {
+    strictEqual(emailUniversity("@usco.edu.co"), false);
   });
 
-  await t.test("only 10 digits after u", () => {
-    strictEqual(emailUniversity("u2023123456@usco.edu.co"), false);
-  });
-
-  await t.test("12 digits after u", () => {
-    strictEqual(emailUniversity("u202312345678@usco.edu.co"), false);
-  });
-
-  await t.test("letters mixed into the digit segment", () => {
-    strictEqual(emailUniversity("u2023abc4567@usco.edu.co"), false);
+  await t.test("invalid whitespace", () => {
+    strictEqual(emailUniversity("profesor apellido@usco.edu.co"), false);
   });
 
   await t.test("wrong domain", () => {
-    strictEqual(emailUniversity("u20231234567@gmail.com"), false);
+    strictEqual(emailUniversity("profesor.apellido@gmail.com"), false);
   });
 
   await t.test("subdomain on usco", () => {
-    strictEqual(emailUniversity("u20231234567@mail.usco.edu.co"), false);
+    strictEqual(emailUniversity("profesor.apellido@mail.usco.edu.co"), false);
   });
 
   await t.test("empty string", () => {
     strictEqual(emailUniversity(""), false);
   });
 
-  await t.test("uppercase U prefix", () => {
-    // The regex anchors on lowercase u — institutional codes are always lowercase.
-    strictEqual(emailUniversity("U20231234567@usco.edu.co"), false);
+  await t.test("trailing whitespace", () => {
+    strictEqual(emailUniversity("profesor@usco.edu.co "), false);
   });
 
-  await t.test("trailing whitespace", () => {
-    strictEqual(emailUniversity("u20231234567@usco.edu.co "), false);
+  await t.test("uppercase domain is not normalized by the helper", () => {
+    strictEqual(emailUniversity("profesor@USCO.EDU.CO"), false);
+  });
+
+  await t.test("leading dot in local part", () => {
+    strictEqual(emailUniversity(".profesor@usco.edu.co"), false);
+  });
+
+  await t.test("trailing dot in local part", () => {
+    strictEqual(emailUniversity("profesor.@usco.edu.co"), false);
+  });
+
+  await t.test("consecutive dots in local part", () => {
+    strictEqual(emailUniversity("pro..fesor@usco.edu.co"), false);
   });
 });
 
