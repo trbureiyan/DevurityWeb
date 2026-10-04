@@ -42,7 +42,7 @@
     "html5-qrcode": "2.3.8",
     "jsonwebtoken": "9.0.3",
     "next": "15.5.25",
-    "nodemailer": "9.1.1",
+    "nodemailer": "10.0.9",
     "only-allow": "1.2.1",
     "qrcode": "1.5.4",
     "react": "19.1.2",
