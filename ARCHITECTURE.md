@@ -20,19 +20,19 @@ DevurityWeb also serves as the formal graduation thesis (*modalidad de grado*) f
 
 | Layer | Technology | Version | Purpose / Notes |
 |---|---|---|---|
-| Framework | Next.js (App Router) | 15.5.19 | RSC, Server Actions, Route Handlers |
-| UI Library | React | 19.1.2 | Server & Client components |
+| Framework | Next.js (App Router) | 15.5.28 | RSC, Server Actions, Route Handlers |
+| UI Library | React | 19.3.1 | Server & Client components |
 | Language | TypeScript | 5.9.3 | Strict mode |
-| Styling | Tailwind CSS | 4.2.4 | Configured via `@tailwindcss/postcss` |
+| Styling | Tailwind CSS | 4.3.3 | Configured via `@tailwindcss/postcss` |
 | ORM | Prisma | 6.19.3 | Custom output path `lib/generated/prisma` |
 | Database | PostgreSQL | 16+ | Relational datastore |
 | Password Hashing | `bcryptjs` | 3.0.3 | Pure JavaScript wrapper (`lib/bcrypt.ts`) |
 | Auth JWT (Node.js) | `jsonwebtoken` | 9.0.3 | Node.js route handlers (`lib/jwt.ts`) |
 | Auth JWT (Edge) | Web Crypto API | Native | Edge Middleware (`lib/auth/jwt-edge.ts`) |
-| Animations | Framer Motion | 12.38.0 | UI transitions (`LazyMotion` domAnimation) |
+| Animations | Framer Motion | 14.6.0 | UI transitions (`LazyMotion` domAnimation) |
 | Icons | Heroicons | 2.2.0 | Micro-icons via `components/icons/` |
 | Attendance QR | `html5-qrcode` & `qrcode` | 2.3.8 / 1.5.4 | Camera scanning and QR rendering |
-| Email Service | Nodemailer | 9.0.1 | Verification and password reset emails |
+| Email Service | Nodemailer | 10.2.1 | Verification and password reset emails |
 | Testing | node:test | Built-in | Node.js native test runner (`tests/*.node-test.ts`) |
 
 ## High-Level Architecture
