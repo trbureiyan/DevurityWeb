@@ -4,8 +4,8 @@ DevurityWeb is the official portal for the Devurity research seedbed at Universi
 
 ## Prerequisites
 
-- Node.js 24
-- pnpm (enforced via `preinstall`; npm and yarn are rejected)
+- Node.js 24.22.1
+- pnpm 12.15.0 (enforced via `preinstall`; npm and yarn are rejected)
 - PostgreSQL 16
 - A `.env.local` file with the variables listed in `.env.example`
 

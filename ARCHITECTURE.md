@@ -267,7 +267,7 @@ Exempt endpoints bypass CSRF checks: `/api/auth/login`, `/api/auth/register`, `/
 - **Target Platform**: Vercel Serverless (Region `gru1` Sao Paulo).
 - **Vercel Build Command**: `prisma migrate deploy && next build`
 - **CI Workflow** (`.github/workflows/ci.yml`):
-  1. Setup Node.js 24 + pnpm.
+  1. Setup Node.js 24.22.1 + pnpm 12.15.0.
   2. Install dependencies with `pnpm install --frozen-lockfile`.
   3. `npx prisma generate`.
   4. Typecheck: `npx tsc --noEmit`.

@@ -95,7 +95,7 @@ pnpm exec prisma db push
 pnpm run dev
 ```
 
-Requiere Node 18+, pnpm y una instancia de PostgreSQL. El proyecto usa pnpm con lockfile versionado para builds deterministas; npm no es compatible.
+Requiere Node 24.22.1, pnpm 12.15.0 y una instancia de PostgreSQL. El proyecto usa pnpm con lockfile versionado para builds deterministas; npm no es compatible.
 
 > [!NOTE]
 > Si vienes de una configuración con npm, ejecuta `node scripts/migrate.mjs` para limpiar artefactos antiguos y sincronizar con pnpm.
