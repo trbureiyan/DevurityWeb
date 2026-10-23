@@ -52,7 +52,6 @@
   "devDependencies": {
     "@eslint/eslintrc": "3.3.7",
     "@tailwindcss/postcss": "4.3.3",
-    "@types/bcryptjs": "2.4.6",
     "@types/jsonwebtoken": "9.0.10",
     "@types/node": "24.19.2",
     "@types/nodemailer": "8.0.2",
