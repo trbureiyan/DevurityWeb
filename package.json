@@ -41,7 +41,7 @@
     "framer-motion": "14.6.0",
     "html5-qrcode": "2.3.8",
     "jsonwebtoken": "9.0.3",
-    "next": "15.5.28",
+    "next": "15.5.29",
     "nodemailer": "10.2.1",
     "only-allow": "1.2.2",
     "qrcode": "1.5.4",
